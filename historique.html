@@ -62,7 +62,11 @@ a{color:var(--givre)}
   </section>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* Chart.js 4 exige un navigateur récent ; la télé Samsung 2018 reçoit Chart.js 2.9 (écrit pour les anciens navigateurs). */
+var CHART_MODERNE = (function(){ try { new Function("var a={};return a?.b??1"); return typeof ResizeObserver === "function"; } catch (e) { return false; } })();
+document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/' + (CHART_MODERNE ? '4.4.1/chart.umd.min.js' : '2.9.4/Chart.min.js') + '"><\/script>');
+</script>
 <script>
 var CAPTEURS = [
   { id: "077BD6BA8BF6", nom: "Salon",           couleur: "#7cc4e8" },
@@ -156,9 +160,34 @@ function options(unite){
   };
 }
 
+/* Mêmes réglages, écrits pour Chart.js 2.9 (navigateur de la télé) */
+function options2(unite){
+  function graduation(v){ return fmt(v, Math.round(v) === v ? 0 : 1) + " " + unite; }
+  return {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    hover: { mode: "nearest", axis: "x", intersect: false },
+    elements: { point: { radius: 0, hoverRadius: 4, hitRadius: 6 }, line: { borderWidth: 2, tension: 0.25 } },
+    scales: {
+      xAxes: [{ type: "linear", ticks: { fontColor: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, gridLines: { color: TRAIT } }],
+      yAxes: [
+        { id: "g", position: "left", ticks: { fontColor: BRUME, callback: graduation }, gridLines: { color: TRAIT } },
+        { id: "d", position: "right", ticks: { fontColor: BRUME, callback: graduation }, gridLines: { drawOnChartArea: false },
+          afterDataLimits: function(ax){ var y = ax.chart.scales.g; if (y) { ax.min = y.min; ax.max = y.max; } } }
+      ]
+    },
+    legend: { labels: { fontColor: BRUME, boxWidth: 12, fontFamily: "IBM Plex Mono", fontSize: 12 } },
+    tooltips: { mode: "nearest", axis: "x", intersect: false, callbacks: {
+      title: function(it){ return new Date(+it[0].xLabel).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); },
+      label: function(it, data){ return data.datasets[it.datasetIndex].label + " : " + fmt(+it.yLabel, unite === "%" || unite === "hPa" ? 0 : 1) + " " + unite; }
+    } }
+  };
+}
+
 function dessiner(id, jeux, unite){
   if (graphiques[id]) graphiques[id].destroy();
-  graphiques[id] = new Chart(el(id), { type: "line", data: { datasets: jeux }, options: options(unite) });
+  if (typeof Chart === "undefined") throw new Error("bibliothèque des graphiques non chargée");
+  if (!CHART_MODERNE) jeux.forEach(function(j){ j.yAxisID = "g"; if (j.fill === undefined) j.fill = false; j.lineTension = 0.25; });
+  graphiques[id] = new Chart(el(id), { type: "line", data: { datasets: jeux }, options: CHART_MODERNE ? options(unite) : options2(unite) });
 }
 
 function rendre(){
