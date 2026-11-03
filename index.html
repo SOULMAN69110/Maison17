@@ -414,6 +414,28 @@ el("bascule").addEventListener("click", function(){ volet(!voletOuvert()); });
 el("volet").addEventListener("click", function(){ volet(true); });
 el("volet").addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); volet(true); } });
 el("pieces").addEventListener("click", function(){ volet(false); });
+/* Retour sur l'onglet après une mise en veille : le minuteur peut avoir été suspendu, on le vérifie tout de suite */
+document.addEventListener("visibilitychange", function(){ if (!document.hidden && voletOuvert()) texteBouton(); });
+
+/* La page ne se recharge pas d'elle-même : on vérifie toutes les 5 min si une nouvelle version a été publiée,
+   et on recharge (le volet se referme, le code d'accès reste retenu). */
+var versionChargee = null;
+function versionPage(){
+  return Promise.all(["index.html", "verrou.js"].map(function(f){
+    return fetch(f + "?v=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(); return r.text(); });
+  })).then(function(t){
+    var txt = t.join(""), h = 0;
+    for (var i = 0; i < txt.length; i++) h = (h * 31 + txt.charCodeAt(i)) | 0;   // empreinte simple du contenu
+    return txt.length + ":" + h;
+  });
+}
+versionPage().then(function(v){ versionChargee = v; }).catch(function(){});
+setInterval(function(){
+  versionPage().then(function(v){
+    if (versionChargee === null) { versionChargee = v; return; }
+    if (v !== versionChargee) location.reload();
+  }).catch(function(){});
+}, 5 * 60 * 1000);
 
 construire();
 horloge();
