@@ -102,6 +102,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .p15 .jc .c i{font-style:normal;font-family:var(--mono);font-size:.9em;color:var(--givre);margin-left:.4em}
 .p15 .jc .t4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(var(--u)*0.35);text-align:center}
 .p15 .jc .t4 span{display:block;font-family:var(--mono);font-size:calc(var(--u)*0.68);color:var(--brume);letter-spacing:.04em}
+.p15 .jc .t4 .bar{height:calc(var(--u)*2.6);display:flex;align-items:flex-end;justify-content:center;margin-bottom:calc(var(--u)*0.3)}
+.p15 .jc .t4 .bar i{display:block;width:58%;border-radius:calc(var(--u)*0.25) calc(var(--u)*0.25) 0 0;min-height:3px}
 .p15 .jc .t4 b{display:block;font-size:calc(var(--u)*1.15);font-weight:600;font-variant-numeric:tabular-nums}
 .volet .titre{font-size:calc(var(--u)*2.6);font-weight:600}
 .volet .aide{font-family:var(--mono);font-size:calc(var(--u)*1);letter-spacing:.12em;text-transform:uppercase;color:var(--brume)}
@@ -117,7 +119,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 </style>
@@ -375,7 +377,22 @@ function previsions15(m){
     var d = new Date(jour + "T12:00"); d.setDate(d.getDate() + decal);
     var cle = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + "T" + ("0" + heure).slice(-2) + ":00";
     var t = h.temperature_2m && idx[cle] !== undefined ? h.temperature_2m[idx[cle]] : null;
-    return typeof t === "number" ? Math.round(t) + "°" : "–";
+    return typeof t === "number" ? t : null;
+  }
+  /* Toutes les températures d'abord, pour une échelle commune aux 15 jours */
+  var tableau = [], tous = [];
+  for (var j = auj; j < dj.time.length && j < auj + 15; j++) {
+    var ligne = MOMENTS.map(function(mo){ return tempA(dj.time[j], mo[1], mo[2]); });
+    tableau.push(ligne);
+    ligne.forEach(function(t){ if (t !== null) tous.push(t); });
+  }
+  var tMin = Math.min.apply(null, tous), tMax = Math.max.apply(null, tous);
+  if (!(tMax - tMin >= 6)) { var c = (tMin + tMax) / 2 || 0; tMin = c - 3; tMax = c + 3; }   // évite d'exagérer de petits écarts
+  function couleurT(t){ return t < 0 ? "#a9d8f5" : t < 6 ? "#7cc4e8" : t < 12 ? "#7fd1c0" : t < 18 ? "#f0c36a" : t < 25 ? "#f0a46a" : "#f08a6a"; }
+  function colonne(lib, t){
+    if (t === null) return '<div><div class="bar"></div><b>–</b><span>' + lib + '</span></div>';
+    var haut = 15 + (t - tMin) / (tMax - tMin) * 85;
+    return '<div><div class="bar"><i style="height:' + haut.toFixed(0) + '%;background:' + couleurT(t) + '"></i></div><b>' + Math.round(t) + '°</b><span>' + lib + '</span></div>';
   }
   for (var k = auj; k < dj.time.length && k < auj + 15; k++) {
     var d = new Date(dj.time[k] + "T12:00"), n = k - auj;
@@ -385,7 +402,7 @@ function previsions15(m){
       '<div class="d">' + nom + ' <b>' + d.getDate() + '</b></div>' +
       '<div class="e">' + emoji(dj.weather_code[k]) + '</div>' +
       '<div class="c">' + ciel(dj.weather_code[k]) + (typeof pl === "number" && pl >= 20 ? '<i>☔' + pl + '%</i>' : '') + '</div>' +
-      '<div class="t4">' + MOMENTS.map(function(mo){ return '<div><span>' + mo[0] + '</span><b>' + tempA(dj.time[k], mo[1], mo[2]) + '</b></div>'; }).join("") + '</div></div>';
+      '<div class="t4">' + MOMENTS.map(function(mo, x){ return colonne(mo[0], tableau[n][x]); }).join("") + '</div></div>';
   }
   var v = el("volet");
   v.classList.add("p15");
