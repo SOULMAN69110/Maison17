@@ -35,6 +35,12 @@ jobs:
             https://www.data199.com/api/pv1/device/lastmeasurement -o site/data.json || true
           python3 -c "import json;d=json.load(open('site/data.json'));assert d.get('devices')" || echo '{"devices":[]}' > site/data.json
 
+      - name: Récupérer la production solaire (eStar Power)
+        env:
+          ESTAR_UTILISATEUR: ${{ secrets.ESTAR_UTILISATEUR }}
+          ESTAR_MOT_DE_PASSE: ${{ secrets.ESTAR_MOT_DE_PASSE }}
+        run: python3 outils/estar.py site/solaire.json
+
       - name: Récupérer la pression (Open-Meteo)
         run: |
           curl -sS -m 30 "https://api.open-meteo.com/v1/forecast?latitude=45.734&longitude=4.802&current=pressure_msl&timeformat=unixtime" -o meteo.json || echo '{}' > meteo.json
@@ -55,7 +61,7 @@ jobs:
 
       - name: Préparer le site
         run: |
-          cp index.html historique.html verrou.js site/
+          cp index.html historique.html energie.html verrou.js site/
           cp -r historique site/
 
       - uses: actions/configure-pages@v5

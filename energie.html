@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maison en énergie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Page « Énergie » : panneaux solaires eStar, lue à 3 m sur la télé.
+   Écrite pour le navigateur de la télé Samsung 2018 : flexbox seulement (pas de grille CSS, pas de gap, pas de inset),
+   et une unité rem qui suit la largeur, ou la hauteur sur un écran plus allongé. */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a;
+  --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8;
+  --soleil:#f0c36a; --maison:#e8eef2; --reseau:#f08a6a; --vente:#7fd1a0;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html{font-size:1vw}
+@supports (width:min(1vw,1vh)){html{font-size:min(1vw,1.7778vh)}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
+.ecran{height:100%;display:flex;flex-direction:column;padding:2.4rem 3.2rem;transition:transform 2s ease}
+.haut{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.4rem}
+h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1}
+.sous{font-family:var(--mono);font-size:1rem;color:var(--brume);margin-top:.6rem;letter-spacing:.06em}
+.heure{font-size:3.4rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.liens{font-family:var(--mono);font-size:.95rem;margin-top:.5rem;text-align:right}
+.liens a{color:var(--givre);text-decoration:none;margin-left:1.2rem}
+
+.rangee{display:flex;margin:0 -0.6rem}
+.rangee > *{margin:0 .6rem}
+.carte{background:var(--ardoise);border-radius:1rem;padding:1.3rem 1.6rem;min-width:0}
+.etiquette{font-family:var(--mono);font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+
+/* Flux en direct */
+.flux{flex:0 0 auto;margin-bottom:1.2rem}
+.flux .carte{flex:1 1 0;display:flex;flex-direction:column;justify-content:space-between}
+.flux .val{font-size:5.2rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;margin-top:.6rem}
+.flux .val small{font-size:.42em;font-weight:400;color:var(--brume);margin-left:.15em}
+.flux .detail{font-size:1.35rem;color:var(--brume);margin-top:.6rem}
+.flux .detail b{color:var(--craie);font-weight:600}
+.jauge{height:.7rem;border-radius:99px;background:var(--nuit);overflow:hidden;margin-top:.9rem}
+.jauge i{display:block;height:100%;border-radius:99px}
+.c-soleil .val{color:var(--soleil)} .c-soleil .jauge i{background:var(--soleil)}
+.c-reseau.achat .val{color:var(--reseau)} .c-reseau.vente .val{color:var(--vente)}
+.fleche{flex:0 0 auto;align-self:center;font-size:2.6rem;color:var(--brume)}
+
+/* Bas : bilan du jour à gauche, courbe à droite */
+.bas{flex:1 1 auto;min-height:0}
+.bilan{flex:0 0 36%;display:flex;flex-direction:column}
+.courbe{flex:1 1 auto;display:flex;flex-direction:column}
+.ligne-kwh{display:flex;justify-content:space-between;align-items:baseline;margin-top:.9rem}
+.ligne-kwh span{font-size:1.4rem;color:var(--brume)}
+.ligne-kwh b{font-size:2.4rem;font-weight:600;font-variant-numeric:tabular-nums}
+.ligne-kwh b small{font-size:.5em;font-weight:400;color:var(--brume);margin-left:.15em}
+.barre{display:flex;height:1.5rem;border-radius:.4rem;overflow:hidden;margin-top:.5rem;background:var(--nuit)}
+.barre i{display:block;height:100%}
+.legende{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.35rem}
+.legende em{font-style:normal}
+.point{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+.taux{display:flex;margin-top:1.2rem}
+.taux > div{flex:1 1 0;margin-right:1rem}
+.taux > div:last-child{margin-right:0}
+.taux b{display:block;font-size:2.6rem;font-weight:700;line-height:1;margin-top:.3rem}
+.cumul{margin-top:auto;padding-top:1rem;border-top:1px dashed var(--trait);font-size:1.25rem;color:var(--brume)}
+.cumul b{color:var(--craie);font-weight:600}
+.cumul div{margin-top:.35rem}
+
+.courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;margin-top:.8rem;overflow:visible}
+.courbe .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.4rem}
+.courbe .leg{font-family:var(--mono);font-size:.95rem;color:var(--brume)}
+.courbe .leg span{margin-left:1.4rem}
+.vide{font-family:var(--mono);font-size:1.1rem;color:var(--brume);margin:auto}
+
+.etat{font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.8rem}
+.etat.erreur{color:var(--reseau)}
+
+@media (max-width:800px){
+  html{font-size:2.4vw}
+  body{overflow:auto}
+  .ecran{height:auto;padding:16px}
+  .rangee{display:block;margin:0}
+  .rangee > *{margin:0 0 12px}
+  .fleche{display:none}
+  .courbe svg{height:40vw}
+}
+@media (prefers-reduced-motion:reduce){.ecran{transition:none}}
+</style>
+<script src="verrou.js"></script>
+</head>
+<body>
+<main class="ecran" id="ecran">
+  <div class="haut">
+    <div>
+      <h1>☀️ Énergie de la maison</h1>
+      <div class="sous" id="sous">Panneaux solaires · chargement…</div>
+    </div>
+    <div>
+      <div class="heure" id="heure">--:--</div>
+      <div class="liens"><a href="./">← Tableau de bord</a><a href="historique.html">Courbes</a></div>
+    </div>
+  </div>
+
+  <div class="rangee flux">
+    <div class="carte c-soleil">
+      <div class="etiquette">☀️ Production</div>
+      <div class="val" id="v-prod">--<small>W</small></div>
+      <div><div class="detail" id="d-prod">&nbsp;</div><div class="jauge"><i id="j-prod" style="width:0"></i></div></div>
+    </div>
+    <div class="fleche" aria-hidden="true">→</div>
+    <div class="carte">
+      <div class="etiquette">🏠 Consommation</div>
+      <div class="val" id="v-conso">--<small>W</small></div>
+      <div class="detail" id="d-conso">&nbsp;</div>
+    </div>
+    <div class="fleche" aria-hidden="true">↔</div>
+    <div class="carte c-reseau" id="c-reseau">
+      <div class="etiquette">⚡ Réseau</div>
+      <div class="val" id="v-reseau">--<small>W</small></div>
+      <div class="detail" id="d-reseau">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="rangee bas">
+    <div class="carte bilan">
+      <div class="etiquette">📅 Aujourd'hui</div>
+      <div class="ligne-kwh"><span>Produit</span><b id="k-prod">--</b></div>
+      <div class="barre"><i id="b-auto" style="background:var(--soleil);width:0"></i><i id="b-vente" style="background:var(--vente);width:0"></i></div>
+      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>consommé sur place <span id="l-auto"></span></em><em><i class="point" style="background:var(--vente)"></i>revendu <span id="l-vente"></span></em></div>
+      <div class="ligne-kwh"><span>Consommé</span><b id="k-conso">--</b></div>
+      <div class="barre"><i id="b-sol" style="background:var(--soleil);width:0"></i><i id="b-achat" style="background:var(--reseau);width:0"></i></div>
+      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>solaire <span id="l-sol"></span></em><em><i class="point" style="background:var(--reseau)"></i>acheté <span id="l-achat"></span></em></div>
+      <div class="taux">
+        <div><div class="etiquette">Autoconsommation</div><b id="t-auto">--</b></div>
+        <div><div class="etiquette">Autonomie</div><b id="t-autonomie">--</b></div>
+      </div>
+      <div class="cumul">
+        <div>Ce mois-ci : <b id="c-mois">--</b></div>
+        <div>Cette année : <b id="c-annee">--</b> · Depuis l'installation : <b id="c-total">--</b></div>
+      </div>
+    </div>
+    <div class="carte courbe">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="etiquette">📈 La journée en puissance</div>
+        <div class="leg"><span><i class="point" style="background:var(--soleil)"></i>production</span><span><i class="point" style="background:var(--maison)"></i>consommation</span></div>
+      </div>
+      <div class="axe" style="margin-top:.6rem"><span id="echelle"></span><span id="attente"></span></div>
+      <svg id="graphe" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="Production et consommation d'aujourd'hui"></svg>
+      <div class="axe"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+      <div class="etat" id="etat">Connexion…</div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===== Réglages ===== */
+var RAFRAICHIR_MIN = 5;      // la tâche du dépôt récupère les données eStar toutes les 10 min environ
+/* ==================== */
+
+function el(id){ return document.getElementById(id); }
+function puissance(w){
+  if (typeof w !== "number") return '--<small>W</small>';
+  w = Math.abs(w);
+  return w >= 1000 ? (w / 1000).toFixed(2).replace(".", ",") + '<small>kW</small>' : Math.round(w) + '<small>W</small>';
+}
+function kwh(wh, dec){
+  if (typeof wh !== "number") return "--";
+  var v = wh / 1000, d = dec === undefined ? (v >= 100 ? 0 : v >= 10 ? 1 : 2) : dec;
+  if (v >= 1000) return (v / 1000).toFixed(2).replace(".", ",") + '<small>MWh</small>';
+  return v.toFixed(d).replace(".", ",") + '<small>kWh</small>';
+}
+function texteKwh(wh){ return typeof wh === "number" ? (wh / 1000).toFixed(1).replace(".", ",") + " kWh" : ""; }
+function pourcent(a, b){ return (typeof a === "number" && b > 0) ? Math.max(0, Math.min(100, a / b * 100)) : 0; }
+
+function horloge(){
+  el("heure").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function afficher(s){
+  var etat = el("etat");
+  if (!s || !s.disponible) {
+    etat.className = "etat erreur";
+    etat.textContent = s && s.erreur ? "Données eStar indisponibles : " + s.erreur : "Données eStar indisponibles.";
+    return;
+  }
+  var crete = parseFloat(s.puissance_kw) || 0;
+  el("sous").textContent = "Panneaux solaires " + String(s.puissance_kw).replace(".", ",") + " kWc · mesure de " + (s.mesure || "").slice(11, 16);
+
+  /* En direct */
+  el("v-prod").innerHTML = puissance(s.production_w);
+  var pc = pourcent(s.production_w, crete * 1000);
+  el("d-prod").innerHTML = "<b>" + Math.round(pc) + " %</b> de la puissance des panneaux";
+  el("j-prod").style.width = pc.toFixed(1) + "%";
+
+  el("v-conso").innerHTML = puissance(s.consommation_w);
+  var solPart = pourcent(Math.min(s.production_w || 0, s.consommation_w || 0), s.consommation_w);
+  el("d-conso").innerHTML = "<b>" + Math.round(solPart) + " %</b> couverte par le soleil";
+
+  var r = s.reseau_w, carte = el("c-reseau");
+  el("v-reseau").innerHTML = puissance(r);
+  if (typeof r === "number" && r < -5) { carte.className = "carte c-reseau achat"; el("d-reseau").innerHTML = "<b>Achat</b> au réseau"; }
+  else if (typeof r === "number" && r > 5) { carte.className = "carte c-reseau vente"; el("d-reseau").innerHTML = "<b>Revente</b> au réseau"; }
+  else { carte.className = "carte c-reseau"; el("d-reseau").innerHTML = "Équilibre"; }
+
+  /* Aujourd'hui */
+  var j = s.jour || {};
+  el("k-prod").innerHTML = kwh(j.production_wh);
+  el("k-conso").innerHTML = kwh(j.consommation_wh);
+  var pAuto = pourcent(j.autoconsommee_wh, j.production_wh), pVente = pourcent(j.vendue_wh, j.production_wh);
+  el("b-auto").style.width = pAuto.toFixed(1) + "%"; el("b-vente").style.width = pVente.toFixed(1) + "%";
+  el("l-auto").textContent = texteKwh(j.autoconsommee_wh); el("l-vente").textContent = texteKwh(j.vendue_wh);
+  var pSol = pourcent(j.autoconsommee_wh, j.consommation_wh), pAchat = pourcent(j.achetee_wh, j.consommation_wh);
+  el("b-sol").style.width = pSol.toFixed(1) + "%"; el("b-achat").style.width = pAchat.toFixed(1) + "%";
+  el("l-sol").textContent = texteKwh(j.autoconsommee_wh); el("l-achat").textContent = texteKwh(j.achetee_wh);
+  el("t-auto").textContent = Math.round(pAuto) + " %";
+  el("t-autonomie").textContent = Math.round(pSol) + " %";
+
+  el("c-mois").innerHTML = kwh(s.mois_production_wh, 1).replace(/<\/?small>/g, " ");
+  el("c-annee").innerHTML = kwh(s.annee_production_wh, 0).replace(/<\/?small>/g, " ");
+  el("c-total").innerHTML = kwh(s.total_production_wh).replace(/<\/?small>/g, " ");
+
+  etat.className = "etat";
+  etat.textContent = "eStar Power · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/* Courbe de la journée, à partir de l'historique enregistré par la tâche toutes les 10 min */
+function courbe(){
+  var d = new Date(), mois = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2);
+  var minuit = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
+  fetch("historique/solaire-" + mois + ".csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){
+    if (!r.ok) throw new Error("pas encore d'historique");
+    return r.text();
+  }).then(function(txt){
+    var pts = [];
+    txt.trim().split("\n").slice(1).forEach(function(l){
+      var c = l.split(","), ts = +c[0];
+      if (ts >= minuit && ts < minuit + 86400) pts.push({ x: (ts - minuit) / 86400 * 1000, p: parseFloat(c[1]) || 0, c: parseFloat(c[2]) || 0 });
+    });
+    var svg = el("graphe");
+    if (pts.length < 2) { svg.innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
+    el("attente").textContent = "";
+    var max = 500;
+    pts.forEach(function(q){ max = Math.max(max, q.p, q.c); });
+    max = Math.ceil(max / 500) * 500;
+    function Y(v){ return (300 - v / max * 290).toFixed(1); }
+    var aire = "M" + pts[0].x.toFixed(1) + " 300 " + pts.map(function(q){ return "L" + q.x.toFixed(1) + " " + Y(q.p); }).join(" ") + " L" + pts[pts.length - 1].x.toFixed(1) + " 300 Z";
+    var conso = pts.map(function(q, k){ return (k ? "L" : "M") + q.x.toFixed(1) + " " + Y(q.c); }).join(" ");
+    var grille = "";
+    for (var g = 1; g < 4; g++) grille += '<line x1="0" x2="1000" y1="' + (g * 75) + '" y2="' + (g * 75) + '" stroke="#26313a" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+    svg.innerHTML = grille +
+      '<path d="' + aire + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + conso + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+    el("echelle").textContent = "Échelle : " + (max >= 1000 ? (max / 1000).toString().replace(".", ",") + " kW" : max + " W") + " en haut";
+  }).catch(function(){
+    el("graphe").innerHTML = ""; el("attente").textContent = "La courbe se remplit au fil de la journée";
+  });
+}
+
+function charger(){
+  fetch("solaire.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(afficher).catch(function(e){
+    var etat = el("etat"); etat.className = "etat erreur";
+    etat.textContent = "Données indisponibles (" + e.message + "). Nouvel essai dans " + RAFRAICHIR_MIN + " min.";
+  });
+  courbe();
+}
+
+/* Léger décalage périodique pour ménager la dalle de la télé */
+var decalages = [[0,0],[6,4],[-5,6],[4,-5],[-6,-3]], iDec = 0;
+setInterval(function(){
+  iDec = (iDec + 1) % decalages.length;
+  el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
+}, 10 * 60 * 1000);
+
+horloge(); charger();
+setInterval(horloge, 1000);
+setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
+</script>
+</body>
+</html>
