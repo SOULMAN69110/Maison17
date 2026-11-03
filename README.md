@@ -19,9 +19,9 @@ Mis en place le 3 novembre 2026.
 | Pièce | Identifiant | Mesures |
 |---|---|---|
 | Salon (station) | salon | température et humidité intérieures et extérieures |
-| Chambre 1 | chambre-c | température, humidité |
+| Chambre C. | chambre-c | température, humidité |
 | Chambre parents | chambre-parents | température, humidité |
-| Chambre 2 | chambre-y | température, humidité |
+| Chambre Y. | chambre-y | température, humidité |
 | Bureau | bureau | température, humidité |
 | SdB filles | sdb-filles | température |
 | SdB parents | sdb-parents | température |
@@ -53,11 +53,11 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 
 ## Entretien
 
-- **Code d'accès** : les deux pages demandent un code, retenu un an sur chaque appareil (iPhone, navigateur de la télé). Le code n'est pas écrit dans le dépôt, seulement son empreinte dans `verrou.js`, avec la marche à suivre pour le changer. C'est un écran d'accès dissuasif, pas une vraie protection : le dépôt et les mesures restent publics. Les chambres des enfants sont nommées Chambre 1 et Chambre 2.
+- **Code d'accès** : les deux pages demandent un code, retenu un an sur chaque appareil (iPhone, navigateur de la télé). Le code n'est pas écrit dans le dépôt, seulement son empreinte dans `verrou.js`, avec la marche à suivre pour le changer. C'est un écran d'accès dissuasif, pas une vraie protection : le dépôt et les mesures restent publics. Les chambres des enfants sont nommées par leur initiale (Chambre C., Chambre Y.).
 
 - **Si les chiffres se figent** : GitHub met en pause les tâches planifiées d'un dépôt public après 60 jours sans activité. Les enregistrements d'historique comptent normalement comme activité ; sinon, relancer la tâche depuis l'onglet Actions (*Run workflow*).
 - **Ajouter un capteur** : l'ajouter dans `CAPTEURS` dans `index.html` et `historique.html`, et dans `IDS` dans `pages.yml`.
-- **Piles faibles** au 3 novembre 2026 : Chambre parents, Chambre 2, SdB parents.
+- **Piles faibles** au 3 novembre 2026 : Chambre parents, Chambre Y., SdB parents.
 
 ## Historique du projet
 
