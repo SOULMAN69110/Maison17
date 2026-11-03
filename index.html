@@ -70,6 +70,13 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .humid span{color:var(--brume);font-size:.75em}
 .maj{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--brume)}
 .piece.vieux{opacity:.45}
+/* Températures des pièces masquées : "••,•" à la place de la valeur */
+.piece .temp{position:relative}
+.masque .piece .temp,.masque .piece .temp small{color:transparent}
+.masque .piece .temp::after{content:"••,•";position:absolute;left:0;top:0;color:var(--brume)}
+.pieces{cursor:pointer}
+.bascule{align-self:flex-start;font-family:var(--mono);font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.4) calc(var(--u)*1.1);border-radius:99px;border:1px solid var(--trait);background:var(--ardoise);color:var(--craie);cursor:pointer}
+.bascule:hover{border-color:var(--givre)}
 .pied{display:flex;justify-content:space-between;gap:calc(var(--u)*0.6);flex-wrap:wrap}
 .pile{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--alerte)}
 @media (max-width:800px){
@@ -77,14 +84,14 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
 <script src="verrou.js"></script>
 </head>
 <body>
-<main class="ecran" id="ecran">
+<main class="ecran masque" id="ecran">
   <section class="gauche">
     <div>
       <div class="heure" id="heure">--:--</div>
@@ -101,7 +108,10 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="etiquette"><i class="emo">📅</i>Prévisions</div>
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
-    <div class="etat" id="etat">Connexion à Mobile Alerts…</div>
+    <div>
+      <button class="bascule" id="bascule" type="button" aria-pressed="false">👁️ Afficher les températures</button>
+      <div class="etat" id="etat" style="margin-top:calc(var(--u)*0.6)">Connexion à Mobile Alerts…</div>
+    </div>
   </section>
   <section class="pieces" id="pieces"></section>
 </main>
@@ -319,6 +329,16 @@ function decaler(){
   iDec = (iDec + 1) % decalages.length;
   el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
 }
+
+/* Masquer / afficher les températures des pièces (masquées à chaque ouverture) */
+function basculer(){
+  var masque = el("ecran").classList.toggle("masque");
+  var b = el("bascule");
+  b.textContent = masque ? "👁️ Afficher les températures" : "🙈 Masquer les températures";
+  b.setAttribute("aria-pressed", masque ? "false" : "true");
+}
+el("bascule").addEventListener("click", basculer);
+el("pieces").addEventListener("click", basculer);
 
 construire();
 horloge();
