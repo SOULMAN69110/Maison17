@@ -47,8 +47,8 @@ a{color:var(--givre)}
       <div class="sous">Mesures enregistrées depuis le 3 novembre 2026 · <a href="./">Tableau de bord</a> · <a href="energie.html">☀️ Énergie</a> · <a href="bilans.html">📊 Bilans</a></div>
     </div>
     <div class="periodes" role="group" aria-label="Période">
-      <button type="button" id="p-1" data-jours="1" aria-pressed="false">24 h</button>
-      <button type="button" id="p-7" data-jours="7" aria-pressed="true">7 jours</button>
+      <button type="button" id="p-1" data-jours="1" aria-pressed="true">24 h</button>
+      <button type="button" id="p-7" data-jours="7" aria-pressed="false">7 jours</button>
       <button type="button" id="p-30" data-jours="30" aria-pressed="false">30 jours</button>
       <button type="button" id="p-365" data-jours="365" aria-pressed="false">1 an</button>
     </div>
@@ -77,7 +77,7 @@ var SALON = "salon";
 var css = getComputedStyle(document.documentElement);
 var BRUME = css.getPropertyValue("--brume").trim(), TRAIT = css.getPropertyValue("--trait").trim(), GIVRE = css.getPropertyValue("--givre").trim();
 
-var lignes = { mesures: [], pression: [] }, graphiques = {}, jours = 7;
+var lignes = { mesures: [], pression: [] }, graphiques = {}, jours = 1;   // 24 h par défaut
 
 function el(id){ return document.getElementById(id); }
 function fmt(n, d){ return n.toFixed(d === undefined ? 1 : d).replace(".", ","); }
