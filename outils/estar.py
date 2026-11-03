@@ -14,6 +14,8 @@ import hashlib
 import json
 import os
 import sys
+import time
+from datetime import date, timedelta
 import http.client
 import urllib.parse
 from datetime import datetime
@@ -22,6 +24,9 @@ from zoneinfo import ZoneInfo
 STATION = 7054590          # numéro de l'installation (visible dans l'adresse de la page eStar)
 API = "https://monitor.estarpower.com/platform/api/gateway"
 PARIS = ZoneInfo("Europe/Paris")
+MISE_EN_SERVICE = date(2024, 10, 30)   # premier jour de l'installation
+JOURS_PAR_PASSAGE = 150                # rattrapage de l'historique par paquets, pour garder des passages courts
+FICHIER_JOURS = "historique/solaire-jours.csv"
 
 
 def appel(chemin, corps, jeton=None):
@@ -99,6 +104,10 @@ def main(sortie):
             "taux_autoconsommation": nombre(d.get("self_rate")),
         }
         historiser(resultat)
+        try:
+            completer_jours(jeton)
+        except Exception as e:
+            print("eStar : historique par jour non complété :", str(e)[:200])
     except Exception as e:  # on ne bloque jamais la publication du tableau de bord
         resultat["erreur"] = str(e)[:200]
         print("eStar :", resultat["erreur"])
@@ -118,6 +127,69 @@ def bilan_du_jour(d, f):
     conso = auto + achat if auto is not None and achat is not None else None
     return {"production_wh": prod, "consommation_wh": conso, "autoconsommee_wh": auto,
             "achetee_wh": achat, "vendue_wh": vente}
+
+
+def bilan_periode(jeton, mode, quand):
+    """Bilan d'une période : mode 1 = jour (AAAA-MM-JJ), 2 = semaine, 3 = mois, 4 = année (AAAA).
+    Le corps doit être enveloppé dans « body » pour que le mode et la date soient pris en compte."""
+    rep = appel("/pvm-data/data_count_station_real_data",
+                {"body": {"sid": STATION, "mode": mode, "date": quand}, "WAITING_PROMISE": True}, jeton)
+    if str(rep.get("status")) != "0":
+        raise RuntimeError("bilan refusé : " + str(rep.get("message", "")))
+    f = (rep.get("data") or {}).get("reflux_station_data") or {}
+    prod, achat, vente = nombre(f.get("pv_eq_total")), nombre(f.get("meter_b_in_eq")), nombre(f.get("meter_b_out_eq"))
+    auto = nombre(f.get("self_eq"))
+    if auto is None and prod is not None and vente is not None:
+        auto = max(0.0, prod - vente)
+    conso = nombre(f.get("use_eq_total"))
+    return {"debut": f.get("start_date"), "fin": f.get("end_date"), "production_wh": prod, "consommation_wh": conso,
+            "autoconsommee_wh": auto, "achetee_wh": achat, "vendue_wh": vente}
+
+
+def completer_jours(jeton):
+    """historique/solaire-jours.csv : une ligne par jour terminé depuis la mise en service.
+    Rattrape les jours manquants (les plus récents d'abord) et relit les deux derniers jours,
+    dont les chiffres peuvent encore s'ajuster après minuit."""
+    lignes = {}
+    if os.path.exists(FICHIER_JOURS):
+        with open(FICHIER_JOURS, encoding="utf-8") as fh:
+            for ligne in csv.DictReader(fh):
+                lignes[ligne["date"]] = ligne
+    hier = datetime.now(PARIS).date() - timedelta(days=1)
+    a_lire, j = [], hier
+    while j >= MISE_EN_SERVICE:
+        cle = j.isoformat()
+        if cle not in lignes or (hier - j).days < 2 and lignes[cle].get("relu") != "1":
+            a_lire.append(j)
+        j -= timedelta(days=1)
+    a_lire = a_lire[:JOURS_PAR_PASSAGE]
+    for j in a_lire:
+        b = bilan_periode(jeton, 1, j.isoformat())
+        if b["debut"] and b["debut"] != j.isoformat():
+            raise RuntimeError("date inattendue dans la réponse : " + str(b["debut"]))
+        lignes[j.isoformat()] = {
+            "date": j.isoformat(),
+            "production_wh": fmt(b["production_wh"]), "consommation_wh": fmt(b["consommation_wh"]),
+            "autoconsommee_wh": fmt(b["autoconsommee_wh"]), "achetee_wh": fmt(b["achetee_wh"]), "vendue_wh": fmt(b["vendue_wh"]),
+            # relu = 1 : lu au moins deux jours après, chiffres définitifs
+            "relu": "1" if (hier - j).days >= 1 else "0",
+        }
+        time.sleep(0.15)
+    if a_lire:
+        os.makedirs("historique", exist_ok=True)
+        champs = ["date", "production_wh", "consommation_wh", "autoconsommee_wh", "achetee_wh", "vendue_wh", "relu"]
+        with open(FICHIER_JOURS, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=champs, lineterminator="\n")
+            w.writeheader()
+            for cle in sorted(lignes):
+                w.writerow({k: lignes[cle].get(k, "") for k in champs})
+        reste = sum(1 for k in range((hier - MISE_EN_SERVICE).days + 1)
+                    if (MISE_EN_SERVICE + timedelta(days=k)).isoformat() not in lignes)
+        print("eStar : %d jour(s) lus, %d encore à rattraper" % (len(a_lire), reste))
+
+
+def fmt(v):
+    return "" if v is None else ("%.0f" % v)
 
 
 def historiser(r):
