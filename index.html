@@ -179,10 +179,8 @@ function ok(j, source){
   etat.textContent = "Mobile Alerts" + source + " · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 function charger(){
-  direct().then(function(j){ ok(j, ""); })
-    .catch(function(){
-      return relais().then(function(j){ ok(j, " (relais)"); });
-    })
+  /* Mobile Alerts refuse les appels directs depuis un navigateur : on lit la copie publiée par le dépôt */
+  relais().then(function(j){ ok(j, ""); })
     .catch(function(e){
       var etat = el("etat"); etat.className = "etat erreur";
       etat.textContent = "Mesures indisponibles (" + e.message + "). Nouvel essai dans " + RAFRAICHIR_MIN + " min.";
