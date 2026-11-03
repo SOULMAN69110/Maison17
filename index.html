@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maison en direct</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Écran de télé, lu à 3 m : colonne gauche heure + extérieur, grille des pièces à droite. Thème sombre unique pour ménager la dalle. */
+:root{
+  --nuit:#0f1418;        /* fond */
+  --ardoise:#182027;     /* tuiles */
+  --trait:#26313a;       /* séparateurs */
+  --craie:#e8eef2;       /* texte principal */
+  --brume:#8a99a5;       /* texte secondaire */
+  --givre:#7cc4e8;       /* accent : froid / extérieur */
+  --ok:#7fd1a0; --tiede:#f0c36a; --alerte:#f08a6a;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
+.ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:2.2vw;padding:3.2vw 3.4vw;transition:transform 2s ease}
+.gauche{display:flex;flex-direction:column;justify-content:space-between;gap:2vw;min-width:0}
+.heure{font-size:9vw;font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.date{font-size:1.9vw;color:var(--brume);margin-top:1vw;text-transform:capitalize}
+.dehors{border-top:1px solid var(--trait);padding-top:1.6vw}
+.etiquette{font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+.dehors .valeur{font-size:6.4vw;font-weight:600;color:var(--givre);line-height:1;margin-top:.6vw;font-variant-numeric:tabular-nums}
+.dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
+.dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
+.etat{font-family:var(--mono);font-size:.9vw;color:var(--brume)}
+.etat.erreur{color:var(--alerte)}
+.pieces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:1.2vw;min-width:0}
+.piece{background:var(--ardoise);border-radius:1vw;padding:1.4vw 1.6vw;display:flex;flex-direction:column;justify-content:space-between;gap:.6vw;position:relative;min-width:0}
+.piece.principale{grid-column:span 2}
+.piece h2{margin:0;font-size:1.6vw;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.temp{font-size:4.6vw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.principale .temp{font-size:6vw}
+.temp small{font-size:.45em;font-weight:400;color:var(--brume);margin-left:.08em}
+.bas{display:flex;align-items:center;justify-content:space-between;gap:.8vw;flex-wrap:wrap}
+.pastille{font-family:var(--mono);font-size:.95vw;padding:.25vw .7vw;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.p-froid{color:var(--givre)} .p-ok{color:var(--ok)} .p-tiede{color:var(--tiede)} .p-alerte{color:var(--alerte)} .p-gris{color:var(--brume)}
+.humid{font-size:1.5vw;color:var(--craie);font-variant-numeric:tabular-nums}
+.humid span{color:var(--brume);font-size:.75em}
+.maj{font-family:var(--mono);font-size:.85vw;color:var(--brume)}
+.piece.vieux{opacity:.45}
+.pile{position:absolute;top:1.2vw;right:1.4vw;font-family:var(--mono);font-size:.85vw;color:var(--alerte)}
+@media (max-width:800px){
+  body{overflow:auto}
+  .ecran{grid-template-columns:1fr;height:auto;padding:16px}
+  .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
+  .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.humid{font-size:4vw}
+}
+@media (prefers-reduced-motion:reduce){.ecran{transition:none}}
+</style>
+</head>
+<body>
+<main class="ecran" id="ecran">
+  <section class="gauche">
+    <div>
+      <div class="heure" id="heure">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="dehors">
+      <div class="etiquette">Dehors</div>
+      <div class="valeur" id="ext-t">--<small>°C</small></div>
+      <div class="hum" id="ext-h">Humidité --</div>
+    </div>
+    <div class="etat" id="etat">Connexion à Mobile Alerts…</div>
+  </section>
+  <section class="pieces" id="pieces"></section>
+</main>
+
+<script>
+/* ===== Réglages : tu peux modifier les noms et l'ordre ici ===== */
+var CAPTEURS = [
+  { id: "077BD6BA8BF6", nom: "Salon", principale: true, exterieur: true },
+  { id: "121D9CDE1215", nom: "Chambre Claire" },
+  { id: "121B8C435713", nom: "Chambre parents" },
+  { id: "122897FF614E", nom: "Chambre Yaël" },
+  { id: "1224E7AD1BFA", nom: "Capteur à nommer" },
+  { id: "202D151D9A21", nom: "SdB filles", sdb: true },
+  { id: "02129E969BF2", nom: "SdB parents", sdb: true }
+];
+var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
+var RAFRAICHIR_MIN = 7;     // Mobile Alerts met à jour environ toutes les 7 min
+var VIEUX_MIN = 45;         // au-delà, la tuile est grisée
+/* =============================================================== */
+
+function el(id){ return document.getElementById(id); }
+function fmt(n){ return (Math.round(n * 10) / 10).toFixed(1).replace(".", ","); }
+
+function horloge(){
+  var d = new Date();
+  el("heure").textContent = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  el("date").textContent = d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function pastilleTemp(t, sdb){
+  var bas = sdb ? 19 : 18, haut = sdb ? 24 : 22.5;
+  if (t < bas - 2) return ["p-froid", "Froid"];
+  if (t < bas) return ["p-froid", "Frais"];
+  if (t <= haut) return ["p-ok", "Confort"];
+  if (t <= haut + 2) return ["p-tiede", "Chaud"];
+  return ["p-alerte", "Très chaud"];
+}
+function humTexte(h){
+  if (h < 35) return " · sec";
+  if (h > 65) return " · humide";
+  return "";
+}
+
+function construire(){
+  var html = "";
+  CAPTEURS.forEach(function(c){
+    html += '<article class="piece' + (c.principale ? " principale" : "") + '" id="p-' + c.id + '">' +
+      '<span class="pile" hidden>Pile faible</span>' +
+      '<h2>' + c.nom + '</h2>' +
+      '<div class="temp">--<small>°C</small></div>' +
+      '<div class="bas"><span class="pastille p-gris">En attente</span><span class="humid"></span></div>' +
+      '<div class="maj"></div>' +
+    '</article>';
+  });
+  el("pieces").innerHTML = html;
+}
+
+function afficher(appareils){
+  var parId = {};
+  appareils.forEach(function(a){ parId[String(a.deviceid).toUpperCase()] = a; });
+  var maintenant = Date.now() / 1000;
+
+  CAPTEURS.forEach(function(c){
+    var tuile = el("p-" + c.id), a = parId[c.id];
+    if (!tuile) return;
+    var m = a && a.measurement;
+    if (!m || typeof m.t1 !== "number") {
+      tuile.querySelector(".pastille").className = "pastille p-gris";
+      tuile.querySelector(".pastille").textContent = "Pas de donnée";
+      return;
+    }
+    tuile.querySelector(".temp").innerHTML = fmt(m.t1) + "<small>°C</small>";
+    var p = pastilleTemp(m.t1, c.sdb);
+    var pas = tuile.querySelector(".pastille");
+    pas.className = "pastille " + p[0]; pas.textContent = p[1];
+    tuile.querySelector(".humid").innerHTML = (typeof m.h === "number") ? Math.round(m.h) + "<span>% hum." + humTexte(m.h) + "</span>" : "";
+    var ts = m.ts || a.lastseen || 0;
+    var age = Math.max(0, Math.round((maintenant - ts) / 60));
+    tuile.querySelector(".maj").textContent = ts ? (age < 1 ? "à l'instant" : "il y a " + age + " min") : "";
+    tuile.classList.toggle("vieux", ts && age > VIEUX_MIN);
+    tuile.querySelector(".pile").hidden = !(a.lowbattery || m.lb);
+
+    if (c.exterieur && typeof m.t2 === "number") {
+      el("ext-t").innerHTML = fmt(m.t2) + "<small>°C</small>";
+      el("ext-h").textContent = (typeof m.h2 === "number") ? "Humidité " + Math.round(m.h2) + " %" : "";
+    }
+  });
+}
+
+function lireJson(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
+function valider(j){ if (!j || !j.devices) throw new Error("réponse inattendue"); return j; }
+function direct(){
+  var corps = "deviceids=" + encodeURIComponent(CAPTEURS.map(function(c){ return c.id; }).join(","));
+  return fetch(API, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: corps })
+    .then(lireJson).then(valider);
+}
+/* Secours : copie des mesures déposée par la tâche automatique du dépôt */
+function relais(){
+  return fetch("data.json?t=" + Date.now(), { cache: "no-store" }).then(lireJson).then(valider);
+}
+function ok(j, source){
+  afficher(j.devices);
+  var etat = el("etat"); etat.className = "etat";
+  etat.textContent = "Mobile Alerts" + source + " · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+function charger(){
+  direct().then(function(j){ ok(j, ""); })
+    .catch(function(){
+      return relais().then(function(j){ ok(j, " (relais)"); });
+    })
+    .catch(function(e){
+      var etat = el("etat"); etat.className = "etat erreur";
+      etat.textContent = "Mesures indisponibles (" + e.message + "). Nouvel essai dans " + RAFRAICHIR_MIN + " min.";
+    });
+}
+
+/* Léger décalage périodique pour éviter le marquage de l'écran */
+var decalages = [[0,0],[6,4],[-5,6],[4,-5],[-6,-3]], iDec = 0;
+function decaler(){
+  iDec = (iDec + 1) % decalages.length;
+  el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
+}
+
+construire();
+horloge();
+charger();
+setInterval(horloge, 1000);
+setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
+setInterval(decaler, 10 * 60 * 1000);
+</script>
+</body>
+</html>
