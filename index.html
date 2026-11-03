@@ -33,6 +33,17 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .dehors .valeur{font-size:6.4vw;font-weight:600;color:var(--givre);line-height:1;margin-top:.6vw;font-variant-numeric:tabular-nums}
 .dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
 .dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
+.pression{font-size:1.5vw;color:var(--brume);margin-top:.5vw;font-variant-numeric:tabular-nums}
+.pression b{color:var(--craie);font-weight:600}
+.meteo{background:transparent;border:1px solid var(--trait)}
+.meteo h2{font-size:1.2vw;font-family:var(--mono);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+.jours{display:flex;flex-direction:column;gap:.55vw;flex:1;justify-content:center}
+.jour{display:grid;grid-template-columns:4.2vw minmax(0,1fr) auto;align-items:baseline;gap:.6vw;font-size:1.25vw}
+.jour .j{color:var(--brume);text-transform:capitalize}
+.jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jour .mm{font-variant-numeric:tabular-nums;white-space:nowrap}
+.jour .mm span{color:var(--brume)}
+.jour .pl{color:var(--givre);font-family:var(--mono);font-size:.8em;margin-left:.4vw}
 .etat{font-family:var(--mono);font-size:.9vw;color:var(--brume)}
 .etat.erreur{color:var(--alerte)}
 .pieces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:1.2vw;min-width:0}
@@ -55,7 +66,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression,.meteo h2{font-size:3.6vw}.jour{font-size:3.6vw;grid-template-columns:12vw minmax(0,1fr) auto}.meteo{grid-column:1 / -1}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -71,6 +82,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="etiquette">Dehors</div>
       <div class="valeur" id="ext-t">--<small>°C</small></div>
       <div class="hum" id="ext-h">Humidité --</div>
+      <div class="pression" id="pression"></div>
     </div>
     <div class="etat" id="etat">Connexion à Mobile Alerts…</div>
   </section>
@@ -90,7 +102,8 @@ var CAPTEURS = [
 ];
 var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
 var RAFRAICHIR_MIN = 7;     // Mobile Alerts met à jour environ toutes les 7 min
-var VIEUX_MIN = 45;         // au-delà, la tuile est grisée
+var VIEUX_MIN = 45;
+var LIEU = { lat: 45.734, lon: 4.802 };   // Sainte-Foy-lès-Lyon (69110)         // au-delà, la tuile est grisée
 /* =============================================================== */
 
 function el(id){ return document.getElementById(id); }
@@ -127,6 +140,7 @@ function construire(){
       '<div class="maj"></div>' +
     '</article>';
   });
+  html += '<article class="piece meteo"><h2>Prévisions</h2><div class="jours" id="jours"><div class="maj">Chargement…</div></div></article>';
   el("pieces").innerHTML = html;
 }
 
@@ -187,6 +201,50 @@ function charger(){
     });
 }
 
+/* ===== Météo (Open-Meteo, gratuit, sans clé) ===== */
+function ciel(code){
+  if (code === 0) return "Ensoleillé";
+  if (code <= 2) return "Éclaircies";
+  if (code === 3) return "Couvert";
+  if (code === 45 || code === 48) return "Brouillard";
+  if (code >= 51 && code <= 57) return "Bruine";
+  if (code >= 61 && code <= 67) return "Pluie";
+  if (code >= 71 && code <= 77) return "Neige";
+  if (code >= 80 && code <= 82) return "Averses";
+  if (code === 85 || code === 86) return "Averses de neige";
+  if (code >= 95) return "Orage";
+  return "—";
+}
+function meteo(){
+  var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
+    "&current=pressure_msl&hourly=pressure_msl&past_days=1&forecast_days=4" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
+  fetch(url).then(lireJson).then(function(m){
+    /* Pression et tendance sur 3 h */
+    var p = m.current && m.current.pressure_msl;
+    if (typeof p === "number") {
+      var heures = m.hourly.time, i = heures.indexOf(m.current.time.slice(0, 13) + ":00"), tendance = "";
+      if (i >= 3) {
+        var d = p - m.hourly.pressure_msl[i - 3];
+        tendance = d >= 1 ? " ↗ en hausse" : d <= -1 ? " ↘ en baisse" : " → stable";
+      }
+      el("pression").innerHTML = "Pression <b>" + Math.round(p) + " hPa</b>" + tendance;
+    }
+    /* Aujourd'hui + 3 jours */
+    var dj = m.daily, html = "";
+    for (var k = 0; k < dj.time.length && k < 4; k++) {
+      var nom = k === 0 ? "Auj." : new Date(dj.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
+      var pl = dj.precipitation_probability_max[k];
+      html += '<div class="jour"><span class="j">' + nom + '</span><span class="ciel">' + ciel(dj.weather_code[k]) + '</span>' +
+        '<span class="mm"><span>' + Math.round(dj.temperature_2m_min[k]) + '°</span> ' + Math.round(dj.temperature_2m_max[k]) + '°' +
+        (pl >= 20 ? '<span class="pl">' + pl + '%</span>' : '') + '</span></div>';
+    }
+    el("jours").innerHTML = html;
+  }).catch(function(){
+    el("jours").innerHTML = '<div class="maj">Prévisions indisponibles, nouvel essai dans 30 min.</div>';
+  });
+}
+
 /* Léger décalage périodique pour éviter le marquage de l'écran */
 var decalages = [[0,0],[6,4],[-5,6],[4,-5],[-6,-3]], iDec = 0;
 function decaler(){
@@ -197,6 +255,8 @@ function decaler(){
 construire();
 horloge();
 charger();
+meteo();
+setInterval(meteo, 30 * 60 * 1000);
 setInterval(horloge, 1000);
 setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
 setInterval(decaler, 10 * 60 * 1000);
