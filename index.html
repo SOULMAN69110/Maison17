@@ -10,6 +10,7 @@
 <style>
 /* Écran de télé, lu à 3 m : colonne gauche heure + extérieur, grille des pièces à droite. Thème sombre unique pour ménager la dalle. */
 :root{
+  --u:min(1vw,1.7778vh);   /* unité qui tient compte de la hauteur : tout rentre aussi sur un écran plus allongé (iPhone à l'horizontale) */
   --nuit:#0f1418;        /* fond */
   --ardoise:#182027;     /* tuiles */
   --trait:#26313a;       /* séparateurs */
@@ -24,56 +25,59 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
-.ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:2.2vw;padding:3.2vw 3.4vw;transition:transform 2s ease}
-.gauche{display:flex;flex-direction:column;justify-content:space-between;gap:1.4vw;min-width:0}
-.heure{font-size:7.6vw;font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
-.date{font-size:1.9vw;color:var(--brume);margin-top:1vw;text-transform:capitalize}
-.dehors{border-top:1px solid var(--trait);padding-top:1.6vw}
-.etiquette{font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
-.dehors .ligne{display:flex;align-items:center;gap:1.2vw;margin-top:.6vw}
-.dehors .valeur{font-size:5.4vw;font-weight:600;color:var(--givre);line-height:1;font-variant-numeric:tabular-nums}
-.dehors .ciel-act{font-size:4.6vw;line-height:1}
+.ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:calc(var(--u)*2.2);padding:calc(var(--u)*3.2) calc(var(--u)*3.4);transition:transform 2s ease}
+.gauche{display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*1);min-width:0}
+.heure{font-size:calc(var(--u)*6.6);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.date{font-size:calc(var(--u)*1.7);color:var(--brume);margin-top:calc(var(--u)*0.6);text-transform:capitalize}
+.dehors{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
+.etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+.dehors .ligne{display:flex;align-items:center;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*0.6)}
+.dehors .valeur{font-size:calc(var(--u)*4.6);font-weight:600;color:var(--givre);line-height:1;font-variant-numeric:tabular-nums}
+.dehors .ciel-act{font-size:calc(var(--u)*3.9);line-height:1}
 .emo{font-style:normal;margin-right:.35em}
 .dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
-.dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
-.pression{font-size:1.5vw;color:var(--brume);margin-top:.5vw;font-variant-numeric:tabular-nums}
+.dehors .hum{font-size:calc(var(--u)*1.8);color:var(--craie);margin-top:calc(var(--u)*0.5)}
+.pression{font-size:calc(var(--u)*1.5);color:var(--brume);margin-top:calc(var(--u)*0.5);font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
-.tendance{margin-top:.7vw}
-.tendance svg{display:block;width:100%;height:4.2vw;overflow:visible}
-.tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.8vw;color:var(--brume);margin-top:.3vw}
-.previsions{border-top:1px solid var(--trait);padding-top:1.4vw}
-.jours{display:flex;flex-direction:column;gap:.5vw;margin-top:.8vw}
-.jour{display:grid;grid-template-columns:4.6vw 2.2vw minmax(0,1fr) auto;align-items:baseline;gap:.8vw;font-size:1.45vw}
+.tendance{margin-top:calc(var(--u)*1.1)}
+.tendance svg{display:block;width:100%;height:calc(var(--u)*3.8);overflow:visible}
+.tendance .graphe{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(var(--u)*0.6);align-items:stretch}
+.tendance .echelle{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);line-height:1;font-variant-numeric:tabular-nums}
+.tendance .echelle.g{text-align:right}
+.tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);margin-top:calc(var(--u)*0.6)}
+.previsions{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
+.jours{display:flex;flex-direction:column;gap:calc(var(--u)*0.25);margin-top:calc(var(--u)*0.6)}
+.jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.3)}
 .jour .j{color:var(--brume);text-transform:capitalize}
 .jour .ico{text-align:center}
 .jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jour .mm{font-variant-numeric:tabular-nums;white-space:nowrap}
 .jour .mm span{color:var(--brume)}
-.jour .pl{color:var(--givre);font-family:var(--mono);font-size:.8em;margin-left:.4vw}
-.etat{font-family:var(--mono);font-size:.9vw;color:var(--brume)}
+.jour .pl{color:var(--givre);font-family:var(--mono);font-size:.8em;margin-left:calc(var(--u)*0.4)}
+.etat{font-family:var(--mono);font-size:calc(var(--u)*0.9);color:var(--brume)}
 .etat.erreur{color:var(--alerte)}
-.pieces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:1.2vw;min-width:0}
-.piece{background:var(--ardoise);border-radius:1vw;padding:1.4vw 1.6vw;display:flex;flex-direction:column;justify-content:space-between;gap:.6vw;position:relative;min-width:0}
+.pieces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:calc(var(--u)*1.2);min-width:0}
+.piece{background:var(--ardoise);border-radius:calc(var(--u)*1);padding:calc(var(--u)*1.4) calc(var(--u)*1.6);display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*0.6);position:relative;min-width:0}
 .piece.principale{grid-column:span 2}
-.piece h2{margin:0;font-size:1.45vw;font-weight:600;line-height:1.15}
-.temp{font-size:4vw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.principale .temp{font-size:5.6vw}
+.piece h2{margin:0;font-size:calc(var(--u)*1.45);font-weight:600;line-height:1.15}
+.temp{font-size:calc(var(--u)*4);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.principale .temp{font-size:calc(var(--u)*5.6)}
 .temp small{font-size:.45em;font-weight:400;color:var(--brume);margin-left:.08em}
-.bas{display:flex;align-items:center;justify-content:space-between;gap:.8vw;flex-wrap:wrap}
-.pastille{font-family:var(--mono);font-size:.95vw;padding:.25vw .7vw;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.bas{display:flex;align-items:center;justify-content:space-between;gap:calc(var(--u)*0.8);flex-wrap:wrap}
+.pastille{font-family:var(--mono);font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.25) calc(var(--u)*0.7);border-radius:99px;border:1px solid currentColor;white-space:nowrap}
 .p-froid{color:var(--givre)} .p-ok{color:var(--ok)} .p-tiede{color:var(--tiede)} .p-alerte{color:var(--alerte)} .p-gris{color:var(--brume)}
-.humid{font-size:1.5vw;color:var(--craie);font-variant-numeric:tabular-nums}
+.humid{font-size:calc(var(--u)*1.5);color:var(--craie);font-variant-numeric:tabular-nums}
 .humid span{color:var(--brume);font-size:.75em}
-.maj{font-family:var(--mono);font-size:.85vw;color:var(--brume)}
+.maj{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--brume)}
 .piece.vieux{opacity:.45}
-.pied{display:flex;justify-content:space-between;gap:.6vw;flex-wrap:wrap}
-.pile{font-family:var(--mono);font-size:.85vw;color:var(--alerte)}
+.pied{display:flex;justify-content:space-between;gap:calc(var(--u)*0.6);flex-wrap:wrap}
+.pile{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--alerte)}
 @media (max-width:800px){
   body{overflow:auto}
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -115,6 +119,7 @@ var CAPTEURS = [
 var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
 var RAFRAICHIR_MIN = 7;     // Mobile Alerts met à jour environ toutes les 7 min
 var VIEUX_MIN = 45;
+var JOURS_PREVISION = 7;   // aujourd'hui + 6 jours (Open-Meteo va jusqu'à 16)
 var LIEU = { lat: 45.734, lon: 4.802 };   // Sainte-Foy-lès-Lyon (69110)         // au-delà, la tuile est grisée
 /* =============================================================== */
 
@@ -268,13 +273,16 @@ function courbePression(m){
     (passe.length > 1 ? '<path d="' + trace(passe) + '" fill="none" stroke="var(--givre)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' : '') +
     (futur.length > 1 ? '<path d="' + trace(futur) + '" fill="none" stroke="var(--givre)" stroke-width="2" stroke-dasharray="4 4" opacity=".55" vector-effect="non-scaling-stroke"/>' : '') +
     '</svg>';
-  el("tendance").innerHTML = '<div style="position:relative">' + svg +
-    '<span style="position:absolute;left:' + (hx / 23 * 100).toFixed(1) + '%;top:' + (Y(yn) / H * 100).toFixed(1) + '%;width:.8vw;height:.8vw;min-width:8px;min-height:8px;border-radius:50%;background:var(--craie);transform:translate(-50%,-50%)"></span></div>' +
-    '<div class="axe"><span>0 h</span><span>min ' + Math.round(mini) + ' · max ' + Math.round(maxi) + ' hPa</span><span>24 h</span></div>';
+  var ech = '<span>' + Math.round(haut) + '</span><span>' + Math.round(milieu) + '</span><span>' + Math.round(bas) + '</span>';
+  el("tendance").innerHTML = '<div class="graphe"><div class="echelle g">' + ech + '</div>' +
+    '<div style="position:relative">' + svg +
+    '<span style="position:absolute;left:' + (hx / 23 * 100).toFixed(1) + '%;top:' + (Y(yn) / H * 100).toFixed(1) + '%;width:calc(var(--u)*0.8);height:calc(var(--u)*0.8);min-width:8px;min-height:8px;border-radius:50%;background:var(--craie);transform:translate(-50%,-50%)"></span></div>' +
+    '<div class="echelle">' + ech + '</div></div>' +
+    '<div class="axe"><span>0 h</span><span>hPa · min ' + Math.round(mini) + ' · max ' + Math.round(maxi) + '</span><span>24 h</span></div>';
 }
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl,weather_code,is_day&hourly=pressure_msl&past_days=1&forecast_days=4" +
+    "&current=pressure_msl,weather_code,is_day&hourly=pressure_msl&past_days=1&forecast_days=" + JOURS_PREVISION + "" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   fetch(url).then(lireJson).then(function(m){
     /* Pression et tendance sur 3 h */
@@ -289,9 +297,9 @@ function meteo(){
     }
     courbePression(m);
     if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
-    /* Aujourd'hui + 3 jours */
+    /* Aujourd'hui + les jours suivants */
     var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
-    for (var k = auj; k < dj.time.length && k < auj + 4; k++) {
+    for (var k = auj; k < dj.time.length && k < auj + JOURS_PREVISION; k++) {
       var nom = k === auj ? "Auj." : new Date(dj.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
       var pl = dj.precipitation_probability_max[k];
       html += '<div class="jour"><span class="j">' + nom + '</span><span class="ico">' + emoji(dj.weather_code[k]) + '</span><span class="ciel">' + ciel(dj.weather_code[k]) + '</span>' +
