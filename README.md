@@ -14,6 +14,8 @@ Mis en place le 3 novembre 2026.
 
 **Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.
 
+**Directement sur la télé Samsung** (application Internet) : ouvrir `soulman69110.github.io/Maison17`, saisir le code, puis Paramètres (roue dentée) → *Définir comme page d'accueil* → *Page actuelle* : lancer Internet ouvre alors le tableau de bord. On peut aussi l'ajouter aux favoris (étoile). Pour un affichage permanent, vérifier l'arrêt automatique de la télé (Paramètres → Général → Solution Éco → Arrêt automatique). Les intitulés peuvent varier selon la version du logiciel de la télé.
+
 ## Capteurs Mobile Alerts
 
 | Pièce | Identifiant | Mesures |
