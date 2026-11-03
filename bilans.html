@@ -106,6 +106,7 @@ h1{margin:0;font-size:3rem;font-weight:700;letter-spacing:-.02em;line-height:1}
 }
 </style>
 <script src="verrou.js"></script>
+<script src="maj.js"></script>
 </head>
 <body>
 <main class="ecran">
@@ -186,7 +187,8 @@ function kwh(wh, dec){
   if (v >= 1000) return (v / 1000).toFixed(2).replace(".", ",") + " MWh";
   return v.toFixed(dec === undefined ? (v >= 100 ? 0 : 1) : dec).replace(".", ",") + " kWh";
 }
-function grand(wh){ var t = kwh(wh); var i = t.lastIndexOf(" "); return i < 0 ? t : t.slice(0, i) + "<small>" + t.slice(i + 1) + "</small>"; }
+function kwhFin(wh){ return wh !== null && wh !== undefined && wh < 1e6 ? kwh(wh, 1) : kwh(wh); }   // une décimale sous 1 000 kWh
+function grand(wh){ var t = kwhFin(wh); var i = t.lastIndexOf(" "); return i < 0 ? t : t.slice(0, i) + "<small>" + t.slice(i + 1) + "</small>"; }
 function somme(debut, fin, jusqua){   // fin exclue ; jusqua : ne compter que les jours avant cette date
   var s = 0, n = 0;
   for (var d = debut; d < fin; d = ajoute(d, 1)) {
@@ -253,7 +255,12 @@ function barres(items, couleur){
   }).join("");
 }
 
-function pct(p){ var v = Math.round(p); return (v > 0 ? "+" : "") + (v === 0 ? 0 : v) + " %"; }
+/* Écart en % : une décimale sous 10 %, pour ne pas afficher « 0 % » quand deux valeurs sont proches mais différentes */
+function pct(p){
+  var a = Math.abs(p), v = a < 10 ? Math.round(p * 10) / 10 : Math.round(p);
+  var t = (a < 10 ? Math.abs(v).toFixed(1) : String(Math.abs(v))).replace(".", ",");
+  return (v > 0 ? "+" : v < 0 ? "-" : "") + t + " %";
+}
 /* ===== Infobulles ===== */
 var dernierItems = [];
 function montrerBulle(cible){
@@ -291,7 +298,7 @@ function ecartTexte(n, n1){
 function cote(titre, n, lignes, ecartN, ecartN1, note){
   el("titre-total").textContent = titre;
   el("total").innerHTML = grand(n);
-  el("comp").innerHTML = lignes.map(function(l){ return '<div class="ligne"><span>' + l[0] + '</span><b>' + kwh(l[1]) + '</b></div>'; }).join("") + ecartTexte(ecartN, ecartN1);
+  el("comp").innerHTML = lignes.map(function(l){ return '<div class="ligne"><span>' + l[0] + '</span><b>' + kwhFin(l[1]) + '</b></div>'; }).join("") + ecartTexte(ecartN, ecartN1);
   el("note").textContent = note || "";
 }
 
