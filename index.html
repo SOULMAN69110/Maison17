@@ -70,11 +70,19 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .humid span{color:var(--brume);font-size:.75em}
 .maj{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--brume)}
 .piece.vieux{opacity:.45}
-/* Températures des pièces masquées : "••,•" à la place de la valeur */
-.piece .temp{position:relative}
-.masque .piece .temp,.masque .piece .temp small{color:transparent}
-.masque .piece .temp::after{content:"••,•";position:absolute;left:0;top:0;color:var(--brume)}
-.pieces{cursor:pointer}
+/* Volet roulant qui couvre toute la partie intérieure ; fermé par défaut */
+.zone{position:relative;min-width:0;overflow:hidden;border-radius:calc(var(--u)*1)}
+.zone .pieces{height:100%}
+.volet{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*1);
+  border-radius:calc(var(--u)*1);cursor:pointer;color:var(--craie);text-align:center;
+  background:repeating-linear-gradient(180deg,#1b242c 0,#1b242c calc(var(--u)*3.4),#141b21 calc(var(--u)*3.4),#141b21 calc(var(--u)*3.6));
+  transition:transform .8s cubic-bezier(.6,0,.3,1),visibility 0s linear 0s}
+.volet .grand{font-size:calc(var(--u)*6);line-height:1}
+.volet .titre{font-size:calc(var(--u)*2.6);font-weight:600}
+.volet .aide{font-family:var(--mono);font-size:calc(var(--u)*1);letter-spacing:.12em;text-transform:uppercase;color:var(--brume)}
+.volet .poignee{position:absolute;bottom:calc(var(--u)*1.2);width:calc(var(--u)*8);height:calc(var(--u)*0.5);border-radius:99px;background:var(--trait)}
+.ouvert .volet{transform:translateY(-101%);visibility:hidden;transition:transform .8s cubic-bezier(.6,0,.3,1),visibility 0s linear .8s}
+.ferme .pieces{visibility:hidden}
 .bascule{align-self:flex-start;font-family:var(--mono);font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.4) calc(var(--u)*1.1);border-radius:99px;border:1px solid var(--trait);background:var(--ardoise);color:var(--craie);cursor:pointer}
 .bascule:hover{border-color:var(--givre)}
 .pied{display:flex;justify-content:space-between;gap:calc(var(--u)*0.6);flex-wrap:wrap}
@@ -86,12 +94,12 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
   .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
-@media (prefers-reduced-motion:reduce){.ecran{transition:none}}
+@media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 </style>
 <script src="verrou.js"></script>
 </head>
 <body>
-<main class="ecran masque" id="ecran">
+<main class="ecran" id="ecran">
   <section class="gauche">
     <div>
       <div class="heure" id="heure">--:--</div>
@@ -109,11 +117,19 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
     <div>
-      <button class="bascule" id="bascule" type="button" aria-pressed="false">👁️ Afficher les températures</button>
+      <button class="bascule" id="bascule" type="button" aria-pressed="false">🏠 Ouvrir le volet</button>
       <div class="etat" id="etat" style="margin-top:calc(var(--u)*0.6)">Connexion à Mobile Alerts…</div>
     </div>
   </section>
-  <section class="pieces" id="pieces"></section>
+  <section class="zone ferme" id="zone">
+    <div class="pieces" id="pieces"></div>
+    <div class="volet" id="volet" role="button" tabindex="0" aria-label="Ouvrir le volet des températures intérieures">
+      <div class="grand">🏠</div>
+      <div class="titre">Intérieur</div>
+      <div class="aide">Toucher pour afficher les températures</div>
+      <div class="poignee"></div>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -330,15 +346,26 @@ function decaler(){
   el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
 }
 
-/* Masquer / afficher les températures des pièces (masquées à chaque ouverture) */
-function basculer(){
-  var masque = el("ecran").classList.toggle("masque");
+/* Volet de la partie intérieure : fermé à chaque ouverture de la page */
+var minuteurVolet = null;
+function volet(ouvrir){
+  var z = el("zone");
+  clearTimeout(minuteurVolet);
+  if (ouvrir) {
+    z.classList.remove("ferme"); z.classList.add("ouvert");
+  } else {
+    z.classList.remove("ouvert");
+    minuteurVolet = setTimeout(function(){ z.classList.add("ferme"); }, 800);   // on cache les tuiles une fois le volet redescendu
+  }
   var b = el("bascule");
-  b.textContent = masque ? "👁️ Afficher les températures" : "🙈 Masquer les températures";
-  b.setAttribute("aria-pressed", masque ? "false" : "true");
+  b.textContent = ouvrir ? "🔽 Fermer le volet" : "🏠 Ouvrir le volet";
+  b.setAttribute("aria-pressed", ouvrir ? "true" : "false");
 }
-el("bascule").addEventListener("click", basculer);
-el("pieces").addEventListener("click", basculer);
+function voletOuvert(){ return el("zone").classList.contains("ouvert"); }
+el("bascule").addEventListener("click", function(){ volet(!voletOuvert()); });
+el("volet").addEventListener("click", function(){ volet(true); });
+el("volet").addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); volet(true); } });
+el("pieces").addEventListener("click", function(){ volet(false); });
 
 construire();
 horloge();
