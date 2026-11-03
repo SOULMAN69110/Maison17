@@ -214,15 +214,48 @@ function charger(){
       jours[c[0]] = o;
     }
     var s = res[1];
+    var trous = estimerTrous();
     if (s && s.disponible && s.jour) jours[cle(aujourdhui())] = s.jour;   // aujourd'hui, en cours
     var n = Object.keys(jours).length;
     el("etat").className = "etat";
-    el("etat").textContent = n + " jours d'historique · mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    el("etat").textContent = n + " jours d'historique" + (trous ? " (dont " + trous + " estimés)" : "") + " · mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     dessiner();
   }).catch(function(e){
     el("etat").className = "etat erreur";
     el("etat").textContent = "Historique indisponible (" + e.message + "). Il se constitue dans l'heure qui suit la mise en place.";
   });
+}
+
+/* ===== Jours sans mesure (panne du suivi eStar) : estimés, jamais modifiés dans les données brutes =====
+   Un jour terminé sans production et avec moins de 0,5 kWh consommé n'est pas réaliste pour une maison habitée :
+   c'est une panne du suivi. Chaque mesure y est estimée par la moyenne des 7 jours valides avant et des 7 après. */
+var CHAMPS = ["production_wh", "consommation_wh", "autoconsommee_wh", "achetee_wh", "vendue_wh"];
+function estimerTrous(){
+  var aujC = cle(aujourdhui()), cles = Object.keys(jours).filter(function(k){ return k < aujC; }).sort();
+  function valide(k){ var j = jours[k]; return j && ((j.production_wh || 0) > 0 || (j.consommation_wh || 0) >= 500); }
+  var nb = 0;
+  for (var i = 0; i < cles.length; i++) {
+    if (valide(cles[i])) continue;
+    var fin = i; while (fin + 1 < cles.length && !valide(cles[fin + 1])) fin++;
+    var voisins = [];
+    for (var a = i - 1; a >= 0 && voisins.length < 7; a--) if (valide(cles[a])) voisins.push(jours[cles[a]]);
+    var apres = 0;
+    for (var b = fin + 1; b < cles.length && apres < 7; b++) if (valide(cles[b])) { voisins.push(jours[cles[b]]); apres++; }
+    if (voisins.length) {
+      var moy = {};
+      CHAMPS.forEach(function(c){ var t = 0, n = 0; voisins.forEach(function(v){ if (typeof v[c] === "number") { t += v[c]; n++; } }); moy[c] = n ? t / n : null; });
+      for (var k = i; k <= fin; k++) { var o = { estime: true }; CHAMPS.forEach(function(c){ o[c] = moy[c]; }); jours[cles[k]] = o; nb++; }
+    }
+    i = fin;
+  }
+  return nb;
+}
+function nbEstimes(debut, fin){ var n = 0; for (var d = debut; d < fin; d = ajoute(d, 1)) { var j = jours[cle(d)]; if (j && j.estime) n++; } return n; }
+function texteEstimes(nN, nN1){
+  var t = [];
+  if (nN) t.push(nN + " jour" + (nN > 1 ? "s" : "") + " estimé" + (nN > 1 ? "s" : "") + " sur la période");
+  if (nN1) t.push(nN1 + " jour" + (nN1 > 1 ? "s" : "") + " estimé" + (nN1 > 1 ? "s" : "") + " en N-1");
+  return t.length ? "Hachuré : " + t.join(", ") + " (panne du suivi eStar, moyenne des jours voisins)." : "";
 }
 
 /* ===== Dessin des barres N et N-1 ===== */
@@ -232,16 +265,17 @@ function barres(items, couleur){
   items.forEach(function(it){ max = Math.max(max, it.n || 0, it.n1 || 0); });
   max = max > 0 ? max * 1.08 : 1;
   var L = 1000, H = 400, larg = L / items.length, svg = "";
+  svg += '<defs><pattern id="hachures" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="' + couleur + '" fill-opacity=".25"/><rect width="4" height="8" fill="' + couleur + '" fill-opacity=".8"/></pattern></defs>';
   for (var g = 1; g <= 3; g++) svg += '<line x1="0" x2="1000" y1="' + (H - g * H / 4) + '" y2="' + (H - g * H / 4) + '" stroke="#26313a" stroke-width="1" vector-effect="non-scaling-stroke"/>';
   items.forEach(function(it, i){
     var x0 = i * larg, b = larg * 0.36, ecartB = larg * 0.04;
     if (it.n1 !== null && it.n1 !== undefined) {
       var h1 = it.n1 / max * H;
-      svg += '<rect x="' + (x0 + larg / 2 - b - ecartB / 2).toFixed(1) + '" y="' + (H - h1).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h1.toFixed(1) + '" fill="' + couleur + '" fill-opacity=".28"/>';
+      svg += '<rect x="' + (x0 + larg / 2 - b - ecartB / 2).toFixed(1) + '" y="' + (H - h1).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h1.toFixed(1) + '" fill="' + couleur + '" fill-opacity="' + (it.est1 ? '.12' : '.28') + '"' + (it.est1 ? ' stroke="' + couleur + '" stroke-opacity=".5" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"' : '') + '/>';
     }
     if (it.n !== null && it.n !== undefined) {
       var h = it.n / max * H;
-      svg += '<rect x="' + (x0 + larg / 2 + ecartB / 2).toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + couleur + '"' + (it.auj ? ' fill-opacity=".65"' : '') + '/>';
+      svg += '<rect x="' + (x0 + larg / 2 + ecartB / 2).toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + (it.est ? 'url(#hachures)' : couleur) + '"' + (it.auj ? ' fill-opacity=".65"' : '') + '/>';
     }
   });
   el("svg").innerHTML = svg;
@@ -268,8 +302,8 @@ function montrerBulle(cible){
   if (!it) return;
   [].forEach.call(el("survol").children, function(c){ c.className = c === cible ? "actif" : ""; });
   var html = '<div class="t">' + m.nom + '</div>' +
-    '<div class="l"><span><i class="carre" style="background:' + m.couleur + '"></i>' + it.titreN + (it.auj ? " (en cours)" : "") + '</span><b>' + kwhPrecis(it.n) + '</b></div>' +
-    '<div class="l"><span><i class="carre" style="background:' + m.couleur + ';opacity:.3"></i>' + it.titreN1 + '</span><b>' + kwhPrecis(it.n1) + '</b></div>';
+    '<div class="l"><span><i class="carre" style="background:' + m.couleur + '"></i>' + it.titreN + (it.auj ? " (en cours)" : "") + suffixeEstime(it.est, it.jours) + '</span><b>' + kwhPrecis(it.n) + '</b></div>' +
+    '<div class="l"><span><i class="carre" style="background:' + m.couleur + ';opacity:.3"></i>' + it.titreN1 + suffixeEstime(it.est1, it.jours) + '</span><b>' + kwhPrecis(it.n1) + '</b></div>';
   if (it.n !== null && it.n !== undefined && it.n1 && it.titreN1.indexOf("incomplet") < 0) {
     var p = (it.n - it.n1) / it.n1 * 100, bon = etat.mesure === "achetee_wh" ? p < 0 : p > 0;
     html += '<div class="e ' + (Math.abs(p) < 1 ? "neutre" : bon ? "hausse" : "baisse") + '">' + pct(p) + ' par rapport à N-1</div>';
@@ -279,6 +313,7 @@ function montrerBulle(cible){
   b.style.left = Math.max(0, Math.min(largeur - w, x - w / 2)) + "px";
   b.style.top = "0px";
 }
+function suffixeEstime(n, unJour){ return !n ? "" : unJour ? " · estimé" : " · dont " + n + " j estimé" + (n > 1 ? "s" : ""); }
 function cacherBulle(){ el("bulle").style.display = "none"; [].forEach.call(el("survol").children, function(c){ c.className = ""; }); }
 function kwhPrecis(wh){
   if (wh === null || wh === undefined) return "pas de donnée";
@@ -299,7 +334,7 @@ function cote(titre, n, lignes, ecartN, ecartN1, note){
   el("titre-total").textContent = titre;
   el("total").innerHTML = grand(n);
   el("comp").innerHTML = lignes.map(function(l){ return '<div class="ligne"><span>' + l[0] + '</span><b>' + kwhFin(l[1]) + '</b></div>'; }).join("") + ecartTexte(ecartN, ecartN1);
-  el("note").textContent = note || "";
+  el("note").textContent = [note || "", etat.noteEstimes || ""].filter(Boolean).join(" ");
 }
 
 function dessiner(){
@@ -321,7 +356,7 @@ function dessiner(){
     debut = lundi(ref); fin = ajoute(debut, 7);
     for (var i = 0; i < 7; i++) {
       var d = ajoute(debut, i), dPasse = ajoute(d, -364);   // même jour de la semaine, un an avant (52 semaines)
-      items.push({ lib: JOURS_COURT[i] + " " + d.getDate(), n: d > auj ? null : valeur(d), n1: valeur(dPasse), auj: cle(d) === cle(auj), titreN: dateLongue(d), titreN1: dateLongue(dPasse) });
+      items.push({ lib: JOURS_COURT[i] + " " + d.getDate(), n: d > auj ? null : valeur(d), n1: valeur(dPasse), auj: cle(d) === cle(auj), titreN: dateLongue(d), titreN1: dateLongue(dPasse), est: nbEstimes(d, ajoute(d, 1)), est1: nbEstimes(dPasse, ajoute(dPasse, 1)), jours: true });
     }
     el("periode").textContent = "Semaine du " + debut.getDate() + " " + MOIS_COURT[debut.getMonth()] + " " + debut.getFullYear();
     el("leg-n-t").textContent = "cette semaine"; el("leg-n1-t").textContent = "même semaine N-1";
@@ -330,6 +365,7 @@ function dessiner(){
     var enCours = auj >= debut && auj < fin;
     var n1Date = enCours ? somme(ajoute(debut, -364), ajoute(fin, -364), ajoute(auj, -363)) : n1;
     var p1S = partiel(ajoute(debut, -364));
+    etat.noteEstimes = texteEstimes(nbEstimes(debut, fin), nbEstimes(ajoute(debut, -364), ajoute(fin, -364)));
     cote("Total de la semaine", n, [["N-1 à date", n1Date], ["N-1 semaine entière", n1]], n, p1S ? null : n1Date,
          "N-1 : la même semaine 52 semaines plus tôt, jour de semaine pour jour de semaine.");
   } else if (etat.vue === "mois") {
@@ -337,7 +373,7 @@ function dessiner(){
     var nb = (fin - debut) / 864e5;
     for (var j = 0; j < nb; j++) {
       var dj = ajoute(debut, j), dp = new Date(dj.getFullYear() - 1, dj.getMonth(), dj.getDate());
-      items.push({ lib: (j % 5 === 0 || j === nb - 1) ? String(j + 1) : "", n: dj > auj ? null : valeur(dj), n1: dp.getMonth() === dj.getMonth() ? valeur(dp) : null, auj: cle(dj) === cle(auj), titreN: dateLongue(dj), titreN1: dp.getMonth() === dj.getMonth() ? dateLongue(dp) : "N-1 (jour inexistant)" });
+      items.push({ lib: (j % 5 === 0 || j === nb - 1) ? String(j + 1) : "", n: dj > auj ? null : valeur(dj), n1: dp.getMonth() === dj.getMonth() ? valeur(dp) : null, auj: cle(dj) === cle(auj), titreN: dateLongue(dj), titreN1: dp.getMonth() === dj.getMonth() ? dateLongue(dp) : "N-1 (jour inexistant)", est: nbEstimes(dj, ajoute(dj, 1)), est1: dp.getMonth() === dj.getMonth() ? nbEstimes(dp, ajoute(dp, 1)) : 0, jours: true });
     }
     el("periode").textContent = maj(debut.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }));
     el("leg-n-t").textContent = String(debut.getFullYear()); el("leg-n1-t").textContent = String(debut.getFullYear() - 1);
@@ -348,13 +384,14 @@ function dessiner(){
     var enCoursM = auj >= debut && auj < fin;
     var n1DateM = enCoursM ? somme(debP, finP, memeJourAnPasse(ajoute(auj, 1))) : n1;
     var p1M = partiel(debP);
+    etat.noteEstimes = texteEstimes(nbEstimes(debut, fin), nbEstimes(debP, finP));
     cote("Total du mois", n, [[(enCoursM ? "N-1 à date" : "Même mois N-1") + (p1M ? " (partiel)" : ""), n1DateM]].concat(enCoursM ? [["N-1 mois complet", n1]] : []), n, p1M ? null : n1DateM,
          p1M ? "Le même mois de l'an dernier est incomplet : installation le 30 octobre 2024." : enCoursM ? "Mois en cours : comparé aux mêmes jours de l'an dernier." : "");
   } else if (etat.vue === "annee") {
     var an = ref.getFullYear();
     for (var k = 0; k < 12; k++) {
       var dm = new Date(an, k, 1), fm = new Date(an, k + 1, 1);
-      items.push({ lib: MOIS_COURT[k], n: dm > auj ? null : somme(dm, fm), n1: somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)), auj: an === auj.getFullYear() && k === auj.getMonth(), titreN: moisLong(an, k), titreN1: moisLong(an - 1, k) + (partiel(new Date(an - 1, k, 1)) ? " (incomplet)" : "") });
+      items.push({ lib: MOIS_COURT[k], n: dm > auj ? null : somme(dm, fm), n1: somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)), auj: an === auj.getFullYear() && k === auj.getMonth(), titreN: moisLong(an, k), titreN1: moisLong(an - 1, k) + (partiel(new Date(an - 1, k, 1)) ? " (incomplet)" : ""), est: nbEstimes(dm, fm), est1: nbEstimes(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)) });
     }
     el("periode").textContent = "Année " + an;
     el("leg-n-t").textContent = String(an); el("leg-n1-t").textContent = String(an - 1);
@@ -364,6 +401,7 @@ function dessiner(){
     var enCoursA = an === auj.getFullYear();
     var n1DateA = enCoursA ? somme(new Date(an - 1, 0, 1), new Date(an, 0, 1), memeJourAnPasse(ajoute(auj, 1))) : n1;
     var p1A = partiel(new Date(an - 1, 0, 1));
+    etat.noteEstimes = texteEstimes(nbEstimes(new Date(an, 0, 1), new Date(an + 1, 0, 1)), nbEstimes(new Date(an - 1, 0, 1), new Date(an, 0, 1)));
     cote("Total de l'année", n, [[(enCoursA ? "N-1 à date" : "Année N-1") + (p1A ? " (partielle)" : ""), n1DateA]].concat(enCoursA ? [["Année N-1 complète", n1]] : []), n, p1A ? null : n1DateA,
          p1A ? "L'année précédente est incomplète (installation le 30 octobre 2024) : comparez mois par mois dans la vue N / N-1." : "Données depuis la mise en service, le 30 octobre 2024.");
   } else {
@@ -377,6 +415,7 @@ function dessiner(){
 
 /* ===== Vue N / N-1 : chaque mois de l'année comparé au même mois de l'année précédente ===== */
 function comparaison(m){
+  etat.noteEstimes = texteEstimes(nbEstimes(new Date(etat.ref.getFullYear(), 0, 1), new Date(etat.ref.getFullYear() + 1, 0, 1)), nbEstimes(new Date(etat.ref.getFullYear() - 1, 0, 1), new Date(etat.ref.getFullYear(), 0, 1))).replace("Hachuré : ", "Estimations : ");
   var an = etat.ref.getFullYear(), auj = aujourdhui(), lignes = [], tN = 0, tN1 = 0, max = 0;
   for (var k = 0; k < 12; k++) {
     var dm = new Date(an, k, 1), fm = new Date(an, k + 1, 1);
@@ -384,7 +423,7 @@ function comparaison(m){
     var vN = dm > auj ? null : somme(dm, fm);
     var vN1 = enCours ? somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1), memeJourAnPasse(ajoute(auj, 1))) : somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1));
     var p1 = partiel(new Date(an - 1, k, 1));
-    lignes.push({ k: k, n: vN, n1: vN1, enCours: enCours, partiel: p1 });
+    lignes.push({ k: k, n: vN, n1: vN1, enCours: enCours, partiel: p1, est: nbEstimes(dm, fm), est1: nbEstimes(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)) });
     max = Math.max(max, vN || 0, vN1 || 0);
     if (vN !== null && vN1 !== null && !p1) { tN += vN; tN1 += vN1; }
   }
@@ -394,8 +433,8 @@ function comparaison(m){
     var bon = etat.mesure === "achetee_wh" ? e < 0 : e > 0;
     var cls = e === null ? "neutre" : Math.abs(e) < 1 ? "neutre" : bon ? "hausse" : "baisse";
     html += '<tr' + (l.enCours ? ' class="courant"' : '') + '><td class="mois">' + maj(MOIS_COURT[l.k]) + (l.enCours ? " (à date)" : "") + '</td>' +
-      '<td>' + kwh(l.n, 0) + '<i class="mini" style="width:' + (max ? (l.n || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + '"></i></td>' +
-      '<td>' + (l.partiel && l.n1 !== null ? '<span style="font-size:.75em;color:var(--brume)">partiel · </span>' : '') + kwh(l.n1, 0) + '<i class="mini" style="width:' + (max ? (l.n1 || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + ';opacity:.3"></i></td>' +
+      '<td>' + (l.est ? '<span style="color:var(--brume)" title="dont ' + l.est + ' jours estimés">≈ </span>' : '') + kwh(l.n, 0) + '<i class="mini" style="width:' + (max ? (l.n || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + '"></i></td>' +
+      '<td>' + (l.partiel && l.n1 !== null ? '<span style="font-size:.75em;color:var(--brume)">partiel · </span>' : '') + (l.est1 ? '<span style="color:var(--brume)">≈ </span>' : '') + kwh(l.n1, 0) + '<i class="mini" style="width:' + (max ? (l.n1 || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + ';opacity:.3"></i></td>' +
       '<td class="ecart-c ' + cls + '">' + (e === null ? "–" : pct(e)) + '</td></tr>';
   });
   var eT = tN1 ? (tN - tN1) / tN1 * 100 : null;
