@@ -231,9 +231,9 @@ function meteo(){
       el("pression").innerHTML = "Pression <b>" + Math.round(p) + " hPa</b>" + tendance;
     }
     /* Aujourd'hui + 3 jours */
-    var dj = m.daily, html = "";
-    for (var k = 0; k < dj.time.length && k < 4; k++) {
-      var nom = k === 0 ? "Auj." : new Date(dj.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
+    var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
+    for (var k = auj; k < dj.time.length && k < auj + 4; k++) {
+      var nom = k === auj ? "Auj." : new Date(dj.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
       var pl = dj.precipitation_probability_max[k];
       html += '<div class="jour"><span class="j">' + nom + '</span><span class="ciel">' + ciel(dj.weather_code[k]) + '</span>' +
         '<span class="mm"><span>' + Math.round(dj.temperature_2m_min[k]) + '°</span> ' + Math.round(dj.temperature_2m_max[k]) + '°' +
