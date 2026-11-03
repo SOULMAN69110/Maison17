@@ -55,7 +55,7 @@ jobs:
 
       - name: Préparer le site
         run: |
-          cp index.html historique.html site/
+          cp index.html historique.html verrou.js site/
           cp -r historique site/
 
       - uses: actions/configure-pages@v5
