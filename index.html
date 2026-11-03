@@ -30,15 +30,19 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .date{font-size:1.9vw;color:var(--brume);margin-top:1vw;text-transform:capitalize}
 .dehors{border-top:1px solid var(--trait);padding-top:1.6vw}
 .etiquette{font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
-.dehors .valeur{font-size:5.4vw;font-weight:600;color:var(--givre);line-height:1;margin-top:.6vw;font-variant-numeric:tabular-nums}
+.dehors .ligne{display:flex;align-items:center;gap:1.2vw;margin-top:.6vw}
+.dehors .valeur{font-size:5.4vw;font-weight:600;color:var(--givre);line-height:1;font-variant-numeric:tabular-nums}
+.dehors .ciel-act{font-size:4.6vw;line-height:1}
+.emo{font-style:normal;margin-right:.35em}
 .dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
 .dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
 .pression{font-size:1.5vw;color:var(--brume);margin-top:.5vw;font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
 .previsions{border-top:1px solid var(--trait);padding-top:1.4vw}
 .jours{display:flex;flex-direction:column;gap:.5vw;margin-top:.8vw}
-.jour{display:grid;grid-template-columns:4.6vw minmax(0,1fr) auto;align-items:baseline;gap:.8vw;font-size:1.45vw}
+.jour{display:grid;grid-template-columns:4.6vw 2.2vw minmax(0,1fr) auto;align-items:baseline;gap:.8vw;font-size:1.45vw}
 .jour .j{color:var(--brume);text-transform:capitalize}
+.jour .ico{text-align:center}
 .jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jour .mm{font-variant-numeric:tabular-nums;white-space:nowrap}
 .jour .mm span{color:var(--brume)}
@@ -66,7 +70,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.jour{font-size:4vw;grid-template-columns:12vw minmax(0,1fr) auto}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -79,13 +83,13 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="date" id="date"></div>
     </div>
     <div class="dehors">
-      <div class="etiquette">Dehors</div>
-      <div class="valeur" id="ext-t">--<small>°C</small></div>
-      <div class="hum" id="ext-h">Humidité --</div>
+      <div class="etiquette"><i class="emo">🌳</i>Dehors</div>
+      <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div></div>
+      <div class="hum" id="ext-h"><i class="emo">💧</i>Humidité --</div>
       <div class="pression" id="pression"></div>
     </div>
     <div class="previsions">
-      <div class="etiquette">Prévisions</div>
+      <div class="etiquette"><i class="emo">📅</i>Prévisions</div>
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
     <div class="etat" id="etat">Connexion à Mobile Alerts…</div>
@@ -173,7 +177,7 @@ function afficher(appareils){
 
     if (c.exterieur && typeof m.t2 === "number") {
       el("ext-t").innerHTML = fmt(m.t2) + "<small>°C</small>";
-      el("ext-h").textContent = (typeof m.h2 === "number") ? "Humidité " + Math.round(m.h2) + " %" : "";
+      el("ext-h").innerHTML = (typeof m.h2 === "number") ? '<i class="emo">💧</i>Humidité ' + Math.round(m.h2) + " %" : "";
     }
   });
 }
@@ -204,6 +208,20 @@ function charger(){
 }
 
 /* ===== Météo (Open-Meteo, gratuit, sans clé) ===== */
+function emoji(code, jour){
+  if (code === 0) return jour === false ? "🌙" : "☀️";
+  if (code === 1) return jour === false ? "🌙" : "🌤️";
+  if (code === 2) return jour === false ? "☁️" : "⛅";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 57) return "🌦️";
+  if (code >= 61 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "❄️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code === 85 || code === 86) return "🌨️";
+  if (code >= 95) return "⛈️";
+  return "";
+}
 function ciel(code){
   if (code === 0) return "Ensoleillé";
   if (code <= 2) return "Éclaircies";
@@ -219,7 +237,7 @@ function ciel(code){
 }
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl&hourly=pressure_msl&past_days=1&forecast_days=4" +
+    "&current=pressure_msl,weather_code,is_day&hourly=pressure_msl&past_days=1&forecast_days=4" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   fetch(url).then(lireJson).then(function(m){
     /* Pression et tendance sur 3 h */
@@ -230,16 +248,17 @@ function meteo(){
         var d = p - m.hourly.pressure_msl[i - 3];
         tendance = d >= 1 ? " ↗ en hausse" : d <= -1 ? " ↘ en baisse" : " → stable";
       }
-      el("pression").innerHTML = "Pression <b>" + Math.round(p) + " hPa</b>" + tendance;
+      el("pression").innerHTML = '<i class="emo">🧭</i>Pression <b>' + Math.round(p) + " hPa</b>" + tendance;
     }
+    if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
     /* Aujourd'hui + 3 jours */
     var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
     for (var k = auj; k < dj.time.length && k < auj + 4; k++) {
       var nom = k === auj ? "Auj." : new Date(dj.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "short" });
       var pl = dj.precipitation_probability_max[k];
-      html += '<div class="jour"><span class="j">' + nom + '</span><span class="ciel">' + ciel(dj.weather_code[k]) + '</span>' +
+      html += '<div class="jour"><span class="j">' + nom + '</span><span class="ico">' + emoji(dj.weather_code[k]) + '</span><span class="ciel">' + ciel(dj.weather_code[k]) + '</span>' +
         '<span class="mm"><span>' + Math.round(dj.temperature_2m_min[k]) + '°</span> ' + Math.round(dj.temperature_2m_max[k]) + '°' +
-        (pl >= 20 ? '<span class="pl">' + pl + '%</span>' : '') + '</span></div>';
+        (pl >= 20 ? '<span class="pl">☔' + pl + '%</span>' : '') + '</span></div>';
     }
     el("jours").innerHTML = html;
   }).catch(function(){
