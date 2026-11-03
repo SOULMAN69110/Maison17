@@ -10,6 +10,7 @@ Mis en place le 3 novembre 2026.
 |---|---|
 | Tableau de bord (télé) | https://soulman69110.github.io/Maison17/ |
 | Courbes et historique | https://soulman69110.github.io/Maison17/historique.html |
+| Énergie (panneaux solaires) | https://soulman69110.github.io/Maison17/energie.html |
 | Mesures brutes (CSV) | dossier [`historique/`](historique/) de ce dépôt |
 
 **Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.
@@ -30,6 +31,10 @@ Mis en place le 3 novembre 2026.
 
 La pression et le pictogramme de prévision de la station du salon ne sont pas transmis par Mobile Alerts : ils viennent d'Open-Meteo (gratuit, sans clé), pour la position de Sainte-Foy-lès-Lyon.
 
+## Panneaux solaires (eStar Power)
+
+Installation de 4,25 kWc suivie sur monitor.estarpower.com (installation n° 7054590). La tâche se connecte avec les secrets GitHub `ESTAR_UTILISATEUR` et `ESTAR_MOT_DE_PASSE` (Settings → Secrets and variables → Actions ; à mettre à jour si le mot de passe eStar change), puis publie `solaire.json` (chiffres seulement, aucun jeton) et ajoute une ligne à `historique/solaire-AAAA-MM.csv` (`horodatage`, `production_w`, `consommation_w`, `reseau_w` — négatif = achat au réseau —, `production_jour_wh`, `consommation_jour_wh`). Le bilan du jour est calculé à partir des seuls compteurs « du jour » d'eStar. Si la connexion échoue, la page Énergie l'indique et le reste du tableau de bord continue de fonctionner.
+
 ## Fonctionnement
 
 1. Toutes les 10 minutes environ (souvent avec un peu de retard), la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo.
@@ -44,6 +49,8 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 |---|---|
 | `index.html` | tableau de bord ; noms et ordre des pièces en tête du script |
 | `verrou.js` | écran du code d'accès, commun aux deux pages |
+| `energie.html` | page Énergie : production solaire, consommation, réseau, bilan du jour et courbe de la journée |
+| `outils/estar.py` | récupère les données eStar Power (connexion avec les secrets GitHub) |
 | `historique.html` | page de courbes (24 h, 7 jours, 30 jours, 1 an) |
 | `outils/historiser.py` | ajoute les mesures aux CSV sans doublons |
 | `.github/workflows/pages.yml` | la tâche automatique ; liste des identifiants à mettre à jour si on ajoute un capteur |
@@ -64,6 +71,6 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 ## Historique du projet
 
 - **3 nov. 2026** : création du tableau de bord (heure, extérieur, 7 pièces avec confort, humidité et alertes de pile), hébergement sur GitHub Pages, ajout de la pression et des prévisions sur 4 jours, démarrage de l'historique des mesures et de la page de courbes.
-- **3 nov. 2026 (suite)** : émojis sur les blocs Dehors, Prévisions et sur chaque pièce ; courbe de la pression du jour avec échelle des deux côtés ; prévisions sur 7 jours ; mise en page adaptée à l'iPhone à l'horizontale ; écran de code d'accès sur les deux pages ; chambres des enfants nommées Chambre C. et Chambre Y. ; volet roulant sur la partie intérieure, fermé par défaut et refermé automatiquement au bout de 3 min (`VOLET_MIN` dans `index.html`). Ajout de la pluie dans l'heure : 4 bâtonnets par quart d'heure (Open-Meteo, précipitations sur 15 min), plus hauts et plus sombres selon l'intensité (faible < 0,25 mm, modérée < 0,75, forte < 2, très forte au-delà) ; météo rafraîchie toutes les 15 min. Le volet fermé affiche les prévisions sur 15 jours avec les températures du matin (8 h), du midi (13 h), du soir (19 h) et de la nuit suivante (2 h), avec des bâtonnets de hauteur et couleur selon la température (échelle commune aux 15 jours) ; jours 11 à 15 plus pâles (simple tendance) ; la page se recharge seule quand une nouvelle version est publiée. Colonne de gauche en cadres (Dehors, pluie dans l'heure, pression, prévisions).
+- **3 nov. 2026 (suite)** : émojis sur les blocs Dehors, Prévisions et sur chaque pièce ; courbe de la pression du jour avec échelle des deux côtés ; prévisions sur 7 jours ; mise en page adaptée à l'iPhone à l'horizontale ; écran de code d'accès sur les deux pages ; chambres des enfants nommées Chambre C. et Chambre Y. ; volet roulant sur la partie intérieure, fermé par défaut et refermé automatiquement au bout de 3 min (`VOLET_MIN` dans `index.html`). Ajout de la pluie dans l'heure : 4 bâtonnets par quart d'heure (Open-Meteo, précipitations sur 15 min), plus hauts et plus sombres selon l'intensité (faible < 0,25 mm, modérée < 0,75, forte < 2, très forte au-delà) ; météo rafraîchie toutes les 15 min. Le volet fermé affiche les prévisions sur 15 jours avec les températures du matin (8 h), du midi (13 h), du soir (19 h) et de la nuit suivante (2 h), avec des bâtonnets de hauteur et couleur selon la température (échelle commune aux 15 jours) ; jours 11 à 15 plus pâles (simple tendance) ; la page se recharge seule quand une nouvelle version est publiée. Colonne de gauche en cadres (Dehors, pluie dans l'heure, pression, prévisions). Ajout de la page Énergie (panneaux solaires eStar Power), compatible avec le navigateur de la télé.
 - **3 nov. 2026 (télé Samsung)** : le navigateur intégré de la télé (QLED Q9FN de 2018) ne connaît ni la grille CSS, ni `inset`, ni `min()`. L'écran du code d'accès restait noir, puis la page s'empilait sur une seule colonne. Ajout d'une mise en page de secours en flexbox dans `index.html` (bloc `@supports not (display:grid)`), ignorée par les navigateurs récents. À garder en tête pour toute modification de mise en page.
 - Idées écartées pour l'instant : appli Apple TV native (nécessite un Mac), intégration de SmartThings.
