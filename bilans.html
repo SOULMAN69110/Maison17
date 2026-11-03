@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bilans énergie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Bilans de l'installation solaire : semaine, mois, année, et comparaison avec l'année précédente (N-1).
+   Écrite pour le navigateur de la télé Samsung 2018 : flexbox seulement (pas de grille CSS, pas de gap, pas de inset). */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a;
+  --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8;
+  --soleil:#f0c36a; --reseau:#f08a6a; --vente:#7fd1a0;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html{font-size:1vw}
+@supports (width:min(1vw,1vh)){html{font-size:min(1vw,1.7778vh)}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
+.ecran{height:100%;display:flex;flex-direction:column;padding:2.2rem 3.2rem}
+.haut{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.2rem}
+h1{margin:0;font-size:3rem;font-weight:700;letter-spacing:-.02em;line-height:1}
+.sous{font-family:var(--mono);font-size:1rem;color:var(--brume);margin-top:.6rem;letter-spacing:.06em}
+.liens{font-family:var(--mono);font-size:1rem;text-align:right}
+.liens a{color:var(--givre);text-decoration:none;margin-left:1.4rem}
+
+.barre-outils{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem}
+.groupe{display:flex;align-items:center}
+.groupe button{font-family:var(--mono);font-size:1.05rem;white-space:nowrap;color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;padding:.5rem 1rem;margin-right:.5rem;cursor:pointer}
+.groupe button:last-child{margin-right:0}
+.groupe button[aria-pressed="true"]{background:var(--craie);color:var(--nuit);border-color:var(--craie)}
+.groupe button:focus{outline:3px solid var(--givre);outline-offset:2px}
+.groupe button.m[aria-pressed="true"]{color:var(--nuit)}
+.nav{display:flex;align-items:center}
+.nav button{font-size:1.6rem;width:3.2rem;height:3.2rem;border-radius:50%;border:1px solid var(--trait);background:var(--ardoise);color:var(--craie);cursor:pointer}
+.nav button:focus{outline:3px solid var(--givre);outline-offset:2px}
+.nav button[disabled]{opacity:.3;cursor:default}
+.nav .periode{font-size:1.7rem;font-weight:600;min-width:17rem;text-align:center;white-space:nowrap}
+
+.corps{flex:1 1 auto;display:flex;min-height:0}
+.carte{background:var(--ardoise);border-radius:1rem;padding:1.3rem 1.6rem;min-width:0}
+.graphique{flex:1 1 auto;display:flex;flex-direction:column;margin-right:1.2rem}
+.cote{flex:0 0 27%;display:flex;flex-direction:column}
+.etiquette{font-family:var(--mono);font-size:.95rem;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+.legende{display:flex;justify-content:space-between;align-items:baseline}
+.legende span{font-family:var(--mono);font-size:1rem;color:var(--brume);margin-left:1.4rem}
+.carre{display:inline-block;width:.9rem;height:.9rem;border-radius:.2rem;margin-right:.4rem;vertical-align:middle}
+.zone-svg{flex:1 1 auto;position:relative;margin-top:1rem;min-height:10rem}
+.zone-svg svg{position:absolute;top:0;left:0;width:100%;height:100%}
+.echelle{position:absolute;left:0;top:-.2rem;font-family:var(--mono);font-size:.9rem;color:var(--brume)}
+.libelles{display:flex;margin-top:.5rem}
+.libelles div{flex:1 1 0;text-align:center;font-family:var(--mono);font-size:.95rem;color:var(--brume);white-space:nowrap;overflow:hidden}
+.libelles div b{display:block;color:var(--craie);font-family:var(--display);font-size:1.25rem;font-weight:600}
+.libelles div.auj{color:var(--givre)}
+
+.total{margin-top:1rem}
+.total .val{font-size:4.4rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;margin-top:.4rem}
+.total .val small{font-size:.4em;font-weight:400;color:var(--brume);margin-left:.15em}
+.comp{margin-top:1.4rem;padding-top:1.2rem;border-top:1px dashed var(--trait)}
+.comp .ligne{display:flex;justify-content:space-between;align-items:baseline;margin-top:.6rem;font-size:1.35rem;color:var(--brume)}
+.comp .ligne b{color:var(--craie);font-weight:600;font-variant-numeric:tabular-nums}
+.ecart{display:inline-block;margin-top:1rem;font-family:var(--mono);font-size:1.5rem;padding:.3rem .9rem;border-radius:99px;border:1px solid currentColor}
+.hausse{color:var(--vente)} .baisse{color:var(--reseau)} .neutre{color:var(--brume)}
+.note{margin-top:auto;font-family:var(--mono);font-size:.9rem;color:var(--brume);line-height:1.5}
+
+/* Tableau de comparaison mois par mois */
+.tableau{width:100%;border-collapse:collapse;margin-top:1rem;font-variant-numeric:tabular-nums}
+.tableau th{font-family:var(--mono);font-size:.95rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--brume);text-align:right;padding:.4rem .8rem;border-bottom:1px solid var(--trait)}
+.tableau th:first-child,.tableau td:first-child{text-align:left}
+.tableau td{font-size:1.45rem;padding:.42rem .8rem;text-align:right;border-bottom:1px solid var(--trait)}
+.tableau td.mois{color:var(--brume)}
+.tableau td.ecart-c{font-family:var(--mono);font-size:1.25rem}
+.tableau tr.courant td{background:rgba(124,196,232,.08)}
+.tableau tr.total-l td{font-weight:700;border-bottom:0}
+.tableau .mini{display:inline-block;height:.7rem;border-radius:.2rem;vertical-align:middle;margin-left:.6rem}
+
+.etat{font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.8rem}
+.etat.erreur{color:var(--reseau)}
+
+@media (max-width:800px){
+  html{font-size:2.4vw}
+  body{overflow:auto}
+  .ecran{height:auto;padding:16px}
+  .haut,.barre-outils{display:block}
+  .barre-outils .groupe{flex-wrap:wrap;margin-bottom:10px}
+  .groupe button{margin-bottom:6px}
+  .corps{display:block}
+  .graphique{margin:0 0 12px}
+  .zone-svg{height:50vw}
+}
+</style>
+<script src="verrou.js"></script>
+</head>
+<body>
+<main class="ecran">
+  <div class="haut">
+    <div>
+      <h1>📊 Bilans énergie</h1>
+      <div class="sous" id="sous">Panneaux solaires · depuis le 30 octobre 2024</div>
+    </div>
+    <div class="liens"><a href="./">← Tableau de bord</a><a href="energie.html">☀️ Énergie</a><a href="historique.html">📈 Courbes</a></div>
+  </div>
+
+  <div class="barre-outils">
+    <div class="groupe" id="vues">
+      <button type="button" data-vue="semaine">Semaine</button>
+      <button type="button" data-vue="mois">Mois</button>
+      <button type="button" data-vue="annee">Année</button>
+      <button type="button" data-vue="comparaison">N / N-1</button>
+    </div>
+    <div class="nav">
+      <button type="button" id="prec" aria-label="Période précédente">‹</button>
+      <div class="periode" id="periode">…</div>
+      <button type="button" id="suiv" aria-label="Période suivante">›</button>
+    </div>
+    <div class="groupe" id="mesures">
+      <button type="button" class="m" data-m="production_wh">☀️ Production</button>
+      <button type="button" class="m" data-m="consommation_wh">🏠 Conso.</button>
+      <button type="button" class="m" data-m="achetee_wh">⚡ Achat</button>
+      <button type="button" class="m" data-m="vendue_wh">💶 Revente</button>
+    </div>
+  </div>
+
+  <div class="corps">
+    <div class="carte graphique" id="bloc-graphique">
+      <div class="legende">
+        <div class="etiquette" id="titre-graphique">—</div>
+        <div><span><i class="carre" id="leg-n"></i><em id="leg-n-t" style="font-style:normal">N</em></span><span><i class="carre" id="leg-n1"></i><em id="leg-n1-t" style="font-style:normal">N-1</em></span></div>
+      </div>
+      <div class="zone-svg" id="zone-svg"><svg id="svg" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="echelle" id="echelle"></div></div>
+      <div class="libelles" id="libelles"></div>
+      <div id="bloc-tableau" style="display:none;flex:1 1 auto;overflow:hidden"></div>
+    </div>
+    <div class="carte cote">
+      <div class="etiquette" id="titre-total">Total</div>
+      <div class="total"><div class="val" id="total">--</div></div>
+      <div class="comp" id="comp"></div>
+      <div class="note" id="note"></div>
+      <div class="etat" id="etat">Chargement de l'historique…</div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ===== Données : historique/solaire-jours.csv (une ligne par jour) + solaire.json pour aujourd'hui ===== */
+var MESURES = {
+  production_wh:   { nom: "Production",  couleur: "#f0c36a" },
+  consommation_wh: { nom: "Consommation", couleur: "#e8eef2" },
+  achetee_wh:      { nom: "Achat au réseau", couleur: "#f08a6a" },
+  vendue_wh:       { nom: "Revente au réseau", couleur: "#7fd1a0" }
+};
+var MOIS_COURT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+var JOURS_COURT = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
+
+var jours = {};            // "AAAA-MM-JJ" -> { production_wh, ... }
+var etat = { vue: "mois", mesure: "production_wh", ref: aujourdhui() };   // ref : un jour dans la période affichée
+
+function maj(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+function el(id){ return document.getElementById(id); }
+function aujourdhui(){ var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function cle(d){ return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function ajoute(d, n){ var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+function lundi(d){ var j = (d.getDay() + 6) % 7; return ajoute(d, -j); }
+function valeur(d){ var j = jours[cle(d)]; return j && typeof j[etat.mesure] === "number" ? j[etat.mesure] : null; }
+function kwh(wh, dec){
+  if (wh === null || wh === undefined) return "–";
+  var v = wh / 1000;
+  if (v >= 1000) return (v / 1000).toFixed(2).replace(".", ",") + " MWh";
+  return v.toFixed(dec === undefined ? (v >= 100 ? 0 : 1) : dec).replace(".", ",") + " kWh";
+}
+function grand(wh){ var t = kwh(wh); var i = t.lastIndexOf(" "); return i < 0 ? t : t.slice(0, i) + "<small>" + t.slice(i + 1) + "</small>"; }
+function somme(debut, fin, jusqua){   // fin exclue ; jusqua : ne compter que les jours avant cette date
+  var s = 0, n = 0;
+  for (var d = debut; d < fin; d = ajoute(d, 1)) {
+    if (jusqua && d >= jusqua) break;
+    var v = valeur(d);
+    if (v !== null) { s += v; n++; }
+  }
+  return n ? s : null;
+}
+function memeJourAnPasse(d){ var x = new Date(d.getTime()); x.setFullYear(x.getFullYear() - 1); return x; }
+
+/* ===== Chargement ===== */
+function charger(){
+  Promise.all([
+    fetch("historique/solaire-jours.csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error("historique pas encore disponible"); return r.text(); }),
+    fetch("solaire.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.ok ? r.json() : null; }).catch(function(){ return null; })
+  ]).then(function(res){
+    jours = {};
+    var lignes = res[0].trim().split("\n"), entete = lignes[0].split(",");
+    for (var i = 1; i < lignes.length; i++) {
+      var c = lignes[i].split(","), o = {};
+      for (var k = 1; k < entete.length; k++) o[entete[k]] = c[k] === "" ? null : parseFloat(c[k]);
+      jours[c[0]] = o;
+    }
+    var s = res[1];
+    if (s && s.disponible && s.jour) jours[cle(aujourdhui())] = s.jour;   // aujourd'hui, en cours
+    var n = Object.keys(jours).length;
+    el("etat").className = "etat";
+    el("etat").textContent = n + " jours d'historique · mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    dessiner();
+  }).catch(function(e){
+    el("etat").className = "etat erreur";
+    el("etat").textContent = "Historique indisponible (" + e.message + "). Il se constitue dans l'heure qui suit la mise en place.";
+  });
+}
+
+/* ===== Dessin des barres N et N-1 ===== */
+function barres(items, couleur){
+  /* items : [{ lib, sous, n, n1, auj }] */
+  var max = 0;
+  items.forEach(function(it){ max = Math.max(max, it.n || 0, it.n1 || 0); });
+  max = max > 0 ? max * 1.08 : 1;
+  var L = 1000, H = 400, larg = L / items.length, svg = "";
+  for (var g = 1; g <= 3; g++) svg += '<line x1="0" x2="1000" y1="' + (H - g * H / 4) + '" y2="' + (H - g * H / 4) + '" stroke="#26313a" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+  items.forEach(function(it, i){
+    var x0 = i * larg, b = larg * 0.36, ecartB = larg * 0.04;
+    if (it.n1 !== null && it.n1 !== undefined) {
+      var h1 = it.n1 / max * H;
+      svg += '<rect x="' + (x0 + larg / 2 - b - ecartB / 2).toFixed(1) + '" y="' + (H - h1).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h1.toFixed(1) + '" fill="' + couleur + '" fill-opacity=".28"/>';
+    }
+    if (it.n !== null && it.n !== undefined) {
+      var h = it.n / max * H;
+      svg += '<rect x="' + (x0 + larg / 2 + ecartB / 2).toFixed(1) + '" y="' + (H - h).toFixed(1) + '" width="' + b.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + couleur + '"' + (it.auj ? ' fill-opacity=".65"' : '') + '/>';
+    }
+  });
+  el("svg").innerHTML = svg;
+  el("echelle").textContent = kwh(max, 0);
+  var montrerValeurs = items.length <= 12;
+  el("libelles").innerHTML = items.map(function(it){
+    return '<div' + (it.auj ? ' class="auj"' : '') + '>' + (montrerValeurs ? '<b>' + (it.n === null || it.n === undefined ? "–" : kwh(it.n, it.n >= 100000 ? 0 : 1).replace(" kWh", "").replace(" MWh", " M")) + '</b>' : '') + it.lib + '</div>';
+  }).join("");
+}
+
+function pct(p){ var v = Math.round(p); return (v > 0 ? "+" : "") + (v === 0 ? 0 : v) + " %"; }
+function ecartTexte(n, n1){
+  if (n === null || n1 === null || !n1) return '<span class="ecart neutre">pas de comparaison</span>';
+  var p = (n - n1) / n1 * 100, signe = p > 0 ? "+" : "";
+  var bon = etat.mesure === "achetee_wh" ? p < 0 : p > 0;   // moins d'achat, c'est mieux
+  return '<span class="ecart ' + (Math.abs(p) < 1 ? "neutre" : bon ? "hausse" : "baisse") + '">' + pct(p) + ' vs N-1</span>';
+}
+
+function cote(titre, n, lignes, ecartN, ecartN1, note){
+  el("titre-total").textContent = titre;
+  el("total").innerHTML = grand(n);
+  el("comp").innerHTML = lignes.map(function(l){ return '<div class="ligne"><span>' + l[0] + '</span><b>' + kwh(l[1]) + '</b></div>'; }).join("") + ecartTexte(ecartN, ecartN1);
+  el("note").textContent = note || "";
+}
+
+function dessiner(){
+  var m = MESURES[etat.mesure], ref = etat.ref, auj = aujourdhui();
+  [].forEach.call(document.querySelectorAll("#vues button"), function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-vue") === etat.vue ? "true" : "false"); });
+  [].forEach.call(document.querySelectorAll("#mesures button"), function(b){
+    var on = b.getAttribute("data-m") === etat.mesure;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.style.background = on ? MESURES[b.getAttribute("data-m")].couleur : "";
+    b.style.borderColor = on ? MESURES[b.getAttribute("data-m")].couleur : "";
+  });
+  el("leg-n").style.background = m.couleur; el("leg-n1").style.background = m.couleur; el("leg-n1").style.opacity = ".3";
+  var tableau = etat.vue === "comparaison";
+  el("zone-svg").style.display = tableau ? "none" : ""; el("libelles").style.display = tableau ? "none" : "";
+  el("bloc-tableau").style.display = tableau ? "block" : "none";
+
+  var items = [], titre, n, n1, n1Complet, debut, fin, note = "";
+  if (etat.vue === "semaine") {
+    debut = lundi(ref); fin = ajoute(debut, 7);
+    for (var i = 0; i < 7; i++) {
+      var d = ajoute(debut, i), dPasse = ajoute(d, -364);   // même jour de la semaine, un an avant (52 semaines)
+      items.push({ lib: JOURS_COURT[i] + " " + d.getDate(), n: d > auj ? null : valeur(d), n1: valeur(dPasse), auj: cle(d) === cle(auj) });
+    }
+    el("periode").textContent = "Semaine du " + debut.getDate() + " " + MOIS_COURT[debut.getMonth()] + " " + debut.getFullYear();
+    el("leg-n-t").textContent = "cette semaine"; el("leg-n1-t").textContent = "même semaine N-1";
+    titre = m.nom + " par jour";
+    n = somme(debut, fin); n1 = somme(ajoute(debut, -364), ajoute(fin, -364));
+    var enCours = auj >= debut && auj < fin;
+    var n1Date = enCours ? somme(ajoute(debut, -364), ajoute(fin, -364), ajoute(auj, -363)) : n1;
+    cote("Total de la semaine", n, [["N-1 à date", n1Date], ["N-1 semaine entière", n1]], n, n1Date,
+         "N-1 : la même semaine 52 semaines plus tôt, jour de semaine pour jour de semaine.");
+  } else if (etat.vue === "mois") {
+    debut = new Date(ref.getFullYear(), ref.getMonth(), 1); fin = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+    var nb = (fin - debut) / 864e5;
+    for (var j = 0; j < nb; j++) {
+      var dj = ajoute(debut, j), dp = new Date(dj.getFullYear() - 1, dj.getMonth(), dj.getDate());
+      items.push({ lib: (j % 5 === 0 || j === nb - 1) ? String(j + 1) : "", n: dj > auj ? null : valeur(dj), n1: dp.getMonth() === dj.getMonth() ? valeur(dp) : null, auj: cle(dj) === cle(auj) });
+    }
+    el("periode").textContent = maj(debut.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }));
+    el("leg-n-t").textContent = String(debut.getFullYear()); el("leg-n1-t").textContent = String(debut.getFullYear() - 1);
+    titre = m.nom + " par jour";
+    n = somme(debut, fin);
+    var debP = new Date(debut.getFullYear() - 1, debut.getMonth(), 1), finP = new Date(debut.getFullYear() - 1, debut.getMonth() + 1, 1);
+    n1 = somme(debP, finP);
+    var enCoursM = auj >= debut && auj < fin;
+    var n1DateM = enCoursM ? somme(debP, finP, memeJourAnPasse(ajoute(auj, 1))) : n1;
+    cote("Total du mois", n, [[(enCoursM ? "N-1 à date" : "Même mois N-1"), n1DateM]].concat(enCoursM ? [["N-1 mois complet", n1]] : []), n, n1DateM,
+         enCoursM ? "Mois en cours : comparé aux mêmes jours de l'an dernier." : "");
+  } else if (etat.vue === "annee") {
+    var an = ref.getFullYear();
+    for (var k = 0; k < 12; k++) {
+      var dm = new Date(an, k, 1), fm = new Date(an, k + 1, 1);
+      items.push({ lib: MOIS_COURT[k], n: dm > auj ? null : somme(dm, fm), n1: somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)), auj: an === auj.getFullYear() && k === auj.getMonth() });
+    }
+    el("periode").textContent = "Année " + an;
+    el("leg-n-t").textContent = String(an); el("leg-n1-t").textContent = String(an - 1);
+    titre = m.nom + " par mois";
+    n = somme(new Date(an, 0, 1), new Date(an + 1, 0, 1));
+    n1 = somme(new Date(an - 1, 0, 1), new Date(an, 0, 1));
+    var enCoursA = an === auj.getFullYear();
+    var n1DateA = enCoursA ? somme(new Date(an - 1, 0, 1), new Date(an, 0, 1), memeJourAnPasse(ajoute(auj, 1))) : n1;
+    cote("Total de l'année", n, [[(enCoursA ? "N-1 à date" : "Année N-1"), n1DateA]].concat(enCoursA ? [["Année N-1 complète", n1]] : []), n, n1DateA,
+         "Données depuis la mise en service, le 30 octobre 2024.");
+  } else {
+    comparaison(m);
+    return;
+  }
+  el("titre-graphique").textContent = titre;
+  barres(items, m.couleur);
+  majNavigation();
+}
+
+/* ===== Vue N / N-1 : chaque mois de l'année comparé au même mois de l'année précédente ===== */
+function comparaison(m){
+  var an = etat.ref.getFullYear(), auj = aujourdhui(), lignes = [], tN = 0, tN1 = 0, max = 0;
+  for (var k = 0; k < 12; k++) {
+    var dm = new Date(an, k, 1), fm = new Date(an, k + 1, 1);
+    var enCours = an === auj.getFullYear() && k === auj.getMonth();
+    var vN = dm > auj ? null : somme(dm, fm);
+    var vN1 = enCours ? somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1), memeJourAnPasse(ajoute(auj, 1))) : somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1));
+    lignes.push({ k: k, n: vN, n1: vN1, enCours: enCours });
+    max = Math.max(max, vN || 0, vN1 || 0);
+    if (vN !== null && vN1 !== null) { tN += vN; tN1 += vN1; }
+  }
+  var html = '<table class="tableau"><thead><tr><th>Mois</th><th>' + an + '</th><th>' + (an - 1) + '</th><th>Écart</th></tr></thead><tbody>';
+  lignes.forEach(function(l){
+    var e = (l.n !== null && l.n1) ? (l.n - l.n1) / l.n1 * 100 : null;
+    var bon = etat.mesure === "achetee_wh" ? e < 0 : e > 0;
+    var cls = e === null ? "neutre" : Math.abs(e) < 1 ? "neutre" : bon ? "hausse" : "baisse";
+    html += '<tr' + (l.enCours ? ' class="courant"' : '') + '><td class="mois">' + maj(MOIS_COURT[l.k]) + (l.enCours ? " (à date)" : "") + '</td>' +
+      '<td>' + kwh(l.n, 0) + '<i class="mini" style="width:' + (max ? (l.n || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + '"></i></td>' +
+      '<td>' + kwh(l.n1, 0) + '<i class="mini" style="width:' + (max ? (l.n1 || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + ';opacity:.3"></i></td>' +
+      '<td class="ecart-c ' + cls + '">' + (e === null ? "–" : pct(e)) + '</td></tr>';
+  });
+  var eT = tN1 ? (tN - tN1) / tN1 * 100 : null;
+  html += '<tr class="total-l"><td>Mois comparables</td><td>' + kwh(tN, 0) + '</td><td>' + kwh(tN1, 0) + '</td><td class="ecart-c">' + (eT === null ? "–" : pct(eT)) + '</td></tr></tbody></table>';
+  el("bloc-tableau").innerHTML = html;
+  el("titre-graphique").textContent = m.nom + " : chaque mois face au même mois de " + (an - 1);
+  el("periode").textContent = an + " / " + (an - 1);
+  el("leg-n-t").textContent = String(an); el("leg-n1-t").textContent = String(an - 1);
+  cote("Mois comparables " + an, tN, [["Mêmes mois " + (an - 1), tN1]], tN, tN1,
+       "Mois en cours comparé aux mêmes jours de l'an dernier. Les mois sans données d'un côté ne sont pas comptés dans le total.");
+  majNavigation();
+}
+
+/* ===== Navigation ===== */
+function deplacer(sens){
+  var r = etat.ref;
+  if (etat.vue === "semaine") r = ajoute(r, 7 * sens);
+  else if (etat.vue === "mois") r = new Date(r.getFullYear(), r.getMonth() + sens, 1);
+  else r = new Date(r.getFullYear() + sens, 0, 1);
+  if (r > aujourdhui()) r = aujourdhui();
+  etat.ref = r; dessiner();
+}
+function majNavigation(){
+  var auj = aujourdhui(), r = etat.ref, dernier;
+  if (etat.vue === "semaine") dernier = lundi(r).getTime() >= lundi(auj).getTime();
+  else if (etat.vue === "mois") dernier = r.getFullYear() === auj.getFullYear() && r.getMonth() === auj.getMonth();
+  else dernier = r.getFullYear() === auj.getFullYear();
+  var premier = etat.vue === "semaine" ? lundi(r) <= new Date(2024, 9, 30) : etat.vue === "mois" ? (r.getFullYear() < 2024 || (r.getFullYear() === 2024 && r.getMonth() <= 9)) : r.getFullYear() <= 2024;
+  el("suiv").disabled = dernier; el("prec").disabled = premier;
+}
+[].forEach.call(document.querySelectorAll("#vues button"), function(b){
+  b.addEventListener("click", function(){ etat.vue = b.getAttribute("data-vue"); dessiner(); });
+});
+[].forEach.call(document.querySelectorAll("#mesures button"), function(b){
+  b.addEventListener("click", function(){ etat.mesure = b.getAttribute("data-m"); dessiner(); });
+});
+el("prec").addEventListener("click", function(){ deplacer(-1); });
+el("suiv").addEventListener("click", function(){ deplacer(1); });
+
+charger();
+setInterval(charger, 15 * 60 * 1000);
+</script>
+</body>
+</html>
