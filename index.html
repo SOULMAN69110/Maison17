@@ -87,6 +87,21 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   background:repeating-linear-gradient(180deg,#1b242c 0,#1b242c calc(var(--u)*3.4),#141b21 calc(var(--u)*3.4),#141b21 calc(var(--u)*3.6));
   transition:transform .8s cubic-bezier(.6,0,.3,1),visibility 0s linear 0s}
 .volet .grand{font-size:calc(var(--u)*6);line-height:1}
+/* Prévisions à 15 jours affichées sur le volet fermé */
+.volet.p15{justify-content:flex-start;align-items:stretch;text-align:left;padding:calc(var(--u)*1.8) calc(var(--u)*1.8) calc(var(--u)*2.6)}
+.p15 .entete{display:flex;justify-content:space-between;align-items:baseline;gap:calc(var(--u)*1);margin-bottom:calc(var(--u)*1.2)}
+.p15 .entete b{font-size:calc(var(--u)*1.9);font-weight:600}
+.p15 .entete span{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.12em;text-transform:uppercase;color:var(--brume)}
+.p15 .grille{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:calc(var(--u)*0.9)}
+.p15 .jc{background:rgba(15,20,24,.72);border:1px solid var(--trait);border-radius:calc(var(--u)*0.8);padding:calc(var(--u)*0.9) calc(var(--u)*1);display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.p15 .jc.loin{opacity:.6}
+.p15 .jc .d{font-size:calc(var(--u)*1.25);color:var(--brume);text-transform:capitalize;white-space:nowrap}
+.p15 .jc .d b{color:var(--craie);font-weight:600}
+.p15 .jc .e{font-size:calc(var(--u)*3);line-height:1.1}
+.p15 .jc .c{font-size:calc(var(--u)*1.05);color:var(--brume);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p15 .jc .t{font-size:calc(var(--u)*1.7);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;align-items:baseline;gap:calc(var(--u)*0.5)}
+.p15 .jc .t span{color:var(--brume);font-size:.75em}
+.p15 .jc .t i{font-style:normal;font-family:var(--mono);font-size:.55em;color:var(--givre)}
 .volet .titre{font-size:calc(var(--u)*2.6);font-weight:600}
 .volet .aide{font-family:var(--mono);font-size:calc(var(--u)*1);letter-spacing:.12em;text-transform:uppercase;color:var(--brume)}
 .volet .poignee{position:absolute;bottom:calc(var(--u)*1.2);width:calc(var(--u)*8);height:calc(var(--u)*0.5);border-radius:99px;background:var(--trait)}
@@ -101,7 +116,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t{font-size:4.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 </style>
@@ -349,9 +364,28 @@ function pluieHeure(m){
   }
   el("pluie").innerHTML = '<div class="resume"><span>' + titre + '</span>' + resume + '</div><div class="barres">' + barres + '</div>';
 }
+/* Volet fermé : prévisions sur 15 jours (au-delà de 10 jours, simple tendance, affichée plus pâle) */
+function previsions15(m){
+  var dj = m.daily, auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10))), html = "";
+  for (var k = auj; k < dj.time.length && k < auj + 15; k++) {
+    var d = new Date(dj.time[k] + "T12:00"), n = k - auj;
+    var nom = n === 0 ? "Auj." : n === 1 ? "Demain" : d.toLocaleDateString("fr-FR", { weekday: "short" });
+    var pl = dj.precipitation_probability_max[k];
+    html += '<div class="jc' + (n >= 10 ? " loin" : "") + '">' +
+      '<div class="d">' + nom + ' <b>' + d.getDate() + '</b></div>' +
+      '<div class="e">' + emoji(dj.weather_code[k]) + '</div>' +
+      '<div class="c">' + ciel(dj.weather_code[k]) + '</div>' +
+      '<div class="t"><div>' + Math.round(dj.temperature_2m_max[k]) + '° <span>' + Math.round(dj.temperature_2m_min[k]) + '°</span></div>' +
+      (typeof pl === "number" && pl >= 20 ? '<i>☔' + pl + '%</i>' : '') + '</div></div>';
+  }
+  var v = el("volet");
+  v.classList.add("p15");
+  v.innerHTML = '<div class="entete"><b>📅 Prévisions sur 15 jours</b><span>🏠 Toucher pour afficher l\'intérieur</span></div>' +
+    '<div class="grille">' + html + '</div><div class="poignee" style="align-self:center"></div>';
+}
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl&past_days=1&forecast_days=" + JOURS_PREVISION + "" +
+    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl&past_days=1&forecast_days=16" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   fetch(url).then(lireJson).then(function(m){
     /* Pression et tendance sur 3 h */
@@ -365,6 +399,7 @@ function meteo(){
       el("pression").innerHTML = '<i class="emo">🧭</i>Pression <b>' + Math.round(p) + " hPa</b>" + tendance;
     }
     courbePression(m);
+    previsions15(m);
     pluieHeure(m);
     if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
     /* Aujourd'hui + les jours suivants */
