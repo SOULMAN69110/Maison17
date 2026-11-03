@@ -147,6 +147,7 @@ var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
 var RAFRAICHIR_MIN = 7;     // Mobile Alerts met à jour environ toutes les 7 min
 var VIEUX_MIN = 45;
 var JOURS_PREVISION = 7;   // aujourd'hui + 6 jours (Open-Meteo va jusqu'à 16)
+var VOLET_MIN = 3;          // le volet se referme tout seul au bout de 3 min
 var LIEU = { lat: 45.734, lon: 4.802 };   // Sainte-Foy-lès-Lyon (69110)         // au-delà, la tuile est grisée
 /* =============================================================== */
 
@@ -347,10 +348,15 @@ function decaler(){
 }
 
 /* Volet de la partie intérieure : fermé à chaque ouverture de la page */
-var minuteurVolet = null;
+var minuteurVolet = null, decompte = null, finVolet = 0;
+function texteBouton(){
+  var reste = Math.max(0, Math.ceil((finVolet - Date.now()) / 1000));
+  el("bascule").textContent = "🔽 Fermer le volet · " + Math.floor(reste / 60) + ":" + ("0" + reste % 60).slice(-2);
+  if (reste <= 0) volet(false);
+}
 function volet(ouvrir){
   var z = el("zone");
-  clearTimeout(minuteurVolet);
+  clearTimeout(minuteurVolet); clearInterval(decompte);
   if (ouvrir) {
     z.classList.remove("ferme"); z.classList.add("ouvert");
   } else {
@@ -358,7 +364,8 @@ function volet(ouvrir){
     minuteurVolet = setTimeout(function(){ z.classList.add("ferme"); }, 800);   // on cache les tuiles une fois le volet redescendu
   }
   var b = el("bascule");
-  b.textContent = ouvrir ? "🔽 Fermer le volet" : "🏠 Ouvrir le volet";
+  if (ouvrir) { finVolet = Date.now() + VOLET_MIN * 60 * 1000; texteBouton(); decompte = setInterval(texteBouton, 1000); }
+  else b.textContent = "🏠 Ouvrir le volet";
   b.setAttribute("aria-pressed", ouvrir ? "true" : "false");
 }
 function voletOuvert(){ return el("zone").classList.contains("ouvert"); }
