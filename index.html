@@ -27,7 +27,7 @@ html,body{height:100%;margin:0}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
 .ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:calc(var(--u)*2.2);padding:calc(var(--u)*2.6) calc(var(--u)*3.4);transition:transform 2s ease}
 .gauche{display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*1);min-width:0}
-.heure{font-size:calc(var(--u)*5.6);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.heure{font-size:calc(var(--u)*5.2);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .date{font-size:calc(var(--u)*1.7);color:var(--brume);margin-top:calc(var(--u)*0.6);text-transform:capitalize}
 .dehors{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
 .etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
@@ -39,23 +39,24 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .dehors .hum{font-size:calc(var(--u)*1.8);color:var(--craie);margin-top:calc(var(--u)*0.5)}
 .pression{font-size:calc(var(--u)*1.5);color:var(--brume);margin-top:calc(var(--u)*0.5);font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
-.pluie{margin-top:calc(var(--u)*0.8);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:calc(var(--u)*1)}
-.pluie .resume{font-size:calc(var(--u)*1.4);color:var(--craie);line-height:1.2}
+.pluie{margin:calc(var(--u)*0.8) 0 calc(var(--u)*0.4);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:calc(var(--u)*1)}
+.pluie .resume{font-size:calc(var(--u)*1.4);color:var(--craie);line-height:1.2;padding-bottom:calc(var(--u)*1.1)}   /* recentre le texte sur les barres, sans les heures dessous */
 .pluie .resume span{display:block;font-family:var(--mono);font-size:.6em;letter-spacing:.12em;text-transform:uppercase;color:var(--brume);margin-bottom:calc(var(--u)*0.3)}
 .pluie .barres{display:flex;gap:calc(var(--u)*0.5);align-items:flex-end}
 .pluie .q{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*0.3)}
 .pluie .b{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);border-radius:calc(var(--u)*0.3);background:var(--ardoise);border:1px solid var(--trait);display:flex;align-items:flex-end;overflow:hidden}
 .pluie .b i{display:block;width:100%}
+.pluie .b i.sec{height:calc(var(--u)*0.25)!important;background:var(--brume)!important;opacity:.5}
 .pluie .h{font-family:var(--mono);font-size:calc(var(--u)*0.75);color:var(--brume)}
-.tendance{margin-top:calc(var(--u)*0.9)}
-.tendance svg{display:block;width:100%;height:calc(var(--u)*2.9);overflow:visible}
+.tendance{margin-top:calc(var(--u)*1.3)}
+.tendance svg{display:block;width:100%;height:calc(var(--u)*2.6);overflow:visible}
 .tendance .graphe{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(var(--u)*0.6);align-items:stretch}
 .tendance .echelle{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);line-height:1;font-variant-numeric:tabular-nums}
 .tendance .echelle.g{text-align:right}
 .tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);margin-top:calc(var(--u)*0.6)}
 .previsions{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
 .jours{display:flex;flex-direction:column;gap:calc(var(--u)*0.15);margin-top:calc(var(--u)*0.6)}
-.jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.22)}
+.jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.15)}
 .jour .j{color:var(--brume);text-transform:capitalize}
 .jour .ico{text-align:center}
 .jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -337,7 +338,7 @@ function pluieHeure(m){
     if (n > 0 && premier < 0) premier = k;
     pire = Math.max(pire, n);
     var haut = n === 0 ? 0 : 25 + n * 18.75;   // 25 % à 100 % selon l'intensité
-    barres += '<div class="q"><div class="b" title="' + mm.toFixed(1).replace(".", ",") + ' mm"><i style="height:' + haut + '%;background:' + NIVEAUX_PLUIE[n].couleur + '"></i></div>' +
+    barres += '<div class="q"><div class="b" title="' + mm.toFixed(1).replace(".", ",") + ' mm"><i' + (n === 0 ? ' class="sec"' : '') + ' style="height:' + haut + '%;background:' + NIVEAUX_PLUIE[n].couleur + '"></i></div>' +
       '<span class="h">' + q.time[k].slice(11, 16).replace(":", "h") + '</span></div>';
   }
   var resume, titre = "Dans l'heure";
