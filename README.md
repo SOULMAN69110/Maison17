@@ -62,4 +62,5 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 ## Historique du projet
 
 - **3 nov. 2026** : création du tableau de bord (heure, extérieur, 7 pièces avec confort, humidité et alertes de pile), hébergement sur GitHub Pages, ajout de la pression et des prévisions sur 4 jours, démarrage de l'historique des mesures et de la page de courbes.
+- **3 nov. 2026 (suite)** : émojis sur les blocs Dehors, Prévisions et sur chaque pièce ; courbe de la pression du jour avec échelle des deux côtés ; prévisions sur 7 jours ; mise en page adaptée à l'iPhone à l'horizontale ; écran de code d'accès sur les deux pages ; chambres des enfants nommées Chambre C. et Chambre Y. ; volet roulant sur la partie intérieure, fermé par défaut et refermé automatiquement au bout de 3 min (`VOLET_MIN` dans `index.html`).
 - Idées écartées pour l'instant : appli Apple TV native (nécessite un Mac), intégration de SmartThings.
