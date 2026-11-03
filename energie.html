@@ -67,9 +67,18 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .taux > div{flex:1 1 0;margin-right:1rem}
 .taux > div:last-child{margin-right:0}
 .taux b{display:block;font-size:2.6rem;font-weight:700;line-height:1;margin-top:.3rem}
-.cumul{margin-top:auto;padding-top:1rem;border-top:1px dashed var(--trait);font-size:1.25rem;color:var(--brume)}
+.cumul{margin-top:auto;padding-top:.9rem;border-top:1px dashed var(--trait);font-size:1.25rem;color:var(--brume)}
 .cumul b{color:var(--craie);font-weight:600}
-.cumul div{margin-top:.35rem}
+.cumul-tete{display:flex;justify-content:space-between;align-items:baseline}
+.cumul-tete a{font-family:var(--mono);font-size:.95rem;color:var(--givre);text-decoration:none}
+.resume3{display:flex;margin-top:.6rem}
+.resume3 > div{flex:1 1 0;margin-right:.8rem}
+.resume3 > div:last-child{margin-right:0}
+.resume3 span{display:block;font-family:var(--mono);font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
+.resume3 b{display:block;font-size:1.7rem;font-variant-numeric:tabular-nums;margin-top:.15rem;white-space:nowrap}
+.resume3 em{display:block;font-style:normal;font-family:var(--mono);font-size:.95rem;margin-top:.1rem}
+.hausse{color:var(--vente)} .baisse{color:var(--reseau)}
+.total-inst{margin-top:.5rem}
 
 .courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;margin-top:.8rem;overflow:visible}
 .courbe .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.4rem}
@@ -141,8 +150,13 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
         <div><div class="etiquette">Autonomie</div><b id="t-autonomie">--</b></div>
       </div>
       <div class="cumul">
-        <div>Ce mois-ci : <b id="c-mois">--</b></div>
-        <div>Cette année : <b id="c-annee">--</b> · Depuis l'installation : <b id="c-total">--</b></div>
+        <div class="cumul-tete"><span class="etiquette">☀️ Production à date · vs N-1</span><a href="bilans.html">📊 Bilans →</a></div>
+        <div class="resume3">
+          <div><span>Semaine</span><b id="r-sem">--</b><em id="e-sem">&nbsp;</em></div>
+          <div><span>Mois</span><b id="r-mois">--</b><em id="e-mois">&nbsp;</em></div>
+          <div><span>Année</span><b id="r-an">--</b><em id="e-an">&nbsp;</em></div>
+        </div>
+        <div class="total-inst">Depuis l'installation : <b id="c-total">--</b></div>
       </div>
     </div>
     <div class="carte courbe">
@@ -221,12 +235,68 @@ function afficher(s){
   el("t-auto").textContent = Math.round(pAuto) + " %";
   el("t-autonomie").textContent = Math.round(pSol) + " %";
 
-  el("c-mois").innerHTML = kwh(s.mois_production_wh, 1).replace(/<\/?small>/g, " ");
-  el("c-annee").innerHTML = kwh(s.annee_production_wh, 0).replace(/<\/?small>/g, " ");
+  aujourdhuiProd = j.production_wh;
+  resume();
   el("c-total").innerHTML = kwh(s.total_production_wh).replace(/<\/?small>/g, " ");
 
   etat.className = "etat";
   etat.textContent = "eStar Power · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+/* ===== Production à date (semaine, mois, année) comparée aux mêmes jours de l'an dernier =====
+   Historique : historique/solaire-jours.csv. Les jours de panne du suivi eStar (aucune production et moins
+   de 0,5 kWh consommé) sont estimés par la moyenne des 7 jours valides avant et après, comme dans la page Bilans. */
+var prodJours = null, aujourdhuiProd = null;
+function cleJ(d){ return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function chargerJours(){
+  fetch("historique/solaire-jours.csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(); return r.text(); }).then(function(txt){
+    var l = txt.trim().split("\n"), t = l[0].split(","), iP = t.indexOf("production_wh"), iC = t.indexOf("consommation_wh"), rangs = [];
+    for (var k = 1; k < l.length; k++) { var c = l[k].split(","); rangs.push({ d: c[0], p: parseFloat(c[iP]) || 0, c: parseFloat(c[iC]) || 0 }); }
+    function valide(x){ return x.p > 0 || x.c >= 500; }
+    var m = {};
+    for (var i = 0; i < rangs.length; i++) {
+      if (valide(rangs[i])) { m[rangs[i].d] = rangs[i].p; continue; }
+      var fin = i; while (fin + 1 < rangs.length && !valide(rangs[fin + 1])) fin++;
+      var v = [], a, b, n = 0;
+      for (a = i - 1; a >= 0 && v.length < 7; a--) if (valide(rangs[a])) v.push(rangs[a].p);
+      for (b = fin + 1; b < rangs.length && n < 7; b++) if (valide(rangs[b])) { v.push(rangs[b].p); n++; }
+      var moy = v.length ? v.reduce(function(x, y){ return x + y; }, 0) / v.length : 0;
+      for (var k2 = i; k2 <= fin; k2++) m[rangs[k2].d] = moy;
+      i = fin;
+    }
+    prodJours = m; resume();
+  }).catch(function(){});
+}
+function somme(debut, finIncluse){
+  var s = 0, n = 0;
+  for (var d = new Date(debut.getTime()); d <= finIncluse; d.setDate(d.getDate() + 1)) {
+    var k = cleJ(d), v = k === cleJ(new Date()) && typeof aujourdhuiProd === "number" ? aujourdhuiProd : prodJours[k];
+    if (typeof v === "number") { s += v; n++; }
+  }
+  return n ? s : null;
+}
+function ecart(n, n1){
+  if (n === null || !n1) return { t: "pas de N-1", c: "" };
+  var p = (n - n1) / n1 * 100, a = Math.abs(p), v = a < 10 ? (Math.round(p * 10) / 10) : Math.round(p);
+  var txt = (v > 0 ? "+" : v < 0 ? "-" : "") + (a < 10 ? Math.abs(v).toFixed(1) : String(Math.abs(v))).replace(".", ",") + " %";
+  return { t: txt + " vs N-1", c: a < 1 ? "" : p > 0 ? "hausse" : "baisse" };
+}
+function resume(){
+  if (!prodJours) return;
+  var auj = new Date(), a = new Date(auj.getFullYear(), auj.getMonth(), auj.getDate());
+  var lun = new Date(a.getTime()); lun.setDate(lun.getDate() - ((a.getDay() + 6) % 7));
+  function an1(d){ var x = new Date(d.getTime()); x.setFullYear(x.getFullYear() - 1); return x; }
+  function sem1(d){ var x = new Date(d.getTime()); x.setDate(x.getDate() - 364); return x; }   // même jour de semaine, 52 semaines avant
+  var periodes = [
+    ["sem", lun, a, sem1(lun), sem1(a)],
+    ["mois", new Date(a.getFullYear(), a.getMonth(), 1), a, an1(new Date(a.getFullYear(), a.getMonth(), 1)), an1(a)],
+    ["an", new Date(a.getFullYear(), 0, 1), a, new Date(a.getFullYear() - 1, 0, 1), an1(a)]
+  ];
+  periodes.forEach(function(p){
+    var n = somme(p[1], p[2]), n1 = somme(p[3], p[4]), e = ecart(n, n1);
+    el("r-" + p[0]).innerHTML = kwh(n).replace(/<\/?small>/g, " ");
+    var em = el("e-" + p[0]); em.textContent = e.t; em.className = e.c;
+  });
 }
 
 /* Courbe de la journée, à partir de l'historique enregistré par la tâche toutes les 10 min */
@@ -280,7 +350,8 @@ setInterval(function(){
   el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
 }, 10 * 60 * 1000);
 
-horloge(); charger();
+horloge(); charger(); chargerJours();
+setInterval(chargerJours, 30 * 60 * 1000);
 setInterval(horloge, 1000);
 setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
 </script>
