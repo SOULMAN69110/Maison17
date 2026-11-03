@@ -25,9 +25,9 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
-.ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:calc(var(--u)*2.2);padding:calc(var(--u)*3.2) calc(var(--u)*3.4);transition:transform 2s ease}
+.ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:calc(var(--u)*2.2);padding:calc(var(--u)*2.6) calc(var(--u)*3.4);transition:transform 2s ease}
 .gauche{display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*1);min-width:0}
-.heure{font-size:calc(var(--u)*6.6);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.heure{font-size:calc(var(--u)*5.6);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .date{font-size:calc(var(--u)*1.7);color:var(--brume);margin-top:calc(var(--u)*0.6);text-transform:capitalize}
 .dehors{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
 .etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
@@ -39,15 +39,23 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .dehors .hum{font-size:calc(var(--u)*1.8);color:var(--craie);margin-top:calc(var(--u)*0.5)}
 .pression{font-size:calc(var(--u)*1.5);color:var(--brume);margin-top:calc(var(--u)*0.5);font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
-.tendance{margin-top:calc(var(--u)*1.1)}
-.tendance svg{display:block;width:100%;height:calc(var(--u)*3.8);overflow:visible}
+.pluie{margin-top:calc(var(--u)*0.8);display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:calc(var(--u)*1)}
+.pluie .resume{font-size:calc(var(--u)*1.4);color:var(--craie);line-height:1.2}
+.pluie .resume span{display:block;font-family:var(--mono);font-size:.6em;letter-spacing:.12em;text-transform:uppercase;color:var(--brume);margin-bottom:calc(var(--u)*0.3)}
+.pluie .barres{display:flex;gap:calc(var(--u)*0.5);align-items:flex-end}
+.pluie .q{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*0.3)}
+.pluie .b{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);border-radius:calc(var(--u)*0.3);background:var(--ardoise);border:1px solid var(--trait);display:flex;align-items:flex-end;overflow:hidden}
+.pluie .b i{display:block;width:100%}
+.pluie .h{font-family:var(--mono);font-size:calc(var(--u)*0.75);color:var(--brume)}
+.tendance{margin-top:calc(var(--u)*0.9)}
+.tendance svg{display:block;width:100%;height:calc(var(--u)*2.9);overflow:visible}
 .tendance .graphe{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(var(--u)*0.6);align-items:stretch}
 .tendance .echelle{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);line-height:1;font-variant-numeric:tabular-nums}
 .tendance .echelle.g{text-align:right}
 .tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);margin-top:calc(var(--u)*0.6)}
 .previsions{border-top:1px solid var(--trait);padding-top:calc(var(--u)*1.1)}
-.jours{display:flex;flex-direction:column;gap:calc(var(--u)*0.25);margin-top:calc(var(--u)*0.6)}
-.jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.3)}
+.jours{display:flex;flex-direction:column;gap:calc(var(--u)*0.15);margin-top:calc(var(--u)*0.6)}
+.jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.22)}
 .jour .j{color:var(--brume);text-transform:capitalize}
 .jour .ico{text-align:center}
 .jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -92,7 +100,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 </style>
@@ -110,6 +118,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div></div>
       <div class="hum" id="ext-h"><i class="emo">💧</i>Humidité --</div>
       <div class="pression" id="pression"></div>
+      <div class="pluie" id="pluie"></div>
       <div class="tendance" id="tendance"></div>
     </div>
     <div class="previsions">
@@ -308,9 +317,40 @@ function courbePression(m){
     '<div class="echelle">' + ech + '</div></div>' +
     '<div class="axe"><span>0 h</span><span>hPa · min ' + Math.round(mini) + ' · max ' + Math.round(maxi) + '</span><span>24 h</span></div>';
 }
+/* Pluie dans l'heure : 4 quarts d'heure, bâtonnets plus hauts et plus sombres quand la pluie est plus forte */
+var NIVEAUX_PLUIE = [   // millimètres sur le quart d'heure
+  { max: 0.05, nom: "",           couleur: "" },
+  { max: 0.25, nom: "faible",     couleur: "#bfe3f7" },
+  { max: 0.75, nom: "modérée",    couleur: "#6fb6ea" },
+  { max: 2,    nom: "forte",      couleur: "#2f7fd6" },
+  { max: 1e9,  nom: "très forte", couleur: "#1c4fb0" }
+];
+function niveauPluie(mm){ for (var n = 0; n < NIVEAUX_PLUIE.length; n++) if (mm < NIVEAUX_PLUIE[n].max) return n; return NIVEAUX_PLUIE.length - 1; }
+function pluieHeure(m){
+  var q = m.minutely_15;
+  if (!q || !q.time) { el("pluie").innerHTML = ""; return; }
+  var debut = 0;
+  while (debut < q.time.length - 1 && q.time[debut + 1] <= m.current.time) debut++;   // quart d'heure en cours
+  var barres = "", premier = -1, pire = 0;
+  for (var k = debut; k < debut + 4 && k < q.time.length; k++) {
+    var mm = q.precipitation[k] || 0, n = niveauPluie(mm);
+    if (n > 0 && premier < 0) premier = k;
+    pire = Math.max(pire, n);
+    var haut = n === 0 ? 0 : 25 + n * 18.75;   // 25 % à 100 % selon l'intensité
+    barres += '<div class="q"><div class="b" title="' + mm.toFixed(1).replace(".", ",") + ' mm"><i style="height:' + haut + '%;background:' + NIVEAUX_PLUIE[n].couleur + '"></i></div>' +
+      '<span class="h">' + q.time[k].slice(11, 16).replace(":", "h") + '</span></div>';
+  }
+  var resume, titre = "Dans l'heure";
+  if (premier < 0) resume = "🌂 Pas de pluie";
+  else {
+    resume = premier === debut ? "☔ Pluie en cours" : "☔ Pluie vers " + q.time[premier].slice(11, 16).replace(":", "h");
+    titre += " · " + (pire > 1 ? "jusqu'à " : "") + NIVEAUX_PLUIE[pire].nom;
+  }
+  el("pluie").innerHTML = '<div class="resume"><span>' + titre + '</span>' + resume + '</div><div class="barres">' + barres + '</div>';
+}
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl,weather_code,is_day&hourly=pressure_msl&past_days=1&forecast_days=" + JOURS_PREVISION + "" +
+    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl&past_days=1&forecast_days=" + JOURS_PREVISION + "" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   fetch(url).then(lireJson).then(function(m){
     /* Pression et tendance sur 3 h */
@@ -324,6 +364,7 @@ function meteo(){
       el("pression").innerHTML = '<i class="emo">🧭</i>Pression <b>' + Math.round(p) + " hPa</b>" + tendance;
     }
     courbePression(m);
+    pluieHeure(m);
     if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
     /* Aujourd'hui + les jours suivants */
     var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
@@ -336,7 +377,7 @@ function meteo(){
     }
     el("jours").innerHTML = html;
   }).catch(function(){
-    el("jours").innerHTML = '<div class="maj">Prévisions indisponibles, nouvel essai dans 30 min.</div>';
+    el("jours").innerHTML = '<div class="maj">Prévisions indisponibles, nouvel essai dans 15 min.</div>';
   });
 }
 
@@ -378,7 +419,7 @@ construire();
 horloge();
 charger();
 meteo();
-setInterval(meteo, 30 * 60 * 1000);
+setInterval(meteo, 15 * 60 * 1000);   // toutes les 15 min pour suivre la pluie dans l'heure
 setInterval(horloge, 1000);
 setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
 setInterval(decaler, 10 * 60 * 1000);
