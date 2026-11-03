@@ -29,35 +29,36 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .gauche{display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*0.7);min-width:0}
 .heure{font-size:calc(var(--u)*4.7);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .date{font-size:calc(var(--u)*1.7);color:var(--brume);margin-top:calc(var(--u)*0.6);text-transform:capitalize}
-.dehors{border-top:1px solid var(--trait);padding-top:calc(var(--u)*0.8)}
+/* Colonne de gauche en cadres, comme les tuiles des pièces */
+.carte{background:var(--ardoise);border-radius:calc(var(--u)*0.9);padding:calc(var(--u)*0.75) calc(var(--u)*1.1)}
+.dehors{display:flex;flex-direction:column;gap:calc(var(--u)*0.6)}
 .etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
-.dehors .ligne{display:flex;align-items:center;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*0.6)}
+.dehors .ligne{display:flex;align-items:center;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*0.4)}
 .dehors .valeur{font-size:calc(var(--u)*4.1);font-weight:600;color:var(--givre);line-height:1;font-variant-numeric:tabular-nums}
 .dehors .ciel-act{font-size:calc(var(--u)*3.5);line-height:1}
 .emo{font-style:normal;margin-right:.35em}
 .dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
-.dehors .hum{font-size:calc(var(--u)*1.55);color:var(--craie);margin-top:calc(var(--u)*0.5)}
+.dehors .hum{margin-left:auto;text-align:right;line-height:1.15;font-size:calc(var(--u)*1.7);font-variant-numeric:tabular-nums;color:var(--craie)}
+.dehors .hum span{display:block;font-family:var(--mono);font-size:.5em;letter-spacing:.12em;text-transform:uppercase;color:var(--brume)}
 .pression{font-size:calc(var(--u)*1.5);color:var(--brume);margin-top:calc(var(--u)*0.5);font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
 .pluie{margin:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:calc(var(--u)*1)}
 .pluie .resume{font-size:calc(var(--u)*1.4);color:var(--craie);line-height:1.2;padding-bottom:calc(var(--u)*1.1)}   /* recentre le texte sur les barres, sans les heures dessous */
-.pluie .resume span{display:block;font-family:var(--mono);font-size:.6em;letter-spacing:.12em;text-transform:uppercase;color:var(--brume);margin-bottom:calc(var(--u)*0.3)}
+.pluie .resume span{display:block;font-family:var(--mono);font-size:.55em;letter-spacing:.05em;text-transform:uppercase;color:var(--brume);margin-bottom:calc(var(--u)*0.3)}
 .pluie .barres{display:flex;gap:calc(var(--u)*0.5);align-items:flex-end}
 .pluie .q{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*0.3)}
-.pluie .b{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);border-radius:calc(var(--u)*0.3);background:var(--ardoise);border:1px solid var(--trait);display:flex;align-items:flex-end;overflow:hidden}
+.pluie .b{width:calc(var(--u)*2.4);height:calc(var(--u)*2.4);border-radius:calc(var(--u)*0.3);background:var(--nuit);border:1px solid var(--trait);display:flex;align-items:flex-end;overflow:hidden}
 .pluie .b i{display:block;width:100%}
 .pluie .b i.sec{height:calc(var(--u)*0.25)!important;background:var(--brume)!important;opacity:.5}
 .pluie .h{font-family:var(--mono);font-size:calc(var(--u)*0.75);color:var(--brume)}
 .tendance{margin-top:calc(var(--u)*0.8)}
-/* Sous-parties du bloc Dehors (pluie dans l'heure, pression) séparées par un trait pointillé */
-.dehors .sb{border-top:1px dashed var(--trait);margin-top:calc(var(--u)*0.75);padding-top:calc(var(--u)*0.7)}
-.dehors .sb .pression{margin-top:0}
+.dehors .carte .pression{margin-top:0}
 .tendance svg{display:block;width:100%;height:calc(var(--u)*2.6);overflow:visible}
 .tendance .graphe{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:calc(var(--u)*0.6);align-items:stretch}
 .tendance .echelle{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);line-height:1;font-variant-numeric:tabular-nums}
 .tendance .echelle.g{text-align:right}
 .tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume);margin-top:calc(var(--u)*0.6)}
-.previsions{border-top:1px solid var(--trait);padding-top:calc(var(--u)*0.8)}
+
 .jours{display:flex;flex-direction:column;gap:calc(var(--u)*0.15);margin-top:calc(var(--u)*0.6)}
 .jour{display:grid;grid-template-columns:calc(var(--u)*4.6) calc(var(--u)*2.2) minmax(0,1fr) auto;align-items:baseline;gap:calc(var(--u)*0.8);font-size:calc(var(--u)*1.15)}
 .jour .j{color:var(--brume);text-transform:capitalize}
@@ -136,16 +137,17 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="date" id="date"></div>
     </div>
     <div class="dehors">
-      <div class="etiquette"><i class="emo">🌳</i>Dehors</div>
-      <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div></div>
-      <div class="hum" id="ext-h"><i class="emo">💧</i>Humidité --</div>
-      <div class="sb"><div class="pluie" id="pluie"></div></div>
-      <div class="sb">
+      <div class="carte">
+        <div class="etiquette"><i class="emo">🌳</i>Dehors</div>
+        <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div><div class="hum" id="ext-h"><i class="emo">💧</i>--</div></div>
+      </div>
+      <div class="carte"><div class="pluie" id="pluie"></div></div>
+      <div class="carte">
         <div class="pression" id="pression"></div>
         <div class="tendance" id="tendance"></div>
       </div>
     </div>
-    <div class="previsions">
+    <div class="previsions carte">
       <div class="etiquette"><i class="emo">📅</i>Prévisions</div>
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
@@ -247,7 +249,7 @@ function afficher(appareils){
 
     if (c.exterieur && typeof m.t2 === "number") {
       el("ext-t").innerHTML = fmt(m.t2) + "<small>°C</small>";
-      el("ext-h").innerHTML = (typeof m.h2 === "number") ? '<i class="emo">💧</i>Humidité ' + Math.round(m.h2) + " %" : "";
+      el("ext-h").innerHTML = (typeof m.h2 === "number") ? '<span>Humidité</span><i class="emo">💧</i>' + Math.round(m.h2) + " %" : "";
     }
   });
 }
