@@ -141,7 +141,10 @@ function options(unite){
     elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2, tension: 0.25 } },
     scales: {
       x: { type: "linear", ticks: { color: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, grid: { color: TRAIT } },
-      y: { ticks: { color: BRUME, callback: function(v){ return fmt(v, unite === "hPa" ? 0 : 0) + " " + unite; } }, grid: { color: TRAIT } }
+      y: { ticks: { color: BRUME, callback: function(v){ return fmt(v, Math.round(v) === v ? 0 : 1) + " " + unite; } }, grid: { color: TRAIT } },
+      /* Même échelle répétée à droite, pour lire les valeurs des deux côtés du graphique */
+      y2: { position: "right", grid: { drawOnChartArea: false }, ticks: { color: BRUME, callback: function(v){ return fmt(v, Math.round(v) === v ? 0 : 1) + " " + unite; } },
+            afterDataLimits: function(ax){ var y = ax.chart.scales.y; if (y) { ax.min = y.min; ax.max = y.max; } } }
     },
     plugins: {
       legend: { labels: { color: BRUME, boxWidth: 12, boxHeight: 3, font: { family: "IBM Plex Mono", size: 12 } } },
