@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maison en courbes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Même identité que le tableau de bord : fond nuit, accent givre. Une colonne de graphiques, sélecteur de période en tête. */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a;
+  --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nuit);color:var(--craie);font-family:var(--display)}
+.page{max-width:1200px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:clamp(28px,4vw,44px);font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.sous{color:var(--brume);margin-top:4px;font-size:15px}
+a{color:var(--givre)}
+.periodes{display:flex;gap:6px;flex-wrap:wrap}
+.periodes button{font:500 14px var(--mono);color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;padding:8px 14px;cursor:pointer}
+.periodes button[aria-pressed="true"]{background:var(--givre);border-color:var(--givre);color:var(--nuit)}
+.periodes button:focus-visible{outline:2px solid var(--givre);outline-offset:2px}
+.grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.bloc{background:var(--ardoise);border-radius:14px;padding:18px 18px 12px;min-width:0}
+.bloc.large{grid-column:1 / -1}
+.bloc h2{margin:0 0 4px;font-size:18px;font-weight:600}
+.bloc .info{font-family:var(--mono);font-size:12px;color:var(--brume);margin-bottom:10px;font-variant-numeric:tabular-nums}
+.toile{position:relative;height:280px}
+.large .toile{height:340px}
+.etat{font-family:var(--mono);font-size:13px;color:var(--brume)}
+@media (max-width:760px){.grille{grid-template-columns:1fr}.toile,.large .toile{height:260px}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <div>
+      <h1>Maison en courbes</h1>
+      <div class="sous">Mesures enregistrées depuis le 3 novembre 2026 · <a href="./">Tableau de bord</a></div>
+    </div>
+    <div class="periodes" role="group" aria-label="Période">
+      <button type="button" id="p-1" data-jours="1" aria-pressed="false">24 h</button>
+      <button type="button" id="p-7" data-jours="7" aria-pressed="true">7 jours</button>
+      <button type="button" id="p-30" data-jours="30" aria-pressed="false">30 jours</button>
+      <button type="button" id="p-365" data-jours="365" aria-pressed="false">1 an</button>
+    </div>
+  </header>
+  <div class="etat" id="etat">Chargement de l'historique…</div>
+  <section class="grille">
+    <article class="bloc large"><h2>Températures des pièces</h2><div class="info" id="i-temp"></div><div class="toile"><canvas id="g-temp"></canvas></div></article>
+    <article class="bloc"><h2>Dehors</h2><div class="info" id="i-ext"></div><div class="toile"><canvas id="g-ext"></canvas></div></article>
+    <article class="bloc"><h2>Pression atmosphérique</h2><div class="info" id="i-pres"></div><div class="toile"><canvas id="g-pres"></canvas></div></article>
+    <article class="bloc large"><h2>Humidité des pièces</h2><div class="info" id="i-hum"></div><div class="toile"><canvas id="g-hum"></canvas></div></article>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+var CAPTEURS = [
+  { id: "077BD6BA8BF6", nom: "Salon",           couleur: "#7cc4e8" },
+  { id: "121D9CDE1215", nom: "Chambre Claire",  couleur: "#f0a6ca" },
+  { id: "121B8C435713", nom: "Chambre parents", couleur: "#f0c36a" },
+  { id: "122897FF614E", nom: "Chambre Yaël",    couleur: "#a99cf0" },
+  { id: "1224E7AD1BFA", nom: "Bureau",          couleur: "#7fd1a0" },
+  { id: "202D151D9A21", nom: "SdB filles",      couleur: "#f08a6a" },
+  { id: "02129E969BF2", nom: "SdB parents",     couleur: "#c9d4dc" }
+];
+var SALON = "077BD6BA8BF6";
+var css = getComputedStyle(document.documentElement);
+var BRUME = css.getPropertyValue("--brume").trim(), TRAIT = css.getPropertyValue("--trait").trim(), GIVRE = css.getPropertyValue("--givre").trim();
+
+var lignes = { mesures: [], pression: [] }, graphiques = {}, jours = 7;
+
+function el(id){ return document.getElementById(id); }
+function fmt(n, d){ return n.toFixed(d === undefined ? 1 : d).replace(".", ","); }
+
+function lireCsv(texte){
+  var l = texte.trim().split(/\r?\n/), entete = l.shift().split(","), out = [];
+  l.forEach(function(x){
+    var v = x.split(","), o = {};
+    entete.forEach(function(k, i){ o[k] = v[i]; });
+    out.push(o);
+  });
+  return out;
+}
+
+function charger(){
+  return fetch("historique/index.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function(r){ if (!r.ok) throw new Error("aucun historique encore"); return r.json(); })
+    .then(function(liste){
+      return Promise.all(liste.map(function(nom){
+        return fetch("historique/" + nom).then(function(r){ return r.text(); }).then(function(t){
+          var type = nom.indexOf("pression") === 0 ? "pression" : "mesures";
+          lignes[type] = lignes[type].concat(lireCsv(t));
+        });
+      }));
+    });
+}
+
+/* Moyenne par tranche de temps pour garder des courbes lisibles sur les longues périodes */
+function pasPour(j){ return j <= 1 ? 0 : j <= 7 ? 3600 : j <= 30 ? 3 * 3600 : 86400; }
+function serie(rangs, champ, debut){
+  var pas = pasPour(jours), seaux = {}, pts = [];
+  rangs.forEach(function(r){
+    var ts = +r.horodatage, v = parseFloat(r[champ]);
+    if (ts < debut || isNaN(v)) return;
+    if (!pas) { pts.push({ x: ts * 1000, y: v }); return; }
+    var k = Math.floor(ts / pas) * pas;
+    (seaux[k] = seaux[k] || []).push(v);
+  });
+  if (pas) Object.keys(seaux).sort().forEach(function(k){
+    var s = seaux[k]; pts.push({ x: (+k + pas / 2) * 1000, y: s.reduce(function(a, b){ return a + b; }, 0) / s.length });
+  });
+  return pts.sort(function(a, b){ return a.x - b.x; });
+}
+function minMax(rangs, champ, debut){
+  var mi = Infinity, ma = -Infinity;
+  rangs.forEach(function(r){ var v = parseFloat(r[champ]); if (+r.horodatage >= debut && !isNaN(v)) { mi = Math.min(mi, v); ma = Math.max(ma, v); } });
+  return mi === Infinity ? null : [mi, ma];
+}
+
+function etiquetteDate(ms){
+  var d = new Date(ms);
+  if (jours <= 1) return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  if (jours <= 30) return d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+  return d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+}
+
+function options(unite){
+  return {
+    responsive: true, maintainAspectRatio: false, animation: false, parsing: false, normalized: true,
+    interaction: { mode: "nearest", axis: "x", intersect: false },
+    elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2, tension: 0.25 } },
+    scales: {
+      x: { type: "linear", ticks: { color: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, grid: { color: TRAIT } },
+      y: { ticks: { color: BRUME, callback: function(v){ return fmt(v, unite === "hPa" ? 0 : 0) + " " + unite; } }, grid: { color: TRAIT } }
+    },
+    plugins: {
+      legend: { labels: { color: BRUME, boxWidth: 12, boxHeight: 3, font: { family: "IBM Plex Mono", size: 12 } } },
+      tooltip: { callbacks: {
+        title: function(it){ return new Date(it[0].parsed.x).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); },
+        label: function(it){ return it.dataset.label + " : " + fmt(it.parsed.y, unite === "%" || unite === "hPa" ? 0 : 1) + " " + unite; }
+      } }
+    }
+  };
+}
+
+function dessiner(id, jeux, unite){
+  if (graphiques[id]) graphiques[id].destroy();
+  graphiques[id] = new Chart(el(id), { type: "line", data: { datasets: jeux }, options: options(unite) });
+}
+
+function rendre(){
+  var debut = Date.now() / 1000 - jours * 86400;
+  var parCapteur = {};
+  lignes.mesures.forEach(function(r){ (parCapteur[r.capteur] = parCapteur[r.capteur] || []).push(r); });
+
+  dessiner("g-temp", CAPTEURS.map(function(c){
+    return { label: c.nom, borderColor: c.couleur, backgroundColor: c.couleur, data: serie(parCapteur[c.id] || [], "temp", debut) };
+  }), "°C");
+
+  var salon = parCapteur[SALON] || [];
+  dessiner("g-ext", [{ label: "Température extérieure", borderColor: GIVRE, backgroundColor: "rgba(124,196,232,.12)", fill: true, data: serie(salon, "temp_ext", debut) }], "°C");
+  var mm = minMax(salon, "temp_ext", debut);
+  el("i-ext").textContent = mm ? "Min " + fmt(mm[0]) + " °C · max " + fmt(mm[1]) + " °C sur la période" : "Pas encore de mesure sur cette période";
+
+  dessiner("g-pres", [{ label: "Pression", borderColor: "#c9d4dc", backgroundColor: "#c9d4dc", data: serie(lignes.pression, "pression_hpa", debut) }], "hPa");
+  var mp = minMax(lignes.pression, "pression_hpa", debut);
+  el("i-pres").textContent = mp ? "Entre " + fmt(mp[0], 0) + " et " + fmt(mp[1], 0) + " hPa sur la période" : "Pas encore de mesure sur cette période";
+
+  dessiner("g-hum", CAPTEURS.filter(function(c){ return (parCapteur[c.id] || []).some(function(r){ return r.hum !== ""; }); }).map(function(c){
+    return { label: c.nom, borderColor: c.couleur, backgroundColor: c.couleur, data: serie(parCapteur[c.id] || [], "hum", debut) };
+  }), "%");
+
+  var pas = pasPour(jours);
+  el("i-temp").textContent = el("i-hum").textContent = pas ? "Moyenne par " + (pas === 86400 ? "jour" : pas === 3600 ? "heure" : "tranche de 3 h") : "Toutes les mesures";
+}
+
+document.querySelectorAll(".periodes button").forEach(function(b){
+  b.addEventListener("click", function(){
+    jours = +b.dataset.jours;
+    document.querySelectorAll(".periodes button").forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    rendre();
+  });
+});
+
+charger().then(function(){
+  var n = lignes.mesures.length;
+  el("etat").textContent = n + " mesures enregistrées · nouvelles mesures toutes les 10 minutes environ";
+  rendre();
+}).catch(function(e){
+  el("etat").textContent = "Historique indisponible (" + e.message + "). Il se remplit à chaque passage de la tâche automatique.";
+});
+</script>
+</body>
+</html>

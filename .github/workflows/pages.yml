@@ -8,13 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publier:
@@ -24,19 +24,40 @@ jobs:
       url: ${{ steps.deploiement.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Récupérer les dernières mesures Mobile Alerts
         run: |
           mkdir -p site
-          cp index.html site/
           IDS="077BD6BA8BF6,121D9CDE1215,121B8C435713,122897FF614E,1224E7AD1BFA,202D151D9A21,02129E969BF2"
-          curl -sS -i -m 30 -X POST \
+          curl -sS -m 30 -X POST \
             -H "Content-Type: application/x-www-form-urlencoded" \
             --data "deviceids=$IDS" \
-            https://www.data199.com/api/pv1/device/lastmeasurement -o reponse.txt || true
-          echo "--- en-têtes ---"; sed -n '1,/^\r$/p' reponse.txt
-          sed '1,/^\r$/d' reponse.txt > site/data.json
-          echo "--- corps ---"; head -c 3000 site/data.json; echo
+            https://www.data199.com/api/pv1/device/lastmeasurement -o site/data.json || true
           python3 -c "import json;d=json.load(open('site/data.json'));assert d.get('devices')" || echo '{"devices":[]}' > site/data.json
+
+      - name: Récupérer la pression (Open-Meteo)
+        run: |
+          curl -sS -m 30 "https://api.open-meteo.com/v1/forecast?latitude=45.734&longitude=4.802&current=pressure_msl&timeformat=unixtime" -o meteo.json || echo '{}' > meteo.json
+
+      - name: Ajouter à l'historique et enregistrer dans le dépôt
+        run: |
+          python3 outils/historiser.py site/data.json meteo.json
+          git config user.name "Tableau de bord maison"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add historique
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Historique : mesures du $(TZ=Europe/Paris date '+%d/%m/%Y %H:%M')"
+            for essai in 1 2 3; do
+              git pull -q --rebase origin main && git push -q origin HEAD:main && break
+              sleep 5
+            done
+          fi
+
+      - name: Préparer le site
+        run: |
+          cp index.html historique.html site/
+          cp -r historique site/
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
