@@ -38,6 +38,9 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
 .pression{font-size:1.5vw;color:var(--brume);margin-top:.5vw;font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
+.tendance{margin-top:.7vw}
+.tendance svg{display:block;width:100%;height:4.2vw;overflow:visible}
+.tendance .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.8vw;color:var(--brume);margin-top:.3vw}
 .previsions{border-top:1px solid var(--trait);padding-top:1.4vw}
 .jours{display:flex;flex-direction:column;gap:.5vw;margin-top:.8vw}
 .jour{display:grid;grid-template-columns:4.6vw 2.2vw minmax(0,1fr) auto;align-items:baseline;gap:.8vw;font-size:1.45vw}
@@ -70,7 +73,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.tendance svg{height:14vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -87,6 +90,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div></div>
       <div class="hum" id="ext-h"><i class="emo">💧</i>Humidité --</div>
       <div class="pression" id="pression"></div>
+      <div class="tendance" id="tendance"></div>
     </div>
     <div class="previsions">
       <div class="etiquette"><i class="emo">📅</i>Prévisions</div>
@@ -235,6 +239,39 @@ function ciel(code){
   if (code >= 95) return "Orage";
   return "—";
 }
+/* Courbe de la pression d'aujourd'hui (0 h à 24 h) : passé en trait plein, prévision en pointillés */
+function courbePression(m){
+  var jour = m.current.time.slice(0, 10), h = m.hourly, pts = [];
+  for (var i = 0; i < h.time.length; i++) {
+    if (h.time[i].slice(0, 10) === jour && typeof h.pressure_msl[i] === "number") {
+      pts.push({ x: +h.time[i].slice(11, 13), y: h.pressure_msl[i] });
+    }
+  }
+  if (pts.length < 2) { el("tendance").innerHTML = ""; return; }
+  var ys = pts.map(function(p){ return p.y; });
+  var mini = Math.min.apply(null, ys), maxi = Math.max.apply(null, ys);
+  var milieu = (mini + maxi) / 2, ecart = Math.max(maxi - mini, 4);   // au moins 4 hPa d'amplitude pour ne pas exagérer
+  var bas = milieu - ecart / 2, haut = milieu + ecart / 2;
+  var L = 240, H = 50;
+  function X(x){ return (x / 23 * L).toFixed(1); }
+  function Y(y){ return (H - (y - bas) / (haut - bas) * H).toFixed(1); }
+  var maint = new Date(m.current.time), hx = maint.getHours() + maint.getMinutes() / 60;
+  var passe = pts.filter(function(p){ return p.x <= Math.ceil(hx); });
+  var futur = pts.filter(function(p){ return p.x >= Math.floor(hx); });
+  function trace(liste){ return liste.map(function(p, k){ return (k ? "L" : "M") + X(p.x) + " " + Y(p.y); }).join(" "); }
+  /* valeur à l'heure actuelle, interpolée */
+  var a = pts[0], b = pts[pts.length - 1];
+  for (var k = 0; k < pts.length - 1; k++) if (pts[k].x <= hx && pts[k + 1].x >= hx) { a = pts[k]; b = pts[k + 1]; break; }
+  var yn = a.x === b.x ? a.y : a.y + (b.y - a.y) * (hx - a.x) / (b.x - a.x);
+  var svg = '<svg viewBox="0 0 ' + L + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Pression aujourd\'hui, de ' + Math.round(mini) + ' à ' + Math.round(maxi) + ' hPa">' +
+    '<line x1="0" x2="' + L + '" y1="' + Y(milieu) + '" y2="' + Y(milieu) + '" stroke="var(--trait)" stroke-width="1" vector-effect="non-scaling-stroke"/>' +
+    (passe.length > 1 ? '<path d="' + trace(passe) + '" fill="none" stroke="var(--givre)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' : '') +
+    (futur.length > 1 ? '<path d="' + trace(futur) + '" fill="none" stroke="var(--givre)" stroke-width="2" stroke-dasharray="4 4" opacity=".55" vector-effect="non-scaling-stroke"/>' : '') +
+    '</svg>';
+  el("tendance").innerHTML = '<div style="position:relative">' + svg +
+    '<span style="position:absolute;left:' + (hx / 23 * 100).toFixed(1) + '%;top:' + (Y(yn) / H * 100).toFixed(1) + '%;width:.8vw;height:.8vw;min-width:8px;min-height:8px;border-radius:50%;background:var(--craie);transform:translate(-50%,-50%)"></span></div>' +
+    '<div class="axe"><span>0 h</span><span>min ' + Math.round(mini) + ' · max ' + Math.round(maxi) + ' hPa</span><span>24 h</span></div>';
+}
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
     "&current=pressure_msl,weather_code,is_day&hourly=pressure_msl&past_days=1&forecast_days=4" +
@@ -250,6 +287,7 @@ function meteo(){
       }
       el("pression").innerHTML = '<i class="emo">🧭</i>Pression <b>' + Math.round(p) + " hPa</b>" + tendance;
     }
+    courbePression(m);
     if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
     /* Aujourd'hui + 3 jours */
     var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
