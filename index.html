@@ -131,6 +131,41 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
+/* ===== Télés anciennes (Samsung 2018…) : navigateur sans grille CSS ni « gap » en flexbox.
+   Même mise en page refaite en flexbox, avec des marges à la place des « gap ». Ignoré par les navigateurs récents. ===== */
+@supports not (display:grid){
+  .ecran{display:flex;align-items:stretch}
+  .gauche{flex:1 1 0%;width:0}
+  .zone{flex:2.1 1 0%;width:0;margin-left:calc(var(--u)*2.2)}
+  .gauche>*+*{margin-top:calc(var(--u)*0.7)}
+  .dehors>*+*{margin-top:calc(var(--u)*0.6)}
+  .dehors .ligne>*+*{margin-left:calc(var(--u)*1.2)}
+  .dehors .ligne .hum{margin-left:auto}
+  .pluie{display:flex;align-items:center;justify-content:space-between}
+  .pluie .resume{flex:1 1 auto;min-width:0;margin-right:calc(var(--u)*1)}
+  .pluie .q+.q{margin-left:calc(var(--u)*0.5)}
+  .pluie .q>*+*{margin-top:calc(var(--u)*0.3)}
+  .tendance .graphe{display:flex;align-items:stretch}
+  .tendance .graphe>div:nth-child(2){flex:1 1 auto;min-width:0;margin:0 calc(var(--u)*0.6)}
+  .jours>*+*{margin-top:calc(var(--u)*0.15)}
+  .jour{display:flex;align-items:baseline}
+  .jour .j{flex:none;width:calc(var(--u)*4.6)}
+  .jour .ico{flex:none;width:calc(var(--u)*2.2);margin:0 calc(var(--u)*0.8)}
+  .jour .ciel{flex:1 1 auto;min-width:0;margin-right:calc(var(--u)*0.8)}
+  .jour .mm{flex:none}
+  /* Pièces : 4 par ligne, le salon compte double, sur 2 lignes qui remplissent la hauteur */
+  .zone .pieces{position:absolute;top:0;right:0;bottom:0;left:0;height:auto;display:flex;flex-wrap:wrap;align-content:stretch;margin:calc(var(--u)*-0.6)}
+  .piece{width:calc(25% - var(--u)*1.2);height:calc(50% - var(--u)*1.2);margin:calc(var(--u)*0.6)}
+  .piece.principale{width:calc(50% - var(--u)*1.2)}
+  .bas>*+*,.pied>*+*{margin-left:calc(var(--u)*0.8)}
+  .volet:not(.p15)>*+*{margin-top:calc(var(--u)*1)}
+  /* Volet : 15 jours en 5 colonnes × 3 lignes */
+  .p15 .grille{display:flex;flex-wrap:wrap;align-content:stretch;margin:calc(var(--u)*-0.45)}
+  .p15 .jc{width:calc(20% - var(--u)*0.9);margin:calc(var(--u)*0.45)}
+  .p15 .jc .t4{display:flex}
+  .p15 .jc .t4>div{flex:1 1 0%;min-width:0}
+  .p15 .jc .t4>div+div{margin-left:calc(var(--u)*0.35)}
+}
 </style>
 <script src="verrou.js"></script>
 </head>
