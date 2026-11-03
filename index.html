@@ -10,7 +10,11 @@
 <style>
 /* Écran de télé, lu à 3 m : colonne gauche heure + extérieur, grille des pièces à droite. Thème sombre unique pour ménager la dalle. */
 :root{
-  --u:min(1vw,1.7778vh);   /* unité qui tient compte de la hauteur : tout rentre aussi sur un écran plus allongé (iPhone à l'horizontale) */
+  --u:1vw;                 /* secours pour les télés dont le navigateur ne connaît pas min() */
+}
+@supports (width:min(1vw,1vh)){:root{--u:min(1vw,1.7778vh);}}
+:root{
+  /* --u : unité qui tient compte de la hauteur : tout rentre aussi sur un écran plus allongé (iPhone à l'horizontale) */
   --nuit:#0f1418;        /* fond */
   --ardoise:#182027;     /* tuiles */
   --trait:#26313a;       /* séparateurs */
@@ -86,7 +90,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 /* Volet roulant qui couvre toute la partie intérieure ; fermé par défaut */
 .zone{position:relative;min-width:0;overflow:hidden;border-radius:calc(var(--u)*1)}
 .zone .pieces{height:100%}
-.volet{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*1);
+.volet{position:absolute;top:0;right:0;bottom:0;left:0;   /* pas de inset : inconnu des navigateurs des télés Samsung avant 2022 */
+  z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--u)*1);
   border-radius:calc(var(--u)*1);cursor:pointer;color:var(--craie);text-align:center;
   background:repeating-linear-gradient(180deg,#1b242c 0,#1b242c calc(var(--u)*3.4),#141b21 calc(var(--u)*3.4),#141b21 calc(var(--u)*3.6));
   transition:transform .8s cubic-bezier(.6,0,.3,1),visibility 0s linear 0s}

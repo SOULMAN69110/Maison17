@@ -1,6 +1,7 @@
 /* Verrou à code pour le tableau de bord et les courbes.
    C'est un simple écran d'accès, pas une vraie sécurité : le dépôt reste public.
    Le code n'est pas écrit ici en clair, seulement son empreinte SHA-256 (préfixe "maison17:").
+   Écrit pour rester lisible par les navigateurs anciens des télés Samsung (pas de inset, min() doublé d'une valeur de secours).
    Pour changer le code : calculer sha256("maison17:" + nouveau_code) et remplacer EMPREINTE. */
 (function(){
   var EMPREINTE = "d9f45b76d54f573dd3192137bc1334db02598ca6ec459332d5845cb6923ba294";
@@ -20,14 +21,15 @@
   var style = document.createElement("style");
   style.textContent =
     "html.verrouille body>*:not(#verrou){visibility:hidden}" +
-    "#verrou{position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;background:#0f1418;color:#e8eef2;font-family:'Bricolage Grotesque',system-ui,sans-serif;padding:16px}" +
-    "#verrou form{display:flex;flex-direction:column;align-items:center;gap:min(2vw,3.6vh);width:min(100%,520px)}" +
-    "#verrou .titre{font-size:min(3vw,5.3vh);font-weight:600}" +
-    "#verrou .sous{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:min(1.1vw,2vh,14px);letter-spacing:.14em;text-transform:uppercase;color:#8a99a5}" +
-    "#verrou input{width:100%;font:inherit;font-size:min(4vw,7vh);text-align:center;letter-spacing:.35em;padding:.3em .4em;border-radius:14px;border:2px solid #26313a;background:#182027;color:#e8eef2;outline:none}" +
+    "#verrou{position:fixed;top:0;right:0;bottom:0;left:0;z-index:99;display:flex;align-items:center;justify-content:center;background:#0f1418;color:#e8eef2;font-family:'Bricolage Grotesque',system-ui,sans-serif;padding:16px}" +
+    "#verrou form{display:flex;flex-direction:column;align-items:center;width:520px;max-width:100%}" +
+    "#verrou form>*{margin:1.6vh 0}" +
+    "#verrou .titre{font-size:3vw;font-size:min(3vw,5.3vh);font-weight:600}" +
+    "#verrou .sous{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-size:min(1.1vw,2vh,14px);letter-spacing:.14em;text-transform:uppercase;color:#8a99a5}" +
+    "#verrou input{width:100%;font:inherit;font-size:4vw;font-size:min(4vw,7vh);text-align:center;letter-spacing:.35em;padding:.3em .4em;border-radius:14px;border:2px solid #26313a;background:#182027;color:#e8eef2;outline:none}" +
     "#verrou input:focus{border-color:#7cc4e8}" +
-    "#verrou button{font:inherit;font-size:min(1.8vw,3.2vh);font-weight:600;padding:.6em 2em;border:0;border-radius:99px;background:#7cc4e8;color:#0f1418;cursor:pointer}" +
-    "#verrou .err{min-height:1.4em;color:#f08a6a;font-size:min(1.4vw,2.6vh)}" +
+    "#verrou button{font:inherit;font-size:1.8vw;font-size:min(1.8vw,3.2vh);font-weight:600;padding:.6em 2em;border:0;border-radius:99px;background:#7cc4e8;color:#0f1418;cursor:pointer}" +
+    "#verrou .err{min-height:1.4em;color:#f08a6a;font-size:1.4vw;font-size:min(1.4vw,2.6vh)}" +
     "@media (max-width:800px){#verrou .titre{font-size:7vw}#verrou input{font-size:10vw}#verrou button{font-size:5vw}#verrou .err{font-size:4vw}#verrou .sous{font-size:3vw}}";
   document.head.appendChild(style);
 
