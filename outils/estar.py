@@ -14,7 +14,8 @@ import hashlib
 import json
 import os
 import sys
-import urllib.request
+import http.client
+import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -24,12 +25,20 @@ PARIS = ZoneInfo("Europe/Paris")
 
 
 def appel(chemin, corps, jeton=None):
-    entetes = {"Content-Type": "application/json", "User-Agent": "Maison17-tableau-de-bord"}
+    """POST JSON. Le jeton part comme dans le navigateur : en-tête « authorization » en minuscules
+    (http.client ne change pas la casse, contrairement à urllib) et cookie estar_token."""
+    u = urllib.parse.urlsplit(API + chemin)
+    entetes = {"content-type": "application/json", "accept": "application/json, text/plain, */*",
+               "user-agent": "Mozilla/5.0 (Maison17 tableau de bord)", "language": "fr-fr"}
     if jeton:
         entetes["authorization"] = jeton
-    req = urllib.request.Request(API + chemin, data=json.dumps(corps).encode(), headers=entetes, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+        entetes["cookie"] = "estar_token=" + urllib.parse.quote(jeton, safe="")
+    cnx = (http.client.HTTPSConnection if u.scheme == "https" else http.client.HTTPConnection)(u.netloc, timeout=30)
+    try:
+        cnx.request("POST", u.path, body=json.dumps(corps).encode(), headers=entetes)
+        return json.loads(cnx.getresponse().read().decode("utf-8"))
+    finally:
+        cnx.close()
 
 
 def chercher_jeton(obj):
@@ -66,6 +75,9 @@ def main(sortie):
             raise RuntimeError("identifiants eStar absents (secrets GitHub)")
         connexion = appel("/iam/auth_login", {"user_name": utilisateur, "password": mot_de_passe_chiffre(mdp)})
         jeton = chercher_jeton(connexion)
+        print("eStar : connexion", "réussie" if jeton else "sans jeton",
+              "| statut", connexion.get("status"), "| clés", sorted((connexion.get("data") or {}).keys()) if isinstance(connexion.get("data"), dict) else type(connexion.get("data")).__name__,
+              "| longueur du jeton", len(jeton or ""))
         if not jeton:
             raise RuntimeError("connexion refusée : " + str(connexion.get("message", "sans message")))
         rep = appel("/pvm-data/data_count_station_real_data", {"sid": STATION}, jeton)
