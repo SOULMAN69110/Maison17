@@ -25,20 +25,19 @@
 html,body{height:100%;margin:0}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
 .ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:2.2vw;padding:3.2vw 3.4vw;transition:transform 2s ease}
-.gauche{display:flex;flex-direction:column;justify-content:space-between;gap:2vw;min-width:0}
-.heure{font-size:9vw;font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.gauche{display:flex;flex-direction:column;justify-content:space-between;gap:1.4vw;min-width:0}
+.heure{font-size:7.6vw;font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .date{font-size:1.9vw;color:var(--brume);margin-top:1vw;text-transform:capitalize}
 .dehors{border-top:1px solid var(--trait);padding-top:1.6vw}
 .etiquette{font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
-.dehors .valeur{font-size:6.4vw;font-weight:600;color:var(--givre);line-height:1;margin-top:.6vw;font-variant-numeric:tabular-nums}
+.dehors .valeur{font-size:5.4vw;font-weight:600;color:var(--givre);line-height:1;margin-top:.6vw;font-variant-numeric:tabular-nums}
 .dehors .valeur small{font-size:.45em;font-weight:400;margin-left:.1em}
 .dehors .hum{font-size:1.8vw;color:var(--craie);margin-top:.5vw}
 .pression{font-size:1.5vw;color:var(--brume);margin-top:.5vw;font-variant-numeric:tabular-nums}
 .pression b{color:var(--craie);font-weight:600}
-.meteo{background:transparent;border:1px solid var(--trait)}
-.meteo h2{font-size:1.2vw;font-family:var(--mono);font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
-.jours{display:flex;flex-direction:column;gap:.55vw;flex:1;justify-content:center}
-.jour{display:grid;grid-template-columns:4.2vw minmax(0,1fr) auto;align-items:baseline;gap:.6vw;font-size:1.25vw}
+.previsions{border-top:1px solid var(--trait);padding-top:1.4vw}
+.jours{display:flex;flex-direction:column;gap:.5vw;margin-top:.8vw}
+.jour{display:grid;grid-template-columns:4.6vw minmax(0,1fr) auto;align-items:baseline;gap:.8vw;font-size:1.45vw}
 .jour .j{color:var(--brume);text-transform:capitalize}
 .jour .ciel{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .jour .mm{font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -46,12 +45,12 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .jour .pl{color:var(--givre);font-family:var(--mono);font-size:.8em;margin-left:.4vw}
 .etat{font-family:var(--mono);font-size:.9vw;color:var(--brume)}
 .etat.erreur{color:var(--alerte)}
-.pieces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:1.2vw;min-width:0}
+.pieces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:1.2vw;min-width:0}
 .piece{background:var(--ardoise);border-radius:1vw;padding:1.4vw 1.6vw;display:flex;flex-direction:column;justify-content:space-between;gap:.6vw;position:relative;min-width:0}
 .piece.principale{grid-column:span 2}
 .piece h2{margin:0;font-size:1.6vw;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.temp{font-size:4.6vw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.principale .temp{font-size:6vw}
+.temp{font-size:4vw;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.principale .temp{font-size:5.6vw}
 .temp small{font-size:.45em;font-weight:400;color:var(--brume);margin-left:.08em}
 .bas{display:flex;align-items:center;justify-content:space-between;gap:.8vw;flex-wrap:wrap}
 .pastille{font-family:var(--mono);font-size:.95vw;padding:.25vw .7vw;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
@@ -66,7 +65,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression,.meteo h2{font-size:3.6vw}.jour{font-size:3.6vw;grid-template-columns:12vw minmax(0,1fr) auto}.meteo{grid-column:1 / -1}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile{font-size:3vw}.pression{font-size:3.6vw}.jour{font-size:4vw;grid-template-columns:12vw minmax(0,1fr) auto}.humid{font-size:4vw}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -83,6 +82,10 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       <div class="valeur" id="ext-t">--<small>°C</small></div>
       <div class="hum" id="ext-h">Humidité --</div>
       <div class="pression" id="pression"></div>
+    </div>
+    <div class="previsions">
+      <div class="etiquette">Prévisions</div>
+      <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
     <div class="etat" id="etat">Connexion à Mobile Alerts…</div>
   </section>
@@ -140,7 +143,6 @@ function construire(){
       '<div class="maj"></div>' +
     '</article>';
   });
-  html += '<article class="piece meteo"><h2>Prévisions</h2><div class="jours" id="jours"><div class="maj">Chargement…</div></div></article>';
   el("pieces").innerHTML = html;
 }
 
