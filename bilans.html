@@ -54,6 +54,16 @@ h1{margin:0;font-size:3rem;font-weight:700;letter-spacing:-.02em;line-height:1}
 .zone-svg{flex:1 1 auto;position:relative;margin-top:1rem;min-height:10rem}
 .zone-svg svg{position:absolute;top:0;left:0;width:100%;height:100%}
 .echelle{position:absolute;left:0;top:-.2rem;font-family:var(--mono);font-size:.9rem;color:var(--brume)}
+/* Infobulles : une colonne invisible par barre, au-dessus du graphique */
+.survol{position:absolute;top:0;left:0;right:0;bottom:0;display:flex}
+.survol div{flex:1 1 0;cursor:default;border-radius:.4rem}
+.survol div:hover,.survol div.actif{background:rgba(232,238,242,.06)}
+.bulle{position:absolute;z-index:3;pointer-events:none;background:#0b1013;border:1px solid var(--trait);border-radius:.7rem;padding:.8rem 1rem;min-width:16rem;box-shadow:0 .6rem 1.6rem rgba(0,0,0,.45);display:none}
+.bulle .t{font-family:var(--mono);font-size:.9rem;letter-spacing:.08em;text-transform:uppercase;color:var(--brume);margin-bottom:.4rem}
+.bulle .l{display:flex;justify-content:space-between;align-items:baseline;font-size:1.25rem;margin-top:.25rem}
+.bulle .l span{color:var(--brume);margin-right:1.4rem;white-space:nowrap}
+.bulle .l b{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bulle .e{font-family:var(--mono);font-size:1rem;margin-top:.5rem}
 .libelles{display:flex;margin-top:.5rem}
 .libelles div{flex:1 1 0;text-align:center;font-family:var(--mono);font-size:.95rem;color:var(--brume);white-space:nowrap;overflow:hidden}
 .libelles div b{display:block;color:var(--craie);font-family:var(--display);font-size:1.25rem;font-weight:600}
@@ -133,7 +143,7 @@ h1{margin:0;font-size:3rem;font-weight:700;letter-spacing:-.02em;line-height:1}
         <div class="etiquette" id="titre-graphique">—</div>
         <div><span><i class="carre" id="leg-n"></i><em id="leg-n-t" style="font-style:normal">N</em></span><span><i class="carre" id="leg-n1"></i><em id="leg-n1-t" style="font-style:normal">N-1</em></span></div>
       </div>
-      <div class="zone-svg" id="zone-svg"><svg id="svg" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="echelle" id="echelle"></div></div>
+      <div class="zone-svg" id="zone-svg"><svg id="svg" viewBox="0 0 1000 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="echelle" id="echelle"></div><div class="survol" id="survol"></div><div class="bulle" id="bulle" role="tooltip"></div></div>
       <div class="libelles" id="libelles"></div>
       <div id="bloc-tableau" style="display:none;flex:1 1 auto;overflow:hidden"></div>
     </div>
@@ -158,6 +168,8 @@ var MESURES = {
 var MOIS_COURT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 var JOURS_COURT = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
 
+var MISE_EN_SERVICE = new Date(2024, 9, 30);   // avant cette date, pas de données : une période qui commence avant est incomplète
+function partiel(debut){ return debut < MISE_EN_SERVICE; }
 var jours = {};            // "AAAA-MM-JJ" -> { production_wh, ... }
 var etat = { vue: "mois", mesure: "production_wh", ref: aujourdhui() };   // ref : un jour dans la période affichée
 
@@ -231,6 +243,9 @@ function barres(items, couleur){
     }
   });
   el("svg").innerHTML = svg;
+  dernierItems = items;
+  el("survol").innerHTML = items.map(function(it, i){ return '<div data-i="' + i + '"></div>'; }).join("");
+  el("bulle").style.display = "none";
   el("echelle").textContent = kwh(max, 0);
   var montrerValeurs = items.length <= 12;
   el("libelles").innerHTML = items.map(function(it){
@@ -239,6 +254,33 @@ function barres(items, couleur){
 }
 
 function pct(p){ var v = Math.round(p); return (v > 0 ? "+" : "") + (v === 0 ? 0 : v) + " %"; }
+/* ===== Infobulles ===== */
+var dernierItems = [];
+function montrerBulle(cible){
+  var i = +cible.getAttribute("data-i"), it = dernierItems[i], m = MESURES[etat.mesure], b = el("bulle"), zone = el("zone-svg");
+  if (!it) return;
+  [].forEach.call(el("survol").children, function(c){ c.className = c === cible ? "actif" : ""; });
+  var html = '<div class="t">' + m.nom + '</div>' +
+    '<div class="l"><span><i class="carre" style="background:' + m.couleur + '"></i>' + it.titreN + (it.auj ? " (en cours)" : "") + '</span><b>' + kwhPrecis(it.n) + '</b></div>' +
+    '<div class="l"><span><i class="carre" style="background:' + m.couleur + ';opacity:.3"></i>' + it.titreN1 + '</span><b>' + kwhPrecis(it.n1) + '</b></div>';
+  if (it.n !== null && it.n !== undefined && it.n1 && it.titreN1.indexOf("incomplet") < 0) {
+    var p = (it.n - it.n1) / it.n1 * 100, bon = etat.mesure === "achetee_wh" ? p < 0 : p > 0;
+    html += '<div class="e ' + (Math.abs(p) < 1 ? "neutre" : bon ? "hausse" : "baisse") + '">' + pct(p) + ' par rapport à N-1</div>';
+  }
+  b.innerHTML = html; b.style.display = "block";
+  var largeur = zone.clientWidth, x = cible.offsetLeft + cible.offsetWidth / 2, w = b.offsetWidth;
+  b.style.left = Math.max(0, Math.min(largeur - w, x - w / 2)) + "px";
+  b.style.top = "0px";
+}
+function cacherBulle(){ el("bulle").style.display = "none"; [].forEach.call(el("survol").children, function(c){ c.className = ""; }); }
+function kwhPrecis(wh){
+  if (wh === null || wh === undefined) return "pas de donnée";
+  var v = wh / 1000;
+  return (v >= 1000 ? (v / 1000).toFixed(2).replace(".", ",") + " MWh" : v.toFixed(v >= 100 ? 0 : v >= 10 ? 1 : 2).replace(".", ",") + " kWh");
+}
+function dateLongue(d){ return maj(d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })); }
+function moisLong(an, k){ return maj(new Date(an, k, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })); }
+
 function ecartTexte(n, n1){
   if (n === null || n1 === null || !n1) return '<span class="ecart neutre">pas de comparaison</span>';
   var p = (n - n1) / n1 * 100, signe = p > 0 ? "+" : "";
@@ -272,7 +314,7 @@ function dessiner(){
     debut = lundi(ref); fin = ajoute(debut, 7);
     for (var i = 0; i < 7; i++) {
       var d = ajoute(debut, i), dPasse = ajoute(d, -364);   // même jour de la semaine, un an avant (52 semaines)
-      items.push({ lib: JOURS_COURT[i] + " " + d.getDate(), n: d > auj ? null : valeur(d), n1: valeur(dPasse), auj: cle(d) === cle(auj) });
+      items.push({ lib: JOURS_COURT[i] + " " + d.getDate(), n: d > auj ? null : valeur(d), n1: valeur(dPasse), auj: cle(d) === cle(auj), titreN: dateLongue(d), titreN1: dateLongue(dPasse) });
     }
     el("periode").textContent = "Semaine du " + debut.getDate() + " " + MOIS_COURT[debut.getMonth()] + " " + debut.getFullYear();
     el("leg-n-t").textContent = "cette semaine"; el("leg-n1-t").textContent = "même semaine N-1";
@@ -280,14 +322,15 @@ function dessiner(){
     n = somme(debut, fin); n1 = somme(ajoute(debut, -364), ajoute(fin, -364));
     var enCours = auj >= debut && auj < fin;
     var n1Date = enCours ? somme(ajoute(debut, -364), ajoute(fin, -364), ajoute(auj, -363)) : n1;
-    cote("Total de la semaine", n, [["N-1 à date", n1Date], ["N-1 semaine entière", n1]], n, n1Date,
+    var p1S = partiel(ajoute(debut, -364));
+    cote("Total de la semaine", n, [["N-1 à date", n1Date], ["N-1 semaine entière", n1]], n, p1S ? null : n1Date,
          "N-1 : la même semaine 52 semaines plus tôt, jour de semaine pour jour de semaine.");
   } else if (etat.vue === "mois") {
     debut = new Date(ref.getFullYear(), ref.getMonth(), 1); fin = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
     var nb = (fin - debut) / 864e5;
     for (var j = 0; j < nb; j++) {
       var dj = ajoute(debut, j), dp = new Date(dj.getFullYear() - 1, dj.getMonth(), dj.getDate());
-      items.push({ lib: (j % 5 === 0 || j === nb - 1) ? String(j + 1) : "", n: dj > auj ? null : valeur(dj), n1: dp.getMonth() === dj.getMonth() ? valeur(dp) : null, auj: cle(dj) === cle(auj) });
+      items.push({ lib: (j % 5 === 0 || j === nb - 1) ? String(j + 1) : "", n: dj > auj ? null : valeur(dj), n1: dp.getMonth() === dj.getMonth() ? valeur(dp) : null, auj: cle(dj) === cle(auj), titreN: dateLongue(dj), titreN1: dp.getMonth() === dj.getMonth() ? dateLongue(dp) : "N-1 (jour inexistant)" });
     }
     el("periode").textContent = maj(debut.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }));
     el("leg-n-t").textContent = String(debut.getFullYear()); el("leg-n1-t").textContent = String(debut.getFullYear() - 1);
@@ -297,13 +340,14 @@ function dessiner(){
     n1 = somme(debP, finP);
     var enCoursM = auj >= debut && auj < fin;
     var n1DateM = enCoursM ? somme(debP, finP, memeJourAnPasse(ajoute(auj, 1))) : n1;
-    cote("Total du mois", n, [[(enCoursM ? "N-1 à date" : "Même mois N-1"), n1DateM]].concat(enCoursM ? [["N-1 mois complet", n1]] : []), n, n1DateM,
-         enCoursM ? "Mois en cours : comparé aux mêmes jours de l'an dernier." : "");
+    var p1M = partiel(debP);
+    cote("Total du mois", n, [[(enCoursM ? "N-1 à date" : "Même mois N-1") + (p1M ? " (partiel)" : ""), n1DateM]].concat(enCoursM ? [["N-1 mois complet", n1]] : []), n, p1M ? null : n1DateM,
+         p1M ? "Le même mois de l'an dernier est incomplet : installation le 30 octobre 2024." : enCoursM ? "Mois en cours : comparé aux mêmes jours de l'an dernier." : "");
   } else if (etat.vue === "annee") {
     var an = ref.getFullYear();
     for (var k = 0; k < 12; k++) {
       var dm = new Date(an, k, 1), fm = new Date(an, k + 1, 1);
-      items.push({ lib: MOIS_COURT[k], n: dm > auj ? null : somme(dm, fm), n1: somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)), auj: an === auj.getFullYear() && k === auj.getMonth() });
+      items.push({ lib: MOIS_COURT[k], n: dm > auj ? null : somme(dm, fm), n1: somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1)), auj: an === auj.getFullYear() && k === auj.getMonth(), titreN: moisLong(an, k), titreN1: moisLong(an - 1, k) + (partiel(new Date(an - 1, k, 1)) ? " (incomplet)" : "") });
     }
     el("periode").textContent = "Année " + an;
     el("leg-n-t").textContent = String(an); el("leg-n1-t").textContent = String(an - 1);
@@ -312,8 +356,9 @@ function dessiner(){
     n1 = somme(new Date(an - 1, 0, 1), new Date(an, 0, 1));
     var enCoursA = an === auj.getFullYear();
     var n1DateA = enCoursA ? somme(new Date(an - 1, 0, 1), new Date(an, 0, 1), memeJourAnPasse(ajoute(auj, 1))) : n1;
-    cote("Total de l'année", n, [[(enCoursA ? "N-1 à date" : "Année N-1"), n1DateA]].concat(enCoursA ? [["Année N-1 complète", n1]] : []), n, n1DateA,
-         "Données depuis la mise en service, le 30 octobre 2024.");
+    var p1A = partiel(new Date(an - 1, 0, 1));
+    cote("Total de l'année", n, [[(enCoursA ? "N-1 à date" : "Année N-1") + (p1A ? " (partielle)" : ""), n1DateA]].concat(enCoursA ? [["Année N-1 complète", n1]] : []), n, p1A ? null : n1DateA,
+         p1A ? "L'année précédente est incomplète (installation le 30 octobre 2024) : comparez mois par mois dans la vue N / N-1." : "Données depuis la mise en service, le 30 octobre 2024.");
   } else {
     comparaison(m);
     return;
@@ -331,18 +376,19 @@ function comparaison(m){
     var enCours = an === auj.getFullYear() && k === auj.getMonth();
     var vN = dm > auj ? null : somme(dm, fm);
     var vN1 = enCours ? somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1), memeJourAnPasse(ajoute(auj, 1))) : somme(new Date(an - 1, k, 1), new Date(an - 1, k + 1, 1));
-    lignes.push({ k: k, n: vN, n1: vN1, enCours: enCours });
+    var p1 = partiel(new Date(an - 1, k, 1));
+    lignes.push({ k: k, n: vN, n1: vN1, enCours: enCours, partiel: p1 });
     max = Math.max(max, vN || 0, vN1 || 0);
-    if (vN !== null && vN1 !== null) { tN += vN; tN1 += vN1; }
+    if (vN !== null && vN1 !== null && !p1) { tN += vN; tN1 += vN1; }
   }
   var html = '<table class="tableau"><thead><tr><th>Mois</th><th>' + an + '</th><th>' + (an - 1) + '</th><th>Écart</th></tr></thead><tbody>';
   lignes.forEach(function(l){
-    var e = (l.n !== null && l.n1) ? (l.n - l.n1) / l.n1 * 100 : null;
+    var e = (l.n !== null && l.n1 && !l.partiel) ? (l.n - l.n1) / l.n1 * 100 : null;
     var bon = etat.mesure === "achetee_wh" ? e < 0 : e > 0;
     var cls = e === null ? "neutre" : Math.abs(e) < 1 ? "neutre" : bon ? "hausse" : "baisse";
     html += '<tr' + (l.enCours ? ' class="courant"' : '') + '><td class="mois">' + maj(MOIS_COURT[l.k]) + (l.enCours ? " (à date)" : "") + '</td>' +
       '<td>' + kwh(l.n, 0) + '<i class="mini" style="width:' + (max ? (l.n || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + '"></i></td>' +
-      '<td>' + kwh(l.n1, 0) + '<i class="mini" style="width:' + (max ? (l.n1 || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + ';opacity:.3"></i></td>' +
+      '<td>' + (l.partiel && l.n1 !== null ? '<span style="font-size:.75em;color:var(--brume)">partiel · </span>' : '') + kwh(l.n1, 0) + '<i class="mini" style="width:' + (max ? (l.n1 || 0) / max * 8 : 0).toFixed(2) + 'rem;background:' + m.couleur + ';opacity:.3"></i></td>' +
       '<td class="ecart-c ' + cls + '">' + (e === null ? "–" : pct(e)) + '</td></tr>';
   });
   var eT = tN1 ? (tN - tN1) / tN1 * 100 : null;
@@ -352,7 +398,7 @@ function comparaison(m){
   el("periode").textContent = an + " / " + (an - 1);
   el("leg-n-t").textContent = String(an); el("leg-n1-t").textContent = String(an - 1);
   cote("Mois comparables " + an, tN, [["Mêmes mois " + (an - 1), tN1]], tN, tN1,
-       "Mois en cours comparé aux mêmes jours de l'an dernier. Les mois sans données d'un côté ne sont pas comptés dans le total.");
+       "Mois en cours comparé aux mêmes jours de l'an dernier. Les mois sans données complètes d'un côté (avant l'installation du 30 octobre 2024) ne sont pas comptés.");
   majNavigation();
 }
 
@@ -380,6 +426,9 @@ function majNavigation(){
   b.addEventListener("click", function(){ etat.mesure = b.getAttribute("data-m"); dessiner(); });
 });
 el("prec").addEventListener("click", function(){ deplacer(-1); });
+el("survol").addEventListener("mouseover", function(e){ if (e.target.parentNode === el("survol")) montrerBulle(e.target); });
+el("survol").addEventListener("click", function(e){ if (e.target.parentNode === el("survol")) montrerBulle(e.target); });   // au toucher (iPhone)
+el("survol").addEventListener("mouseleave", cacherBulle);
 el("suiv").addEventListener("click", function(){ deplacer(1); });
 
 charger();
