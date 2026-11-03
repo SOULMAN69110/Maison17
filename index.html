@@ -86,7 +86,6 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .humid{font-size:calc(var(--u)*1.5);color:var(--craie);font-variant-numeric:tabular-nums}
 .humid span{color:var(--brume);font-size:.75em}
 .maj{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--brume)}
-.piece.vieux{opacity:.45}
 /* Volet roulant qui couvre toute la partie intérieure ; fermé par défaut */
 .zone{position:relative;min-width:0;overflow:hidden;border-radius:calc(var(--u)*1)}
 .zone .pieces{height:100%}
@@ -130,18 +129,18 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
   .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
 }
-/* Téléphone (debout ou couché) : tuiles teintées selon le confort, chiffre en couleur, pastille pleine — plus vivant qu'à la télé */
-@media (max-width:800px),(max-height:500px) and (orientation:landscape){
-  .piece{border-left:4px solid var(--c,var(--trait));background:linear-gradient(135deg,var(--fond,var(--ardoise)) 0%,var(--ardoise) 75%)}
-  .piece .temp{color:var(--c,var(--craie))}
-  .piece .pastille{background:var(--c,transparent);border-color:var(--c,currentColor);color:var(--nuit);font-weight:500}
-  .piece .pastille.p-gris{background:transparent;color:var(--brume)}
-  .piece.e-froid{--c:var(--givre);--fond:#173447}
-  .piece.e-ok{--c:var(--ok);--fond:#173a2a}
-  .piece.e-tiede{--c:var(--tiede);--fond:#3d3218}
-  .piece.e-alerte{--c:var(--alerte);--fond:#43231a}
-  .piece.vieux{opacity:.7}
-}
+/* Tuiles teintées selon le confort : chiffre en couleur, bordure et fond légèrement colorés, pastille pleine */
+.piece{border-left:calc(var(--u)*0.3) solid var(--c,var(--trait));background:linear-gradient(135deg,var(--fond,var(--ardoise)) 0%,var(--ardoise) 75%)}
+.piece .temp{color:var(--c,var(--craie))}
+.piece .pastille{background:var(--c,transparent);border-color:var(--c,currentColor);color:var(--nuit);font-weight:500}
+.piece .pastille.p-gris{background:transparent;color:var(--brume)}
+.piece.e-froid{--c:var(--givre);--fond:#173447}
+.piece.e-ok{--c:var(--ok);--fond:#173a2a}
+.piece.e-tiede{--c:var(--tiede);--fond:#3d3218}
+.piece.e-alerte{--c:var(--alerte);--fond:#43231a}
+.piece.vieux{opacity:.7}
+/* Téléphone : bordure d'épaisseur fixe, sinon trop fine */
+@media (max-width:800px),(max-height:500px) and (orientation:landscape){.piece{border-left-width:4px}}
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 /* ===== Télés anciennes (Samsung 2018…) : navigateur sans grille CSS ni « gap » en flexbox.
    Même mise en page refaite en flexbox, avec des marges à la place des « gap ». Ignoré par les navigateurs récents. ===== */
@@ -305,7 +304,7 @@ function afficher(appareils){
     var pas = tuile.querySelector(".pastille");
     pas.className = "pastille " + p[0]; pas.textContent = p[1];
     ["e-froid", "e-ok", "e-tiede", "e-alerte"].forEach(function(e){ tuile.classList.remove(e); });
-    tuile.classList.add("e-" + p[0].slice(2));   // teinte de la tuile (utilisée sur téléphone)
+    tuile.classList.add("e-" + p[0].slice(2));   // teinte de la tuile
     tuile.querySelector(".humid").innerHTML = (typeof m.h === "number") ? Math.round(m.h) + "<span>% hum." + humTexte(m.h) + "</span>" : "";
     var ts = m.ts || a.lastseen || 0;
     var age = Math.max(0, Math.round((maintenant - ts) / 60));
