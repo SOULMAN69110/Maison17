@@ -1,0 +1,45 @@
+name: Mesures et publication
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Récupérer les dernières mesures Mobile Alerts
+        run: |
+          mkdir -p site
+          cp index.html site/
+          IDS="salon,chambre-c,chambre-parents,chambre-y,bureau,sdb-filles,sdb-parents"
+          curl -sS -i -m 30 -X POST \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data "deviceids=$IDS" \
+            https://www.data199.com/api/pv1/device/lastmeasurement -o reponse.txt || true
+          echo "--- en-têtes ---"; sed -n '1,/^\r$/p' reponse.txt
+          sed '1,/^\r$/d' reponse.txt > site/data.json
+          echo "--- corps ---"; head -c 3000 site/data.json; echo
+          python3 -c "import json;d=json.load(open('site/data.json'));assert d.get('devices')" || echo '{"devices":[]}' > site/data.json
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploiement
+        uses: actions/deploy-pages@v4
