@@ -137,6 +137,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{display:flex;align-items:stretch}
   .gauche{flex:1 1 0%;width:0}
   .zone{flex:2.1 1 0%;width:0;margin-left:calc(var(--u)*2.2)}
+  .gauche>*{flex-shrink:0}   /* sinon les cadres s'écrasent et se chevauchent */
   .gauche>*+*{margin-top:calc(var(--u)*0.7)}
   .dehors>*+*{margin-top:calc(var(--u)*0.6)}
   .dehors .ligne>*+*{margin-left:calc(var(--u)*1.2)}
@@ -225,6 +226,17 @@ var JOURS_PREVISION = 7;   // aujourd'hui + 6 jours (Open-Meteo va jusqu'à 16)
 var VOLET_MIN = 3;          // le volet se referme tout seul au bout de 3 min
 var LIEU = { lat: 45.73, lon: 4.80 };   // Sainte-Foy-lès-Lyon (69110)         // au-delà, la tuile est grisée
 /* =============================================================== */
+
+/* Télés anciennes sans min() en CSS : on calcule l'unité --u en JavaScript (même formule), pour que tout tienne en hauteur
+   malgré la barre d'adresse du navigateur de la télé. */
+if (!(window.CSS && CSS.supports && CSS.supports("width", "min(1vw,1vh)"))) {
+  var uniteTele = function(){
+    var u = Math.min(window.innerWidth / 100, window.innerHeight * 1.7778 / 100);
+    document.documentElement.style.setProperty("--u", u.toFixed(2) + "px");
+  };
+  uniteTele();
+  window.addEventListener("resize", uniteTele);
+}
 
 function el(id){ return document.getElementById(id); }
 function fmt(n){ return (Math.round(n * 10) / 10).toFixed(1).replace(".", ","); }
