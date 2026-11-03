@@ -92,13 +92,7 @@ def main(sortie):
             "production_w": nombre(f.get("pv_power") or d.get("real_power")),
             "consommation_w": nombre(f.get("load_power")),
             "reseau_w": nombre(f.get("grid_power")),           # négatif : achat au réseau ; positif : envoi vers le réseau (conso = prod - réseau)
-            "jour": {
-                "production_wh": nombre(f.get("pv_eq_total") or d.get("today_eq")),
-                "consommation_wh": nombre(f.get("use_eq_total")),
-                "autoconsommee_wh": nombre(f.get("self_eq")),
-                "achetee_wh": nombre(f.get("meter_b_in_eq")),
-                "vendue_wh": nombre(f.get("meter_b_out_eq")),
-            },
+            "jour": bilan_du_jour(d, f),
             "mois_production_wh": nombre(d.get("month_eq")),
             "annee_production_wh": nombre(d.get("year_eq")),
             "total_production_wh": nombre(d.get("total_eq")),
@@ -110,6 +104,20 @@ def main(sortie):
         print("eStar :", resultat["erreur"])
     with open(sortie, "w", encoding="utf-8") as fh:
         json.dump(resultat, fh, ensure_ascii=False)
+
+
+def bilan_du_jour(d, f):
+    """Énergies du jour, à partir des seuls compteurs « today_eq » (les champs *_total de la réponse
+    peuvent valoir le cumul depuis l'installation selon le contexte de l'appel)."""
+    prod = nombre(d.get("today_eq"))
+    achat = nombre((f.get("mb_in_eq") or f.get("grid_in_eq") or {}).get("today_eq"))
+    vente = nombre((f.get("mb_out_eq") or f.get("grid_out_eq") or {}).get("today_eq"))
+    auto = prod - vente if prod is not None and vente is not None else None
+    if auto is not None and auto < 0:
+        auto = 0.0
+    conso = auto + achat if auto is not None and achat is not None else None
+    return {"production_wh": prod, "consommation_wh": conso, "autoconsommee_wh": auto,
+            "achetee_wh": achat, "vendue_wh": vente}
 
 
 def historiser(r):
