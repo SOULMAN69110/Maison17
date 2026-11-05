@@ -1,8 +1,9 @@
 name: Horloge (relance toutes les 10 min)
 
-# GitHub ne lance les tâches planifiées que toutes les quelques heures.
+# GitHub ne lance les tâches planifiées que toutes les quelques heures (voire jamais).
 # Cette tâche reste active près de 6 h et relance « Mesures et publication »
-# toutes les 10 min. La suivante, déjà en attente, prend le relais.
+# toutes les 10 min. Dès son démarrage, elle programme sa remplaçante, qui attend
+# son tour (même groupe) et prend le relais à la fin : la chaîne ne s'arrête pas.
 
 on:
   schedule:
@@ -21,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 358
     steps:
+      - name: Programmer l'horloge suivante (elle attend la fin de celle-ci)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run horloge.yml -R "$GITHUB_REPOSITORY" --ref main
       - name: Relancer la publication toutes les 10 minutes pendant 5 h 50
         env:
           GH_TOKEN: ${{ github.token }}
