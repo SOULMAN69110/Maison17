@@ -41,7 +41,7 @@ Installation de 4,25 kWc suivie sur monitor.estarpower.com (installation n° 705
 
 ## Fonctionnement
 
-1. Toutes les 10 minutes, la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo. GitHub ne lançant les tâches planifiées que toutes les quelques heures, c'est la tâche `Horloge` (`.github/workflows/horloge.yml`) qui la relance : elle reste active près de 6 h, relance la publication toutes les 10 min, puis une nouvelle horloge prend le relais.
+1. Toutes les 10 minutes, la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo. GitHub ne lançant les tâches planifiées que toutes les quelques heures, c'est la tâche `Horloge` (`.github/workflows/horloge.yml`) qui la relance : elle reste active près de 6 h, relance la publication toutes les 10 min, puis la suivante, qu'elle a elle-même programmée dès son démarrage, prend le relais (le déclenchement horaire de GitHub ne suffisait pas).
 2. Elle ajoute les nouvelles mesures aux fichiers mensuels `historique/mesures-AAAA-MM.csv` et `historique/pression-AAAA-MM.csv`, et les enregistre dans le dépôt.
 3. Elle republie le site sur GitHub Pages avec une copie des dernières mesures (`data.json`).
 
