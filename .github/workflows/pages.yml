@@ -46,6 +46,21 @@ jobs:
           ESTAR_MOT_DE_PASSE: ${{ secrets.ESTAR_MOT_DE_PASSE }}
         run: python3 outils/estar.py site/solaire.json
 
+      - name: Préparer Python 3.13 (bibliothèque Home-SmartLink)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Récupérer le chauffage (Home-SmartLink, lecture seule)
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          HSL_EMAIL: ${{ secrets.HSL_EMAIL }}
+          HSL_MOT_DE_PASSE: ${{ secrets.HSL_MOT_DE_PASSE }}
+        run: |
+          pip install -q "homesmartlink==0.4.1" || true
+          python3 outils/chauffage.py site/chauffage.json
+
       - name: Récupérer la pression (Open-Meteo)
         run: |
           curl -sS -m 30 "https://api.open-meteo.com/v1/forecast?latitude=45.734&longitude=4.802&current=pressure_msl&timeformat=unixtime" -o meteo.json || echo '{}' > meteo.json
