@@ -46,6 +46,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 /* Colonne de gauche en cadres, comme les tuiles des pièces */
 .carte{background:var(--ardoise);border-radius:calc(var(--u)*0.9);padding:calc(var(--u)*0.75) calc(var(--u)*1.1)}
 .dehors{display:flex;flex-direction:column;gap:calc(var(--u)*0.6)}
+.etiquette .lieu{color:var(--givre);text-decoration:none;text-transform:none;letter-spacing:.04em}
+.etiquette .lieu:focus,.etiquette .lieu:hover{text-decoration:underline;outline:none}
 .etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
 .dehors .ligne{display:flex;align-items:center;gap:calc(var(--u)*1.2);margin-top:calc(var(--u)*0.4)}
 .dehors .valeur{font-size:calc(var(--u)*4.1);font-weight:600;color:var(--givre);line-height:1;font-variant-numeric:tabular-nums}
@@ -238,7 +240,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       </div>
     </div>
     <div class="previsions carte">
-      <div class="etiquette"><i class="emo">📅</i>Prévisions</div>
+      <div class="etiquette"><i class="emo">📅</i>Prévisions · <a class="lieu" id="lieu" href="lieux.html">📍 Sainte-Foy-lès-Lyon</a></div>
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
     <div>
@@ -281,7 +283,13 @@ var VIEUX_MIN = 45;
 var HEURES_JOUR = [7, 10, 13, 16, 19];   // créneaux affichés en emoji pour chaque jour des prévisions
 var JOURS_PREVISION = 7;   // aujourd'hui + 6 jours (Open-Meteo va jusqu'à 16)
 var VOLET_MIN = 3;          // le volet se referme tout seul au bout de 3 min
-var LIEU = { lat: 45.734, lon: 4.802 };   // Sainte-Foy-lès-Lyon (69110)         // au-delà, la tuile est grisée
+var MAISON = { nom: "Sainte-Foy-lès-Lyon", lat: 45.734, lon: 4.802 };   // 69110
+/* Lieu de la météo : choisi sur la page lieux.html (gardé sur l'appareil), la maison par défaut */
+var LIEU = (function(){
+  try { var e = JSON.parse(localStorage.getItem("maison17-meteo")); if (e && e.accueil && typeof e.accueil.lat === "number") return e.accueil; } catch (x) {}
+  return MAISON;
+})();
+var LIEU_MAISON = Math.abs(LIEU.lat - MAISON.lat) < 0.01 && Math.abs(LIEU.lon - MAISON.lon) < 0.01;         // au-delà, la tuile est grisée
 /* =============================================================== */
 
 /* Télés anciennes sans min() en CSS : on calcule l'unité --u en JavaScript (même formule), pour que tout tienne en hauteur
@@ -543,7 +551,7 @@ function afficherPluieMF(cases){
 function pluieMF(){
   function essai(url){ return fetch(url, { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(lirePluieMF); }
   essai(PLUIE_MF)
-    .catch(function(){ return essai("pluie.json?t=" + Date.now()); })
+    .catch(function(e){ if (!LIEU_MAISON) throw e; return essai("pluie.json?t=" + Date.now()); })   // la copie publiée ne vaut que pour la maison
     .then(afficherPluieMF)
     .catch(function(){ if (dernierMeteo) pluieHeure(dernierMeteo); });
 }
@@ -654,6 +662,7 @@ function fusionMeteoFrance(m, mf){
   }
   return m;
 }
+(function(){ var a = document.getElementById("lieu"); if (a) a.textContent = "📍 " + LIEU.nom + (LIEU.code && !LIEU_MAISON ? " (" + LIEU.code + ")" : ""); })();
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
     "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl,temperature_2m,weather_code,is_day&past_days=1&forecast_days=16" +
