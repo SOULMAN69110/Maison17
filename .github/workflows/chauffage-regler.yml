@@ -23,6 +23,9 @@ on:
       eco:
         description: "Éco du programme (°C, 13 à 19, au moins 0,5 sous le confort)"
         default: ""
+      plages:
+        description: 'Plages 1 à 6 en JSON, ex. [{"plage":1,"debut":"06:00","fin":"08:00","jours":[0,1,2,3,4]}]'
+        default: ""
 
 permissions:
   contents: read
@@ -50,6 +53,7 @@ jobs:
           MANUELLE: ${{ inputs.manuelle }}
           CONFORT: ${{ inputs.confort }}
           ECO: ${{ inputs.eco }}
+          PLAGES: ${{ inputs.plages }}
         run: |
           pip install -q "homesmartlink==0.4.1"
           python3 outils/chauffage_regler.py
