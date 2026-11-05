@@ -82,6 +82,9 @@ async def lire(email, mot_de_passe):
                 "consigne_eco": nombre(hs.economy_value),
                 "consigne_actuelle": nombre(st.set_point) if st else None,
                 "temperature": nombre(st.ambient_temperature) if st else None,
+                # Ligne d'état brute du thermostat (ex. R7D0M4S0C43A42J0W0M0Y0), gardée pour comprendre
+                # les champs inconnus D et S et les compteurs J/W/M/Y (consommation ?) ; voir historiser.py
+                "etat_brut": st.raw if st else None,
                 "fenetre_ouverte_detection": r.open_window_detection_enabled,
                 # Programmation : « avancée » = plages 1 à 6, « simplifiée » = matin (7), journée (9), soir (8).
                 # jours : 0 = lundi … 6 = dimanche ; mode de plage 1 = confort, 2 = boost, 3 = ventilation

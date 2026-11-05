@@ -6,8 +6,10 @@ Fichiers produits (heure de Paris pour le découpage par mois) :
   historique/pression-AAAA-MM.csv  : horodatage,pression_hpa
   historique/chauffage-AAAA-MM.csv : horodatage,piece,temperature,consigne,mode
     (radiateurs Home-SmartLink ; horodatage = heure du relevé par la box)
+  historique/etat-radiateur-AAAA-MM.csv : horodatage,piece,brut,d,s,j,w,m,y
+    (ligne d'état brute du thermostat découpée ; D, S inconnus, J/W/M/Y peut-être la consommation)
 """
-import csv, json, os, sys
+import csv, json, os, re, sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -37,6 +39,12 @@ def derniers(chemin, cle):
 def valeur(m, k):
     v = m.get(k)
     return "" if v is None else v
+
+
+def champs_brut(brut):
+    """R7D0M4S0C43A42J0W0M0Y0 -> [D, S, J, W, M, Y], lus dans l'ordre (le 2e M est le compteur)."""
+    m = re.fullmatch(r"R\d+D(\d+)M\d+S(\d+)C\d+A\d+J(\d+)W(\d+)M(\d+)Y(\d+)", brut or "")
+    return list(m.groups()) if m else [""] * 6
 
 
 def main(mesures_json, meteo_json, chauffage_json=None):
@@ -86,6 +94,16 @@ def main(mesures_json, meteo_json, chauffage_json=None):
                     with open(chemin, "a", newline="") as f:
                         csv.writer(f).writerow([ts, pc["numero"], pc["temperature"], valeur(pc, "consigne_actuelle"), valeur(pc, "mode_code")])
                     ajouts += 1
+            for pc in ch.get("pieces", []):
+                brut = pc.get("etat_brut")
+                if not brut:
+                    continue
+                chemin = fichier("etat-radiateur", ts, ["horodatage", "piece", "brut", "d", "s", "j", "w", "m", "y"])
+                if derniers(chemin, "piece").get(str(pc["numero"]), 0) >= ts:
+                    continue
+                with open(chemin, "a", newline="") as f:
+                    csv.writer(f).writerow([ts, pc["numero"], brut] + champs_brut(brut))
+                ajouts += 1
         except Exception as e:
             print("chauffage ignoré :", e)
 

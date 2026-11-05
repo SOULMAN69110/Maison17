@@ -134,6 +134,8 @@ function charger(){
   return fetch("historique/index.json?t=" + Date.now(), { cache: "no-store" })
     .then(function(r){ if (!r.ok) throw new Error("aucun historique encore"); return r.json(); })
     .then(function(liste){
+      /* seulement les capteurs et la pression : les fichiers du radiateur servent à la page Chauffage */
+      liste = liste.filter(function(nom){ return nom.indexOf("mesures-") === 0 || nom.indexOf("pression-") === 0; });
       return Promise.all(liste.map(function(nom){
         return fetch("historique/" + nom).then(function(r){ return r.text(); }).then(function(t){
           var type = nom.indexOf("pression") === 0 ? "pression" : "mesures";
