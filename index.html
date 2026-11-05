@@ -240,7 +240,8 @@ var RACCOURCIS = [
 ];
 /* ===== Réglages : tu peux modifier les noms et l'ordre ici ===== */
 var CAPTEURS = [
-  { id: "077BD6BA8BF6", nom: "Salon", emo: "🛋️", principale: true, exterieur: true },
+  { id: "077BD6BA8BF6", cle: "dehors", nom: "Dehors", emo: "🌳", dehors: true },   // sonde extérieure de la station du salon
+  { id: "077BD6BA8BF6", nom: "Salon", emo: "🛋️", exterieur: true },
   { id: "121D9CDE1215", nom: "Chambre C.", emo: "🛏️" },
   { id: "121B8C435713", nom: "Chambre parents", emo: "🛏️" },
   { id: "122897FF614E", nom: "Chambre Y.", emo: "🛏️" },
@@ -284,6 +285,13 @@ function pastilleTemp(t, sdb){
   if (t <= haut + 2) return ["p-tiede", "Chaud"];
   return ["p-alerte", "Très chaud"];
 }
+function pastilleDehors(t){
+  if (t < 0) return ["p-froid", "Gel"];
+  if (t < 10) return ["p-froid", "Froid"];
+  if (t < 25) return ["p-ok", "Doux"];
+  if (t < 30) return ["p-tiede", "Chaud"];
+  return ["p-alerte", "Canicule"];
+}
 function humTexte(h){
   if (h < 35) return " · sec";
   if (h > 65) return " · humide";
@@ -293,7 +301,7 @@ function humTexte(h){
 function construire(){
   var html = "";
   CAPTEURS.forEach(function(c){
-    html += '<article class="piece' + (c.principale ? " principale" : "") + '" id="p-' + c.id + '">' +
+    html += '<article class="piece' + (c.principale ? " principale" : "") + '" id="p-' + (c.cle || c.id) + '">' +
       '<h2>' + (c.emo ? '<i class="emo">' + c.emo + '</i>' : '') + c.nom + '</h2>' +
       '<div class="temp">--<small>°C</small></div>' +
       '<div class="bas"><span class="pastille p-gris">En attente</span><span class="humid"></span></div>' +
@@ -309,16 +317,17 @@ function afficher(appareils){
   var maintenant = Date.now() / 1000;
 
   CAPTEURS.forEach(function(c){
-    var tuile = el("p-" + c.id), a = parId[c.id];
+    var tuile = el("p-" + (c.cle || c.id)), a = parId[c.id];
     if (!tuile) return;
     var m = a && a.measurement;
+    if (m && c.dehors) m = { t1: m.t2, h: m.h2, ts: m.ts, lb: m.lb };   // tuile Dehors : sonde extérieure
     if (!m || typeof m.t1 !== "number") {
       tuile.querySelector(".pastille").className = "pastille p-gris";
       tuile.querySelector(".pastille").textContent = "Pas de donnée";
       return;
     }
     tuile.querySelector(".temp").innerHTML = fmt(m.t1) + "<small>°C</small>";
-    var p = pastilleTemp(m.t1, c.sdb);
+    var p = c.dehors ? pastilleDehors(m.t1) : pastilleTemp(m.t1, c.sdb);
     var pas = tuile.querySelector(".pastille");
     pas.className = "pastille " + p[0]; pas.textContent = p[1];
     ["e-froid", "e-ok", "e-tiede", "e-alerte"].forEach(function(e){ tuile.classList.remove(e); });
