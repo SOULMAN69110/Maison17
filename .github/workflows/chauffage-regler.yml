@@ -1,0 +1,61 @@
+name: Régler le chauffage
+
+# Lancée depuis la page chauffage.html (ou à la main, onglet Actions → Run workflow).
+# Champ vide = inchangé. Ensuite, la publication est relancée pour afficher le nouvel état.
+
+on:
+  workflow_dispatch:
+    inputs:
+      piece:
+        description: "Numéro de la pièce (7 = SdB filles)"
+        default: "7"
+      mode:
+        description: "Mode"
+        type: choice
+        options: ["", "Arrêt", "Hors-gel", "Manuel", "Programme"]
+        default: ""
+      manuelle:
+        description: "Consigne manuelle (°C, 13,5 à 30, pas de 0,5)"
+        default: ""
+      confort:
+        description: "Confort du programme (°C, 13 à 30)"
+        default: ""
+      eco:
+        description: "Éco du programme (°C, 13 à 19, au moins 0,5 sous le confort)"
+        default: ""
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chauffage-regler
+  cancel-in-progress: false
+
+jobs:
+  regler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Envoyer les réglages au radiateur
+        env:
+          HSL_EMAIL: ${{ secrets.HSL_EMAIL }}
+          HSL_MOT_DE_PASSE: ${{ secrets.HSL_MOT_DE_PASSE }}
+          PIECE: ${{ inputs.piece }}
+          MODE: ${{ inputs.mode }}
+          MANUELLE: ${{ inputs.manuelle }}
+          CONFORT: ${{ inputs.confort }}
+          ECO: ${{ inputs.eco }}
+        run: |
+          pip install -q "homesmartlink==0.4.1"
+          python3 outils/chauffage_regler.py
+      - name: Relancer la publication pour afficher le nouvel état
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 45
+          gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main
