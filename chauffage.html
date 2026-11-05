@@ -53,6 +53,28 @@ button:disabled{opacity:.5;cursor:default}
 input[type=password]{width:100%;font:inherit;font-family:var(--mono);font-size:14px;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:10px;margin:8px 0}
 ol{padding-left:20px;margin:8px 0;font-size:15px}
 a{color:var(--givre)}
+/* Semaine de programmation */
+.semaine{margin-top:10px}
+.jour{display:flex;align-items:center;margin:6px 0}
+.jour .j{width:34px;font-family:var(--mono);font-size:13px;color:var(--brume)}
+.jour.auj .j{color:var(--soleil)}
+.barre{position:relative;flex:1;height:22px;background:var(--nuit);border-radius:6px;overflow:hidden}
+.barre i{position:absolute;top:0;bottom:0;background:var(--soleil);opacity:.85}
+.barre i.boost{background:var(--alerte)}
+.barre b{position:absolute;top:0;bottom:0;width:2px;background:var(--givre)}
+.graduation{display:flex;justify-content:space-between;margin-left:34px;font-family:var(--mono);font-size:11px;color:var(--brume)}
+.legende{font-family:var(--mono);font-size:12px;color:var(--brume);margin-top:8px}
+.legende i{display:inline-block;width:12px;height:10px;background:var(--soleil);border-radius:2px;margin-right:4px;vertical-align:middle}
+/* Éditeur des plages */
+.plage{border-top:1px solid var(--trait);padding:12px 0}
+.plage .titre{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.plage .titre span{font-family:var(--mono);font-size:12px;color:var(--brume)}
+.plage.inactive .heures{opacity:.45}
+.jours{display:flex;flex-wrap:wrap;margin:0 -3px 8px}
+.jours button{width:40px;padding:8px 0;margin:3px;font-family:var(--mono);font-size:13px}
+.heures{display:flex;align-items:center;flex-wrap:wrap}
+.heures select{font:inherit;font-variant-numeric:tabular-nums;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:8px}
+.heures span{margin:0 8px;color:var(--brume)}
 .retour{margin-top:12px;font-family:var(--mono);font-size:13px}
 .retour.ok{color:var(--ok)} .retour.erreur{color:var(--alerte)}
 </style>
@@ -79,6 +101,21 @@ a{color:var(--givre)}
     <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule. <a href="#" id="oublier">Oublier le jeton sur cet appareil</a></div>
   </section>
 
+  <section class="carte" id="programme" hidden>
+    <div class="etiquette">Programmation de la semaine · <span id="prog-type"></span></div>
+    <div class="semaine" id="semaine"></div>
+    <div class="graduation"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+    <div class="legende"><i></i>confort (<span id="leg-confort"></span>) · le reste du temps : éco (<span id="leg-eco"></span>) · trait bleu : maintenant</div>
+  </section>
+
+  <section class="carte" id="plages-edit" hidden>
+    <div class="etiquette">Modifier les plages</div>
+    <div class="etat" style="margin:6px 0 4px">6 plages au plus. Pour chacune : les jours concernés et l'horaire de confort (par 10 min, sans passer minuit). Aucun jour coché = plage inactive.</div>
+    <div id="plages"></div>
+    <button class="principal" id="envoyer-plages" type="button" disabled>Envoyer la programmation</button>
+    <div class="retour" id="retour-plages"></div>
+  </section>
+
   <section class="carte" id="jeton" hidden>
     <div class="etiquette">Réglages réservés</div>
     <p style="margin:8px 0">Pour régler le radiateur depuis cet appareil, colle ton jeton GitHub. Il reste dans ce navigateur seulement, jamais dans le dépôt.</p>
@@ -99,6 +136,7 @@ var PIECE = 7;                       // SdB filles (« SDB2 » dans l'appli)
 var NOMS = { 7: "SdB filles" };      // nom affiché pour chaque numéro de pièce
 var MODES = ["Arrêt", "Hors-gel", "Manuel", "Programme"];
 
+var JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 function el(id){ return document.getElementById(id); }
 function deg(v){ return typeof v === "number" ? (Math.round(v * 10) / 10).toString().replace(".", ",") + "°" : "—"; }
 function jeton(){ try { return localStorage.getItem(CLE_JETON) || ""; } catch (e) { return ""; } }
@@ -123,7 +161,87 @@ function afficher(j){
   var p = (j.pieces || []).filter(function(x){ return x.numero === PIECE; })[0];
   if (p && !choix.envoye) { actuel = { mode: p.mode, manuelle: p.consigne_manuelle, confort: p.consigne_confort, eco: p.consigne_eco }; reinitialiser(); }
   el("regl-nom").textContent = p ? (NOMS[p.numero] || p.nom) : "";
+  if (p && p.plages) { semaine(p); if (!plagesEnvoyees) editeurPlages(p); }
 }
+
+/* ===== Programmation : semaine en barres, puis éditeur des 6 plages ===== */
+function minutes(hhmm){ var t = hhmm.split(":"); return +t[0] * 60 + +t[1]; }
+function plagesUtiles(p){
+  /* avancée : plages 1 à 6 ; simplifiée : matin (7), journée (9), soir (8) */
+  return p.plages.filter(function(x){ return p.programmation === "simplifiée" ? x.plage >= 7 : x.plage <= 6; });
+}
+function semaine(p){
+  el("programme").hidden = false;
+  el("prog-type").textContent = "programmation " + p.programmation;
+  el("leg-confort").textContent = deg(p.consigne_confort); el("leg-eco").textContent = deg(p.consigne_eco);
+  var maintenant = new Date(), auj = (maintenant.getDay() + 6) % 7, m = maintenant.getHours() * 60 + maintenant.getMinutes();
+  var html = "";
+  for (var d = 0; d < 7; d++) {
+    var b = "";
+    plagesUtiles(p).forEach(function(x){
+      if (x.jours.indexOf(d) < 0) return;
+      var a = minutes(x.debut), z = minutes(x.fin);
+      b += '<i class="' + (x.mode === 2 ? "boost" : "") + '" style="left:' + (a / 14.4) + '%;width:' + ((z - a) / 14.4) + '%" title="' + x.debut + '–' + x.fin + '"></i>';
+    });
+    if (d === auj) b += '<b style="left:' + (m / 14.4) + '%"></b>';
+    html += '<div class="jour' + (d === auj ? " auj" : "") + '"><span class="j">' + JOURS[d] + '</span><div class="barre">' + b + '</div></div>';
+  }
+  el("semaine").innerHTML = html;
+}
+
+var plagesActuelles = [], plagesChoix = [], plagesEnvoyees = false;
+function editeurPlages(p){
+  if (p.programmation !== "avancée") {
+    el("plages").innerHTML = '<div class="etat">Ce radiateur est en programmation simplifiée (matin, journée, soir). Passe-le en programmation avancée dans l\'appli Home-SmartLink pour modifier les plages ici.</div>';
+    el("envoyer-plages").hidden = true; return;
+  }
+  plagesActuelles = p.plages.filter(function(x){ return x.plage <= 6; }).map(function(x){ return { plage: x.plage, debut: x.debut, fin: x.fin, jours: x.jours.slice() }; });
+  plagesChoix = JSON.parse(JSON.stringify(plagesActuelles));
+  dessinerPlages();
+}
+function optionsHeures(val){
+  var o = "";
+  for (var t = 0; t <= 23 * 60 + 50; t += 10) {
+    var h = ("0" + Math.floor(t / 60)).slice(-2) + ":" + ("0" + t % 60).slice(-2);
+    o += '<option' + (h === val ? " selected" : "") + '>' + h + '</option>';
+  }
+  if (val === "23:59" || val === "24:00") o += '<option selected>' + val + '</option>';
+  return o;
+}
+function dessinerPlages(){
+  el("plages").innerHTML = plagesChoix.map(function(x, i){
+    var inactive = !x.jours.length;
+    return '<div class="plage' + (inactive ? " inactive" : "") + '" data-i="' + i + '"><div class="titre"><b>Plage ' + x.plage + '</b><span>' + (inactive ? "inactive" : x.jours.length === 7 ? "tous les jours" : x.jours.length + " jour(s)") + '</span></div>' +
+      '<div class="jours">' + JOURS.map(function(j, d){ return '<button type="button" data-jour="' + d + '" class="' + (x.jours.indexOf(d) >= 0 ? "choisi" : "") + '">' + j.slice(0, 2) + '</button>'; }).join("") + '</div>' +
+      '<div class="heures"><select data-champ="debut">' + optionsHeures(x.debut) + '</select><span>→</span><select data-champ="fin">' + optionsHeures(x.fin) + '</select></div></div>';
+  }).join("");
+  el("envoyer-plages").disabled = JSON.stringify(plagesChoix) === JSON.stringify(plagesActuelles);
+}
+el("plages").addEventListener("click", function(e){
+  var d = e.target.getAttribute("data-jour"); if (d === null) return;
+  var x = plagesChoix[+e.target.closest(".plage").getAttribute("data-i")], k = x.jours.indexOf(+d);
+  if (k >= 0) x.jours.splice(k, 1); else { x.jours.push(+d); x.jours.sort(); }
+  dessinerPlages();
+});
+el("plages").addEventListener("change", function(e){
+  var c = e.target.getAttribute("data-champ"); if (!c) return;
+  plagesChoix[+e.target.closest(".plage").getAttribute("data-i")][c] = e.target.value;
+  dessinerPlages();
+});
+el("envoyer-plages").addEventListener("click", function(){
+  var faux = plagesChoix.filter(function(x){ return x.jours.length && minutes(x.fin) <= minutes(x.debut); });
+  if (faux.length) { retourPlages("Plage " + faux[0].plage + " : la fin doit être après le début (une plage ne passe pas minuit).", "erreur"); return; }
+  var changees = plagesChoix.filter(function(x, i){ return JSON.stringify(x) !== JSON.stringify(plagesActuelles[i]); });
+  el("envoyer-plages").disabled = true; retourPlages("Envoi…", "");
+  envoyer({ piece: String(PIECE), plages: JSON.stringify(changees) }, function(ok, msg){
+    retourPlages(msg, ok ? "ok" : "erreur");
+    if (ok) {
+      plagesActuelles = JSON.parse(JSON.stringify(plagesChoix)); plagesEnvoyees = true; dessinerPlages();
+      var n = 0, t = setInterval(function(){ lire(); if (++n >= 10) { clearInterval(t); plagesEnvoyees = false; } }, 30000);
+    } else el("envoyer-plages").disabled = false;
+  });
+});
+function retourPlages(t, c){ var r = el("retour-plages"); r.textContent = t; r.className = "retour " + c; }
 
 function lire(){
   fetch("chauffage.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(); return r.json(); })
@@ -168,26 +286,31 @@ el("envoyer").addEventListener("click", function(){
   var entrees = { piece: String(PIECE) };
   ch.forEach(function(c){ entrees[c] = c === "mode" ? choix.mode : String(choix[c]); });
   el("envoyer").disabled = true; retour("Envoi…", "");
+  envoyer(entrees, function(ok, msg){
+    retour(msg, ok ? "ok" : "erreur");
+    if (ok) {
+      actuel = { mode: choix.mode, manuelle: choix.manuelle, confort: choix.confort, eco: choix.eco };
+      choix.envoye = true; dessiner();
+      var n = 0, t = setInterval(function(){ lire(); if (++n >= 10) { clearInterval(t); choix.envoye = false; } }, 30000);
+    } else el("envoyer").disabled = false;
+  });
+});
+/* Demande à GitHub de lancer la tâche « Régler le chauffage » avec ces paramètres */
+function envoyer(entrees, fini){
   fetch("https://api.github.com/repos/" + DEPOT + "/actions/workflows/chauffage-regler.yml/dispatches", {
     method: "POST",
     headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
     body: JSON.stringify({ ref: "main", inputs: entrees })
   }).then(function(r){
-    if (r.status === 204) {
-      retour("Envoyé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ". Le nouvel état s'affichera d'ici 2 à 3 min.", "ok");
-      actuel = { mode: choix.mode, manuelle: choix.manuelle, confort: choix.confort, eco: choix.eco };
-      choix.envoye = true; dessiner();
-      var n = 0, t = setInterval(function(){ lire(); if (++n >= 10) { clearInterval(t); choix.envoye = false; } }, 30000);
-    } else if (r.status === 401 || r.status === 403 || r.status === 404) {
-      retour("Jeton refusé par GitHub (" + r.status + ") : vérifie qu'il a la permission Actions en écriture sur Maison17, ou recolle-le.", "erreur");
-      el("envoyer").disabled = false;
-    } else { retour("Échec de l'envoi (" + r.status + "). Réessaie dans un instant.", "erreur"); el("envoyer").disabled = false; }
-  }).catch(function(){ retour("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); el("envoyer").disabled = false; });
-});
+    if (r.status === 204) fini(true, "Envoyé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ". Le nouvel état s'affichera d'ici 2 à 3 min.");
+    else if (r.status === 401 || r.status === 403 || r.status === 404) fini(false, "Jeton refusé par GitHub (" + r.status + ") : vérifie qu'il a la permission Actions en écriture sur Maison17, ou recolle-le.");
+    else fini(false, "Échec de l'envoi (" + r.status + "). Réessaie dans un instant.");
+  }).catch(function(){ fini(false, "Pas de connexion à GitHub. Réessaie dans un instant."); });
+}
 function retour(t, c){ var r = el("retour"); r.textContent = t; r.className = "retour " + c; }
 
 /* ===== Jeton (sur cet appareil seulement) ===== */
-function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("jeton").hidden = a; }
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("jeton").hidden = a; }
 el("jeton-ok").addEventListener("click", function(){
   var v = el("jeton-saisie").value.trim(); if (!v) return;
   try { localStorage.setItem(CLE_JETON, v); } catch (e) {}
