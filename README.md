@@ -58,7 +58,7 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | `outils/estar.py` | récupère les données eStar Power (connexion avec les secrets GitHub) |
 | `historique.html` | page de courbes (jour, semaine, mois, année avec flèches ◀ ▶, ou dates libres) |
 | `lieux.html` | choix du lieu de la météo : recherche de ville, ma position, historique, favoris (gardés sur chaque appareil) |
-| `chauffage.html` | page Chauffage : état du radiateur et réglages (mode, consignes manuelle, confort, éco) ; raccourci visible seulement sur les appareils où le jeton de réglage a été saisi |
+| `chauffage.html` | page Chauffage : état du radiateur et réglages (mode, consignes manuelle, confort, éco) ; raccourci visible seulement sur les appareils où le jeton de réglage a été saisi, et toujours dans l'appli installée sur l'écran d'accueil (sur iPhone, son stockage est séparé de Safari : le jeton s'y colle une fois) |
 | `outils/chauffage.py`, `outils/chauffage_regler.py` | lecture de l'état du chauffage (à chaque publication) et envoi des réglages |
 | `.github/workflows/chauffage-regler.yml` | tâche « Régler le chauffage », lancée par la page Chauffage ou à la main (champ vide = inchangé) |
 | `app/` | appli Météo installable : manifeste (`meteo.webmanifest`) et icônes, chargés par `index.html` en vue météo seule |
