@@ -116,6 +116,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .bas{display:flex;align-items:center;justify-content:space-between;gap:calc(var(--u)*0.8);flex-wrap:wrap}
 .pastille{font-family:var(--mono);font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.25) calc(var(--u)*0.7);border-radius:99px;border:1px solid currentColor;white-space:nowrap}
 .p-froid{color:var(--givre)} .p-ok{color:var(--ok)} .p-tiede{color:var(--tiede)} .p-alerte{color:var(--alerte)} .p-gris{color:var(--brume)}
+.chauffe{font-size:calc(var(--u)*1.2);color:var(--craie);white-space:nowrap}
+.chauffe span{color:var(--brume)}
 .humid{font-size:calc(var(--u)*1.5);color:var(--craie);font-variant-numeric:tabular-nums}
 .humid span{color:var(--brume);font-size:.75em}
 .maj{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--brume)}
@@ -167,7 +169,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
   .raccourcis a{font-size:4.2vw;padding:2vw 4vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .mf{width:52vw}.pluie .mf .bornes{font-size:2.6vw}.pluie .mf .cases{height:5vw;border-radius:2.5vw}.pluie .mf .reperes{height:4.5vw;font-size:2.2vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e b{font-size:6vw}.p15 .jc .e span{font-size:2.2vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:11vw minmax(0,1fr)}.jour .tps .mn{width:7vw}.jour .tps .mx{width:8vw}.jour .tps .pl{width:11vw}.jour.heures{font-size:2.6vw}.dehors .ciel-act b{font-size:8vw}.dehors .ciel-act span{font-size:2.4vw}.humid{font-size:4vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .mf{width:52vw}.pluie .mf .bornes{font-size:2.6vw}.pluie .mf .cases{height:5vw;border-radius:2.5vw}.pluie .mf .reperes{height:4.5vw;font-size:2.2vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e b{font-size:6vw}.p15 .jc .e span{font-size:2.2vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:11vw minmax(0,1fr)}.jour .tps .mn{width:7vw}.jour .tps .mx{width:8vw}.jour .tps .pl{width:11vw}.jour.heures{font-size:2.6vw}.dehors .ciel-act b{font-size:8vw}.dehors .ciel-act span{font-size:2.4vw}.humid{font-size:4vw}.chauffe{font-size:3.2vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
 }
 /* Tuiles teintées selon le confort : chiffre en couleur, bordure et fond légèrement colorés, pastille pleine */
 .piece{border-left:calc(var(--u)*0.3) solid var(--c,var(--trait));background:linear-gradient(135deg,var(--fond,var(--ardoise)) 0%,var(--ardoise) 75%)}
@@ -297,7 +299,7 @@ var CAPTEURS = [
   { id: "121B8C435713", nom: "Chambre parents", emo: "🛏️" },
   { id: "122897FF614E", nom: "Chambre Y.", emo: "🛏️" },
   { id: "1224E7AD1BFA", nom: "Bureau", emo: "💻" },
-  { id: "202D151D9A21", nom: "SdB filles", emo: "🛁", sdb: true },
+  { id: "202D151D9A21", nom: "SdB filles", emo: "🛁", sdb: true, radiateur: 7 },   // radiateur Carrera « SDB2 » (Home-SmartLink)
   { id: "02129E969BF2", nom: "SdB parents", emo: "🛁", sdb: true }
 ];
 var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
@@ -383,7 +385,8 @@ function construire(){
       '<h2>' + (c.emo ? '<i class="emo">' + c.emo + '</i>' : '') + c.nom + '</h2>' +
       (c.dehors ? '<div class="ciel-tuile" id="ciel-tuile" aria-hidden="true"></div>' : '') +
       '<div class="temp">--<small>°C</small></div>' +
-      '<div class="bas"><span class="pastille p-gris">En attente</span><span class="humid"></span></div>' +
+      '<div class="bas"><span class="pastille p-gris">En attente</span><span class="humid"></span>' +
+      (c.radiateur ? '<span class="chauffe" id="chauffe-' + c.radiateur + '"></span>' : '') + '</div>' +
       '<div class="pied"><span class="maj"></span><span class="pile" hidden>Pile faible</span></div>' +
     '</article>';
   });
@@ -438,7 +441,23 @@ function ok(j, source){
   var etat = el("etat"); etat.className = "etat";
   etat.textContent = "Mobile Alerts" + source + " · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
+/* Radiateur Carrera (Home-SmartLink) : mode et consigne, publiés par la tâche dans chauffage.json (lecture seule) */
+function chauffage(){
+  fetch("chauffage.json?t=" + Date.now(), { cache: "no-store" }).then(lireJson).then(function(j){
+    var vieux = !j.maj || (Date.now() - new Date(j.maj).getTime()) > 60 * 60 * 1000;   // plus d'une heure : on n'affiche plus rien
+    (j.pieces || []).forEach(function(p){
+      var z = el("chauffe-" + p.numero);
+      if (!z) return;
+      if (!j.disponible || vieux) { z.innerHTML = ""; return; }
+      var txt = '<i class="emo">🔥</i>' + p.mode;
+      if ((p.mode_code === 3 || p.mode_code === 4) && typeof p.consigne_actuelle === "number")
+        txt += ' <span>· consigne</span> ' + Math.round(p.consigne_actuelle) + '°';
+      z.innerHTML = txt;
+    });
+  }).catch(function(){});
+}
 function charger(){
+  chauffage();
   /* Mobile Alerts refuse les appels directs depuis un navigateur : on lit la copie publiée par le dépôt */
   relais().then(function(j){ ok(j, ""); })
     .catch(function(e){
