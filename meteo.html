@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Météo</title>
 <!-- Page météo seule : même code que le tableau de bord, sans capteurs ni liens vers les autres pages -->
-<script>location.replace("./?vue=meteo");</script>
+<script>location.replace("./?vue=meteo" + location.search.replace(/^\?/, "&") + location.hash);</script>
 <meta http-equiv="refresh" content="0; url=./?vue=meteo">
 </head>
 <body style="background:#0f1418;color:#e8eef2;font-family:system-ui,sans-serif"><a href="./?vue=meteo" style="color:#7cc4e8">Ouvrir la météo</a></body>
