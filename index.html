@@ -46,6 +46,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 /* Colonne de gauche en cadres, comme les tuiles des pièces */
 .carte{background:var(--ardoise);border-radius:calc(var(--u)*0.9);padding:calc(var(--u)*0.75) calc(var(--u)*1.1)}
 .dehors{display:flex;flex-direction:column;gap:calc(var(--u)*0.6)}
+.vue-meteo .bascule-bloc,.vue-meteo .p15 .entete span{display:none}
+.vue-meteo .volet{cursor:default}
 .etiquette .lieu{color:var(--givre);text-decoration:none;text-transform:none;letter-spacing:.04em}
 .etiquette .lieu:focus,.etiquette .lieu:hover{text-decoration:underline;outline:none}
 .etiquette{font-family:var(--mono);font-size:calc(var(--u)*0.95);letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
@@ -240,10 +242,10 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
       </div>
     </div>
     <div class="previsions carte">
-      <div class="etiquette"><i class="emo">📅</i>Prévisions · <a class="lieu" id="lieu" href="lieux.html">📍 Sainte-Foy-lès-Lyon</a></div>
+      <div class="etiquette"><i class="emo">📅</i>Prévisions · <a class="lieu" id="lieu" href="lieux.html" onclick="if (VUE_METEO) this.href = 'lieux.html?retour=meteo'">📍 Sainte-Foy-lès-Lyon</a></div>
       <div class="jours" id="jours"><div class="maj">Chargement…</div></div>
     </div>
-    <div>
+    <div class="bascule-bloc">
       <button class="bascule" id="bascule" type="button" aria-pressed="false">🏠 Ouvrir le volet</button>
       <div class="etat" id="etat" style="margin-top:calc(var(--u)*0.6)">Connexion à Mobile Alerts…</div>
     </div>
@@ -260,6 +262,9 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 </main>
 
 <script>
+/* Vue « météo seule » (meteo.html renvoie ici avec ?vue=meteo) : ni capteurs, ni volet, ni liens vers les autres pages */
+var VUE_METEO = /[?&]vue=meteo\b/.test(location.search);
+if (VUE_METEO) { document.documentElement.classList.add("vue-meteo"); document.title = "Météo"; }
 /* ===== Raccourcis vers les autres pages du site (ajouter une ligne pour chaque nouvelle page) ===== */
 var RACCOURCIS = [
   { lien: "historique.html", texte: "📈 Courbes" },
@@ -289,6 +294,7 @@ var LIEU = (function(){
   try { var e = JSON.parse(localStorage.getItem("maison17-meteo")); if (e && e.accueil && typeof e.accueil.lat === "number") return e.accueil; } catch (x) {}
   return MAISON;
 })();
+if (VUE_METEO) RACCOURCIS = [{ lien: "lieux.html?retour=meteo", texte: "📍 Lieu" }];
 var LIEU_MAISON = Math.abs(LIEU.lat - MAISON.lat) < 0.01 && Math.abs(LIEU.lon - MAISON.lon) < 0.01;         // au-delà, la tuile est grisée
 /* =============================================================== */
 
@@ -752,8 +758,8 @@ function volet(ouvrir){
 }
 function voletOuvert(){ return el("zone").classList.contains("ouvert"); }
 el("bascule").addEventListener("click", function(){ volet(!voletOuvert()); });
-el("volet").addEventListener("click", function(){ volet(true); });
-el("volet").addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); volet(true); } });
+el("volet").addEventListener("click", function(){ if (!VUE_METEO) volet(true); });
+el("volet").addEventListener("keydown", function(e){ if (VUE_METEO) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); volet(true); } });
 el("pieces").addEventListener("click", function(){ volet(false); });
 /* Retour sur l'onglet après une mise en veille : le minuteur peut avoir été suspendu, on le vérifie tout de suite */
 document.addEventListener("visibilitychange", function(){ if (!document.hidden && voletOuvert()) texteBouton(); });
@@ -791,16 +797,15 @@ function solaire(){
     a.innerHTML = '☀️ Énergie<span class="w">' + (w >= 1000 ? (w / 1000).toFixed(1).replace(".", ",") + " kW" : Math.round(w) + " W") + '</span>';
   }).catch(function(){});
 }
-solaire();
-setInterval(solaire, 5 * 60 * 1000);
+if (!VUE_METEO) { solaire(); setInterval(solaire, 5 * 60 * 1000); }
 
 construire();
 horloge();
-charger();
+if (!VUE_METEO) charger();
 meteo();
 setInterval(meteo, 15 * 60 * 1000);   // toutes les 15 min pour suivre la pluie dans l'heure
 setInterval(horloge, 1000);
-setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
+if (!VUE_METEO) setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
 setInterval(decaler, 10 * 60 * 1000);
 </script>
 </body>
