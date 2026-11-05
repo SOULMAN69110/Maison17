@@ -67,7 +67,7 @@ jobs:
 
       - name: Ajouter à l'historique et enregistrer dans le dépôt
         run: |
-          python3 outils/historiser.py site/data.json meteo.json
+          python3 outils/historiser.py site/data.json meteo.json site/chauffage.json
           git config user.name "Tableau de bord maison"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add historique

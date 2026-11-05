@@ -53,6 +53,10 @@ button:disabled{opacity:.5;cursor:default}
 input[type=password]{width:100%;font:inherit;font-family:var(--mono);font-size:14px;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:10px;margin:8px 0}
 ol{padding-left:20px;margin:8px 0;font-size:15px}
 a{color:var(--givre)}
+/* Courbe */
+.titre-courbe{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.periodes button{padding:6px 10px;font-family:var(--mono);font-size:13px;margin-left:6px}
+.cadre-courbe{position:relative;height:220px;margin-top:10px}
 /* Semaine de programmation */
 .semaine{margin-top:10px}
 .jour{display:flex;align-items:center;margin:6px 0}
@@ -83,6 +87,7 @@ a{color:var(--givre)}
 </style>
 <script src="verrou.js"></script>
 <script src="maj.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <main>
@@ -102,6 +107,14 @@ a{color:var(--givre)}
     <button class="principal" id="envoyer" type="button" disabled>Envoyer au radiateur</button>
     <div class="retour" id="retour"></div>
     <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule.</div>
+  </section>
+
+  <section class="carte" id="courbe-carte">
+    <div class="titre-courbe"><div class="etiquette">Température relevée par le radiateur</div>
+      <div class="periodes"><button type="button" data-h="24" class="choisi">24 h</button><button type="button" data-h="168">7 jours</button></div></div>
+    <div class="cadre-courbe"><canvas id="courbe"></canvas></div>
+    <div class="legende"><span style="color:var(--soleil)">━</span> radiateur · <span style="color:var(--brume)">┅</span> consigne · <span style="color:var(--givre)">━</span> capteur de la pièce</div>
+    <div class="etat" id="courbe-etat"></div>
   </section>
 
   <section class="carte" id="programme" hidden>
@@ -154,8 +167,9 @@ function afficher(j){
   el("pieces").innerHTML = (j.pieces || []).map(function(p){
     return '<section class="carte"><div class="etiquette">Pièce ' + p.numero + ' · ' + p.nom + '</div>' +
       '<h2>🛁 ' + (NOMS[p.numero] || p.nom) + '</h2>' +
-      '<div class="ligne"><div class="grand">' + deg(p.temperature).replace("°", "") + '<small>°C mesurés</small></div>' +
-      '<div class="mode">Mode <b>' + p.mode + '</b>' + ((p.mode_code === 3 || p.mode_code === 4) ? ' · vise ' + deg(p.consigne_actuelle) : '') + '</div></div>' +
+      '<div class="ligne"><div class="grand">' + (typeof p.temperature === "number" ? deg(p.temperature).replace("°", "") + '<small>°C relevés par le radiateur</small>'
+        : '<small>Température en attente du prochain relevé</small>') + '</div>' +
+      '<div class="mode">Mode <b>' + p.mode + '</b>' + ((p.mode_code === 3 || p.mode_code === 4) ? ' · vise ' + deg(typeof p.consigne_actuelle === "number" ? p.consigne_actuelle : p.mode_code === 3 ? p.consigne_manuelle : null) : '') + '</div></div>' +
       '<div class="details"><div><span>Confort</span><b>' + deg(p.consigne_confort) + '</b></div><div><span>Éco</span><b>' + deg(p.consigne_eco) + '</b></div>' +
       '<div><span>Manuelle</span><b>' + deg(p.consigne_manuelle) + '</b></div>' +
       '<div><span>Fenêtre ouverte</span><b>' + (p.fenetre_ouverte_detection ? "détectée" : "non suivie") + '</b></div>' +
@@ -326,8 +340,65 @@ el("oublier").addEventListener("click", function(e){
   ecranJeton();
 });
 
+/* ===== Courbe : historique/chauffage-AAAA-MM.csv (radiateur) et mesures-AAAA-MM.csv (capteur de la pièce) ===== */
+var CAPTEUR = { 7: "sdb-filles" };   // capteur Mobile Alerts de la même pièce
+var heuresCourbe = 24, graphe = null;
+function csv(nom){
+  return fetch("historique/" + nom + "?t=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.ok ? r.text() : ""; })
+    .then(function(t){ var l = t.trim().split("\n"), e = (l.shift() || "").split(","); return l.map(function(x){ var v = x.split(","), o = {}; e.forEach(function(k, i){ o[k] = v[i]; }); return o; }); });
+}
+function courbe(){
+  fetch("historique/index.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.json(); }).then(function(liste){
+    var depuis = Date.now() / 1000 - heuresCourbe * 3600;
+    var mois = {}; [0, heuresCourbe * 3600].forEach(function(d){ var x = new Date((Date.now() / 1000 - d) * 1000); mois[x.getFullYear() + "-" + ("0" + (x.getMonth() + 1)).slice(-2)] = 1; });
+    var noms = liste.filter(function(n){ return Object.keys(mois).some(function(m){ return n === "chauffage-" + m + ".csv" || n === "mesures-" + m + ".csv"; }); });
+    return Promise.all(noms.map(function(n){ return csv(n).then(function(l){ return { nom: n, lignes: l }; }); })).then(function(fichiers){
+      var rad = [], cons = [], capt = [];
+      fichiers.forEach(function(f){
+        f.lignes.forEach(function(l){
+          var t = +l.horodatage; if (!(t >= depuis)) return;
+          if (f.nom.indexOf("chauffage-") === 0 && +l.piece === PIECE) {
+            rad.push({ x: t * 1000, y: +l.temperature });
+            if (l.consigne !== "") cons.push({ x: t * 1000, y: +l.consigne });
+          } else if (f.nom.indexOf("mesures-") === 0 && l.capteur === CAPTEUR[PIECE]) capt.push({ x: t * 1000, y: +l.temp });
+        });
+      });
+      [rad, cons, capt].forEach(function(a){ a.sort(function(p, q){ return p.x - q.x; }); });
+      el("courbe-etat").textContent = rad.length ? "" : "L'historique du radiateur démarre le 5 novembre 2026 à 13 h 30 : la courbe se remplit au fil des relevés (toutes les 10 min).";
+      dessinerCourbe(rad, cons, capt);
+    });
+  }).catch(function(){ el("courbe-etat").textContent = "Historique illisible pour l'instant."; });
+}
+function dessinerCourbe(rad, cons, capt){
+  if (typeof Chart === "undefined") { el("courbe-etat").textContent = "Bibliothèque des graphiques non chargée."; return; }
+  var jeux = [
+    { label: "Radiateur", data: rad, borderColor: "#f0c36a", backgroundColor: "#f0c36a", borderWidth: 2.5, pointRadius: 0, tension: .25 },
+    { label: "Consigne", data: cons, borderColor: "#8a99a5", borderDash: [5, 4], borderWidth: 1.5, pointRadius: 0, stepped: true },
+    { label: "Capteur", data: capt, borderColor: "#7cc4e8", borderWidth: 1.5, pointRadius: 0, tension: .25 }
+  ];
+  if (graphe) { graphe.data.datasets = jeux; graphe.options.scales.x.min = Date.now() - heuresCourbe * 3600000; graphe.update(); return; }
+  graphe = new Chart(el("courbe"), { type: "line", data: { datasets: jeux }, options: {
+    responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { title: function(c){ return c.length ? new Date(c[0].parsed.x).toLocaleString("fr-FR", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : ""; }, label: function(c){ return c.dataset.label + " : " + deg(c.parsed.y); } } } },
+    scales: {
+      x: { type: "linear", min: Date.now() - heuresCourbe * 3600000, max: Date.now(), grid: { color: "#26313a" }, ticks: { color: "#8a99a5", maxTicksLimit: 7, callback: function(v){
+        var d = new Date(v);
+        return heuresCourbe > 24 ? d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }) : d.getHours() + " h" + (d.getMinutes() ? ("0" + d.getMinutes()).slice(-2) : "");
+      } } },
+      y: { grid: { color: "#26313a" }, ticks: { color: "#8a99a5", callback: function(v){ return v + "°"; } } }
+    } } });
+}
+document.querySelector(".periodes").addEventListener("click", function(e){
+  var h = e.target.getAttribute("data-h"); if (!h) return;
+  heuresCourbe = +h;
+  Array.prototype.forEach.call(document.querySelectorAll(".periodes button"), function(b){ b.className = b === e.target ? "choisi" : ""; });
+  courbe();
+});
+
 ecranJeton();
 lire();
+courbe();
+setInterval(courbe, 10 * 60 * 1000);
 setInterval(lire, 5 * 60 * 1000);
 </script>
 </body>

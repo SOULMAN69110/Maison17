@@ -1,9 +1,11 @@
 """Ajoute les dernières mesures (Mobile Alerts + pression Open-Meteo) aux fichiers CSV mensuels.
 
-Usage : python3 outils/historiser.py site/data.json meteo.json
+Usage : python3 outils/historiser.py site/data.json meteo.json [site/chauffage.json]
 Fichiers produits (heure de Paris pour le découpage par mois) :
-  historique/mesures-AAAA-MM.csv  : horodatage,capteur,temp,hum,temp_ext,hum_ext
-  historique/pression-AAAA-MM.csv : horodatage,pression_hpa
+  historique/mesures-AAAA-MM.csv   : horodatage,capteur,temp,hum,temp_ext,hum_ext
+  historique/pression-AAAA-MM.csv  : horodatage,pression_hpa
+  historique/chauffage-AAAA-MM.csv : horodatage,piece,temperature,consigne,mode
+    (radiateurs Home-SmartLink ; horodatage = heure du relevé par la box)
 """
 import csv, json, os, sys
 from datetime import datetime
@@ -37,7 +39,7 @@ def valeur(m, k):
     return "" if v is None else v
 
 
-def main(mesures_json, meteo_json):
+def main(mesures_json, meteo_json, chauffage_json=None):
     os.makedirs(DOSSIER, exist_ok=True)
     ajouts = 0
     try:
@@ -70,6 +72,23 @@ def main(mesures_json, meteo_json):
     except Exception as e:
         print("pression ignorée :", e)
 
+    if chauffage_json:
+        try:
+            ch = json.load(open(chauffage_json))
+            if ch.get("disponible") and ch.get("mesure"):
+                ts = int(datetime.fromisoformat(ch["mesure"]).timestamp())
+                for pc in ch.get("pieces", []):
+                    if pc.get("temperature") is None:
+                        continue
+                    chemin = fichier("chauffage", ts, ["horodatage", "piece", "temperature", "consigne", "mode"])
+                    if derniers(chemin, "piece").get(str(pc["numero"]), 0) >= ts:
+                        continue
+                    with open(chemin, "a", newline="") as f:
+                        csv.writer(f).writerow([ts, pc["numero"], pc["temperature"], valeur(pc, "consigne_actuelle"), valeur(pc, "mode_code")])
+                    ajouts += 1
+        except Exception as e:
+            print("chauffage ignoré :", e)
+
     # Liste des fichiers disponibles, lue par la page de courbes
     liste = sorted(n for n in os.listdir(DOSSIER) if n.endswith(".csv"))
     with open(os.path.join(DOSSIER, "index.json"), "w") as f:
@@ -78,4 +97,4 @@ def main(mesures_json, meteo_json):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
