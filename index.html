@@ -68,6 +68,15 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .pluie .b i{display:block;width:100%}
 .pluie .b i.sec{height:calc(var(--u)*0.25)!important;background:var(--brume)!important;opacity:.5}
 .pluie .h{font-family:var(--mono);font-size:calc(var(--u)*0.75);color:var(--brume)}
+/* Pluie dans l'heure de Météo-France : une barre de 9 cases (5 min puis 10 min), comme dans l'appli */
+.pluie .mf{width:calc(var(--u)*14);padding-bottom:calc(var(--u)*0.2)}
+.pluie .mf .bornes{display:flex;justify-content:space-between;font-family:var(--mono);font-size:calc(var(--u)*0.75);font-weight:500;color:var(--craie);margin-bottom:calc(var(--u)*0.25)}
+.pluie .mf .cases{display:flex;height:calc(var(--u)*1.5);border-radius:calc(var(--u)*0.75);overflow:hidden}
+.pluie .mf .cases i{display:block;height:100%;min-width:0;margin-left:2px;background:rgba(232,238,242,.13)}
+.pluie .mf .cases i:first-child{margin-left:0}
+.pluie .mf .reperes{position:relative;height:calc(var(--u)*1.35);font-family:var(--mono);font-size:calc(var(--u)*0.62);color:var(--brume)}
+.pluie .mf .reperes span{position:absolute;top:0;padding-top:calc(var(--u)*0.4);transform:translateX(-50%);white-space:nowrap;border-left:1px solid transparent}
+.pluie .mf .reperes span:before{content:"";position:absolute;left:50%;top:0;height:calc(var(--u)*0.3);border-left:1px solid var(--brume);opacity:.6}
 .tendance{margin-top:calc(var(--u)*0.8)}
 .dehors .carte .pression{margin-top:0}
 .tendance svg{display:block;width:100%;height:calc(var(--u)*2.6);overflow:visible}
@@ -154,7 +163,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
   .raccourcis a{font-size:4.2vw;padding:2vw 4vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e b{font-size:6vw}.p15 .jc .e span{font-size:2.2vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:11vw minmax(0,1fr)}.jour .tps .mn{width:7vw}.jour .tps .mx{width:8vw}.jour .tps .pl{width:11vw}.jour.heures{font-size:2.6vw}.dehors .ciel-act b{font-size:8vw}.dehors .ciel-act span{font-size:2.4vw}.humid{font-size:4vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .mf{width:52vw}.pluie .mf .bornes{font-size:2.6vw}.pluie .mf .cases{height:5vw;border-radius:2.5vw}.pluie .mf .reperes{height:4.5vw;font-size:2.2vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e b{font-size:6vw}.p15 .jc .e span{font-size:2.2vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:11vw minmax(0,1fr)}.jour .tps .mn{width:7vw}.jour .tps .mx{width:8vw}.jour .tps .pl{width:11vw}.jour.heures{font-size:2.6vw}.dehors .ciel-act b{font-size:8vw}.dehors .ciel-act span{font-size:2.4vw}.humid{font-size:4vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
 }
 /* Tuiles teintées selon le confort : chiffre en couleur, bordure et fond légèrement colorés, pastille pleine */
 .piece{border-left:calc(var(--u)*0.3) solid var(--c,var(--trait));background:linear-gradient(135deg,var(--fond,var(--ardoise)) 0%,var(--ardoise) 75%)}
@@ -489,6 +498,57 @@ var NIVEAUX_PLUIE = [   // millimètres sur le quart d'heure
   { max: 1e9,  nom: "très forte", couleur: "#1c4fb0" }
 ];
 function niveauPluie(mm){ for (var n = 0; n < NIVEAUX_PLUIE.length; n++) if (mm < NIVEAUX_PLUIE[n].max) return n; return NIVEAUX_PLUIE.length - 1; }
+/* ===== Pluie dans l'heure de Météo-France =====
+   1) appel direct, 2) copie « pluie.json » publiée toutes les 10 min par la tâche automatique,
+   3) à défaut, l'ancien affichage par quarts d'heure d'Open-Meteo. */
+var PLUIE_MF = "https://webservice.meteofrance.com/rain?lat=" + LIEU.lat.toFixed(3) + "&lon=" + LIEU.lon.toFixed(3) + "&lang=fr&token=__Wj7dVSTjV9YGu1guveLyDq0g7S7TfTjaHBTPTpO0kj8__";
+var NIVEAUX_MF = [null,
+  { nom: "",        couleur: "" },          // 1 : temps sec
+  { nom: "faible",  couleur: "#bfeef7" },   // 2
+  { nom: "modérée", couleur: "#5b9ef0" },   // 3
+  { nom: "forte",   couleur: "#1f3fb4" }    // 4
+];
+var dernierMeteo = null;
+function hhmm(ts){ var d = new Date(ts * 1000); return ("0" + d.getHours()).slice(-2) + "h" + ("0" + d.getMinutes()).slice(-2); }
+function lirePluieMF(j){
+  var f = j && j.forecast;
+  if (!f || !f.length || typeof f[0].dt !== "number") throw new Error("pas de prévision");
+  var maint = Date.now() / 1000, cases = [];
+  f.forEach(function(c, i){
+    var fin = i + 1 < f.length ? f[i + 1].dt : c.dt + 600;
+    if (fin > maint) cases.push({ debut: c.dt, fin: fin, n: Math.max(1, Math.min(4, +c.rain || 1)) });
+  });
+  if (cases.length < 3) throw new Error("prévision trop ancienne");
+  return cases;
+}
+function afficherPluieMF(cases){
+  var t0 = cases[0].debut, t1 = cases[cases.length - 1].fin, duree = t1 - t0;
+  var premier = -1, pire = 1;
+  cases.forEach(function(c, i){ if (c.n > 1 && premier < 0) premier = i; pire = Math.max(pire, c.n); });
+  var html = cases.map(function(c){
+    return '<i style="flex:' + (c.fin - c.debut) + ' 1 0' + (c.n > 1 ? ';background:' + NIVEAUX_MF[c.n].couleur : '') + '" title="' + hhmm(c.debut) + ' : ' + (c.n > 1 ? "pluie " + NIVEAUX_MF[c.n].nom : "pas de pluie") + '"></i>';
+  }).join("");
+  var reperes = "";
+  for (var t = Math.ceil((t0 + 60) / 600) * 600; t < t1 - 60; t += 600)
+    reperes += '<span style="left:' + ((t - t0) / duree * 100).toFixed(1) + '%">' + hhmm(t) + '</span>';
+  var titre = "Dans l'heure", resume;
+  if (premier < 0) resume = "🌂 Pas de pluie";
+  else {
+    resume = premier === 0 ? "☔ Pluie en cours" : "☔ Pluie vers " + hhmm(cases[premier].debut);
+    titre += " · " + (pire > 2 ? "jusqu'à " : "") + NIVEAUX_MF[pire].nom;
+  }
+  el("pluie").innerHTML = '<div class="resume"><span>' + titre + '</span>' + resume + '</div>' +
+    '<div class="mf"><div class="bornes"><b>' + hhmm(t0) + '</b><b>' + hhmm(t1) + '</b></div><div class="cases">' + html + '</div><div class="reperes">' + reperes + '</div></div>';
+}
+function pluieMF(){
+  function essai(url){ return fetch(url, { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(lirePluieMF); }
+  essai(PLUIE_MF)
+    .catch(function(){ return essai("pluie.json?t=" + Date.now()); })
+    .then(afficherPluieMF)
+    .catch(function(){ if (dernierMeteo) pluieHeure(dernierMeteo); });
+}
+setInterval(pluieMF, 5 * 60 * 1000);
+
 function pluieHeure(m){
   var q = m.minutely_15;
   if (!q || !q.time) { el("pluie").innerHTML = ""; return; }
@@ -619,7 +679,8 @@ function meteo(){
     }
     courbePression(m);
     previsions15(m);
-    pluieHeure(m);
+    dernierMeteo = m;
+    pluieMF();
     if (typeof m.current.weather_code === "number") el("ciel-act").innerHTML = cielProchain(m);
     cielTuileDehors(m);
     /* Aujourd'hui + les jours suivants */
