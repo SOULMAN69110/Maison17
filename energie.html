@@ -89,10 +89,14 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .etat{font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.8rem}
 .etat.erreur{color:var(--reseau)}
 
+/* Boutons vers les autres pages (nav.js), à l'échelle de la page */
+.haut .nav-pages{font-size:1.1rem}
 @media (max-width:800px){
   html{font-size:2.4vw}
+  .haut .nav-pages{font-size:3.4vw}
   body{overflow:auto}
   .ecran{height:auto;padding:16px}
+  .haut{display:block}.haut .heure{margin-top:12px}
   .rangee{display:block;margin:0}
   .rangee > *{margin:0 0 12px}
   .fleche{display:none}
@@ -112,7 +116,7 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
     </div>
     <div>
       <div class="heure" id="heure">--:--</div>
-      <div class="liens"><a href="./">← Tableau de bord</a><a href="bilans.html">📊 Bilans</a><a href="historique.html">📈 Courbes</a></div>
+      <nav class="nav-pages droite"></nav><script src="nav.js"></script>
     </div>
   </div>
 
