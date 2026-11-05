@@ -98,7 +98,10 @@ async def lire(email, mot_de_passe):
 
 def main():
     chemin = sys.argv[1] if len(sys.argv) > 1 else "chauffage.json"
-    email, mdp = os.environ.get("HSL_EMAIL", ""), os.environ.get("HSL_MOT_DE_PASSE", "")
+    email_brut, mdp_brut = os.environ.get("HSL_EMAIL", ""), os.environ.get("HSL_MOT_DE_PASSE", "")
+    email, mdp = email_brut.strip(), mdp_brut.strip()   # espaces ou retour à la ligne collés par erreur dans les secrets
+    if email != email_brut or mdp != mdp_brut:
+        print("Chauffage : espaces retirés autour de l'e-mail ou du mot de passe.")
     if not email or not mdp:
         ecrire(chemin, {"disponible": False, "raison": "identifiants Home-SmartLink non renseignés"})
         print("Chauffage : secrets HSL_EMAIL / HSL_MOT_DE_PASSE absents, rien à lire.")
@@ -109,7 +112,9 @@ def main():
     except Exception as e:
         # Le message d'erreur peut contenir des détails de la réponse : on ne publie que le type
         donnees = {"disponible": False, "raison": "connexion impossible (" + type(e).__name__ + ")"}
-        print("Chauffage : échec, " + type(e).__name__)
+        # Dans le journal seulement (GitHub y masque les secrets) : le message aide à comprendre l'échec
+        print("Chauffage : échec, " + type(e).__name__ + " : " + str(e)[:300])
+        print("Chauffage : e-mail de " + str(len(email)) + " caractères" + ("" if "@" in email else ", sans @ (est-ce bien l'e-mail ?)"))
     ecrire(chemin, donnees)
 
 
