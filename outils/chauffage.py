@@ -83,6 +83,16 @@ async def lire(email, mot_de_passe):
                 "consigne_actuelle": nombre(st.set_point) if st else None,
                 "temperature": nombre(st.ambient_temperature) if st else None,
                 "fenetre_ouverte_detection": r.open_window_detection_enabled,
+                # Programmation : « avancée » = plages 1 à 6, « simplifiée » = matin (7), journée (9), soir (8).
+                # jours : 0 = lundi … 6 = dimanche ; mode de plage 1 = confort, 2 = boost, 3 = ventilation
+                "programmation": "simplifiée" if r.ecopilot_enabled else "avancée",
+                "plages": [{
+                    "plage": e.event_id,
+                    "jours": [j for j in range(7) if e.recurrence & (1 << j)],
+                    "debut": "%02d:%02d" % (e.start_hour, e.start_minute),
+                    "fin": "%02d:%02d" % (e.end_hour, e.end_minute),
+                    "mode": e.mode,
+                } for e in r.events],
             })
 
         return {
