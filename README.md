@@ -38,7 +38,7 @@ Installation de 4,25 kWc suivie sur monitor.estarpower.com (installation n° 705
 
 ## Fonctionnement
 
-1. Toutes les 10 minutes environ (souvent avec un peu de retard), la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo.
+1. Toutes les 10 minutes, la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo. GitHub ne lançant les tâches planifiées que toutes les quelques heures, c'est la tâche `Horloge` (`.github/workflows/horloge.yml`) qui la relance : elle reste active près de 6 h, relance la publication toutes les 10 min, puis une nouvelle horloge prend le relais.
 2. Elle ajoute les nouvelles mesures aux fichiers mensuels `historique/mesures-AAAA-MM.csv` et `historique/pression-AAAA-MM.csv`, et les enregistre dans le dépôt.
 3. Elle republie le site sur GitHub Pages avec une copie des dernières mesures (`data.json`).
 
@@ -56,6 +56,7 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | `historique.html` | page de courbes (24 h, 7 jours, 30 jours, 1 an) |
 | `outils/historiser.py` | ajoute les mesures aux CSV sans doublons |
 | `.github/workflows/pages.yml` | la tâche automatique ; liste des identifiants à mettre à jour si on ajoute un capteur |
+| `.github/workflows/horloge.yml` | relance la tâche automatique toutes les 10 min |
 
 ### Format des CSV
 
@@ -66,7 +67,7 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 
 - **Code d'accès** : les deux pages demandent un code, retenu un an sur chaque appareil (iPhone, navigateur de la télé). Le code n'est pas écrit dans le dépôt, seulement son empreinte dans `verrou.js`, avec la marche à suivre pour le changer. C'est un écran d'accès dissuasif, pas une vraie protection : le dépôt et les mesures restent publics. Les chambres des enfants sont nommées par leur initiale (Chambre C., Chambre Y.).
 
-- **Si les chiffres se figent** : GitHub met en pause les tâches planifiées d'un dépôt public après 60 jours sans activité. Les enregistrements d'historique comptent normalement comme activité ; sinon, relancer la tâche depuis l'onglet Actions (*Run workflow*).
+- **Si les chiffres se figent** : vérifier dans l'onglet Actions qu'une tâche `Horloge` est en cours ; sinon la lancer (*Run workflow*). GitHub met aussi en pause les tâches planifiées d'un dépôt public après 60 jours sans activité. Les enregistrements d'historique comptent normalement comme activité ; sinon, relancer la tâche depuis l'onglet Actions (*Run workflow*).
 - **Ajouter une page** : la créer à la racine, l'ajouter à la commande `cp` de `pages.yml` et à la liste `RACCOURCIS` d'`index.html`.
 - **Ajouter un capteur** : l'ajouter dans `CAPTEURS` dans `index.html` et `historique.html`, et dans `IDS` dans `pages.yml`.
 - **Piles faibles** au 3 novembre 2026 : Chambre parents, Chambre Y., SdB parents.
@@ -76,4 +77,5 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 - **3 nov. 2026** : création du tableau de bord (heure, extérieur, 7 pièces avec confort, humidité et alertes de pile), hébergement sur GitHub Pages, ajout de la pression et des prévisions sur 4 jours, démarrage de l'historique des mesures et de la page de courbes.
 - **3 nov. 2026 (suite)** : émojis sur les blocs Dehors, Prévisions et sur chaque pièce ; courbe de la pression du jour avec échelle des deux côtés ; prévisions sur 7 jours ; mise en page adaptée à l'iPhone à l'horizontale ; écran de code d'accès sur les deux pages ; chambres des enfants nommées Chambre C. et Chambre Y. ; volet roulant sur la partie intérieure, fermé par défaut et refermé automatiquement au bout de 3 min (`VOLET_MIN` dans `index.html`). Ajout de la pluie dans l'heure : 4 bâtonnets par quart d'heure (Open-Meteo, précipitations sur 15 min), plus hauts et plus sombres selon l'intensité (faible < 0,25 mm, modérée < 0,75, forte < 2, très forte au-delà) ; météo rafraîchie toutes les 15 min. Le volet fermé affiche les prévisions sur 15 jours avec les températures du matin (8 h), du midi (13 h), du soir (19 h) et de la nuit suivante (2 h), avec des bâtonnets de hauteur et couleur selon la température (échelle commune aux 15 jours) ; jours 11 à 15 plus pâles (simple tendance) ; la page se recharge seule quand une nouvelle version est publiée. Colonne de gauche en cadres (Dehors, pluie dans l'heure, pression, prévisions). Ajout de la page Énergie (panneaux solaires eStar Power), compatible avec le navigateur de la télé. Page Bilans (semaine, mois, année, N/N-1, infobulles, jours de panne estimés) ; résumé « production à date » vs N-1 sur la page Énergie ; courbes en 24 h par défaut avec l'échelle répétée à droite. Détail : page Bilans (semaine, mois, année, N/N-1) et raccourcis vers les autres pages à droite de l'heure sur le tableau de bord (liste `RACCOURCIS` en tête du script d'`index.html`).
 - **3 nov. 2026 (télé Samsung)** : le navigateur intégré de la télé (QLED Q9FN de 2018) ne connaît ni la grille CSS, ni `inset`, ni `min()`. L'écran du code d'accès restait noir, puis la page s'empilait sur une seule colonne. Ajout d'une mise en page de secours en flexbox dans `index.html` (bloc `@supports not (display:grid)`), ignorée par les navigateurs récents. À garder en tête pour toute modification de mise en page.
+- **5 nov. 2026** : les températures ne se mettaient à jour que toutes les 4 à 8 h (GitHub espaçait la tâche planifiée). Ajout de la tâche `Horloge` qui la relance toutes les 10 min.
 - Idées écartées pour l'instant : appli Apple TV native (nécessite un Mac), intégration de SmartThings.
