@@ -556,11 +556,57 @@ function previsions15(m){
   v.innerHTML = '<div class="entete"><b>📅 Prévisions sur 15 jours</b><span>🏠 Toucher pour afficher l\'intérieur</span></div>' +
     '<div class="grille">' + html + '</div><div class="poignee" style="align-self:center"></div>';
 }
+/* Remplace, partout où Météo-France a une valeur, les données du modèle par défaut (au-delà de 4 jours, rien ne change) */
+function fusionMeteoFrance(m, mf){
+  if (!mf) return m;
+  function remplace(dest, src, champs){
+    if (!dest || !src || !src.time) return;
+    var pos = {};
+    for (var i = 0; i < dest.time.length; i++) pos[dest.time[i]] = i;
+    champs.forEach(function(c){
+      if (!dest[c] || !src[c]) return;
+      for (var j = 0; j < src.time.length; j++) {
+        var k = pos[src.time[j]];
+        if (k !== undefined && typeof src[c][j] === "number") dest[c][k] = src[c][j];
+      }
+    });
+  }
+  remplace(m.hourly, mf.hourly, ["temperature_2m", "weather_code", "is_day"]);
+  remplace(m.minutely_15, mf.minutely_15, ["precipitation"]);
+  /* Jours : seulement ceux que Météo-France couvre en entier (24 heures), sinon min/max seraient faussés */
+  if (mf.daily && mf.hourly && m.daily) {
+    var complets = { time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [] };
+    mf.daily.time.forEach(function(jour, d){
+      var n = 0;
+      for (var i = 0; i < mf.hourly.time.length; i++)
+        if (mf.hourly.time[i].slice(0, 10) === jour && typeof mf.hourly.temperature_2m[i] === "number") n++;
+      if (n < 24) return;
+      complets.time.push(jour);
+      complets.weather_code.push(mf.daily.weather_code[d]);
+      complets.temperature_2m_max.push(mf.daily.temperature_2m_max[d]);
+      complets.temperature_2m_min.push(mf.daily.temperature_2m_min[d]);
+    });
+    remplace(m.daily, complets, ["weather_code", "temperature_2m_max", "temperature_2m_min"]);
+  }
+  if (mf.current && typeof mf.current.weather_code === "number") {
+    m.current.weather_code = mf.current.weather_code;
+    if (typeof mf.current.is_day === "number") m.current.is_day = mf.current.is_day;
+  }
+  return m;
+}
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
     "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl,temperature_2m,weather_code,is_day&past_days=1&forecast_days=16" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
-  fetch(url).then(lireJson).then(function(m){
+  /* Modèles Météo-France (AROME 1,5 km puis ARPEGE) pour les 4 premiers jours : plus fidèles que le modèle par défaut */
+  var urlMF = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
+    "&current=weather_code,is_day&minutely_15=precipitation&hourly=temperature_2m,weather_code,is_day&past_days=1&forecast_days=4" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min&models=meteofrance_seamless&timezone=Europe%2FParis";
+  Promise.all([
+    fetch(url).then(lireJson),
+    fetch(urlMF).then(lireJson).catch(function(){ return null; })   // si Météo-France ne répond pas, on garde le modèle par défaut
+  ]).then(function(r){
+    var m = fusionMeteoFrance(r[0], r[1]);
     /* Pression et tendance sur 3 h */
     var p = m.current && m.current.pressure_msl;
     if (typeof p === "number") {
