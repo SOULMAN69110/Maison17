@@ -83,6 +83,7 @@ jobs:
         run: |
           cp index.html historique.html energie.html bilans.html lieux.html meteo.html verrou.js maj.js site/
           cp -r historique site/
+          cp -r app site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
