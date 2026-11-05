@@ -60,7 +60,7 @@ h2 .act{margin-left:auto;font:500 14px var(--mono);color:var(--givre);background
 <body>
 <main class="page">
   <h1>Recherche et favoris</h1>
-  <div class="sous">Lieu de la météo du tableau de bord · <a href="./">Tableau de bord</a></div>
+  <div class="sous" id="sous">Lieu de la météo du tableau de bord · <a href="./">Tableau de bord</a></div>
 
   <div class="recherche">
     <span class="loupe" aria-hidden="true">🔍</span>
@@ -78,10 +78,12 @@ h2 .act{margin-left:auto;font:500 14px var(--mono);color:var(--givre);background
   <h2><span aria-hidden="true">🤍</span>Mes favoris<button type="button" class="act" id="trier">⇅ Trier</button></h2>
   <ul class="liste" id="fav"></ul>
 
-  <p class="note">Toucher un lieu pour l'afficher sur le tableau de bord. Ces choix sont gardés sur chaque appareil (télé, téléphone) séparément. La pluie dans l'heure vient de Météo-France pour les lieux en France ; ailleurs, de l'autre modèle.</p>
+  <p class="note">Toucher un lieu pour en afficher la météo. Ces choix sont gardés sur chaque appareil (télé, téléphone) séparément. La pluie dans l'heure vient de Météo-France pour les lieux en France ; ailleurs, de l'autre modèle.</p>
 </main>
 
 <script>
+/* Venue de la page météo seule : le lien ramène à la météo, sans parler du tableau de bord */
+if (/[?&]retour=meteo\b/.test(location.search)) document.getElementById("sous").innerHTML = '<a href="./?vue=meteo">← Retour à la météo</a>';
 var CLE = "maison17-meteo";
 var MAISON = { nom: "Sainte-Foy-lès-Lyon", code: "69", lat: 45.734, lon: 4.802 };
 var etat = lire();
@@ -121,7 +123,7 @@ function choisir(l, sansFavori){
   if (!sansFavori && !etat.favoris.some(function(f){ return meme(f, l); })) etat.favoris.push(l);
   ecrire();
   el("q").value = ""; el("res").innerHTML = "";
-  el("msg").className = "msg"; el("msg").textContent = libelle(l) + " est maintenant sur le tableau de bord.";
+  el("msg").className = "msg"; el("msg").textContent = libelle(l) + " est maintenant le lieu de la météo.";
   rendre();
 }
 
