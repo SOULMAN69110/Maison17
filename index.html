@@ -418,26 +418,30 @@ function ciel(code){
   if (code >= 95) return "Orage";
   return "—";
 }
-/* Temps actuel, dans 2 h et dans 4 h (carte Dehors) */
+/* Temps actuel et dans 2 h (carte Dehors du haut) */
 function cielProchain(m){
   var h = m.hourly, i = h.time.indexOf(m.current.time.slice(0, 13) + ":00");
   var html = '<div><b>' + emoji(m.current.weather_code, m.current.is_day !== 0) + '</b><span>maint.</span></div>';
-  [2, 4].forEach(function(n){
+  [2].forEach(function(n){
     var j = i >= 0 ? i + n : -1;
     if (j >= 0 && j < h.time.length && typeof h.weather_code[j] === "number")
-      html += '<div><b>' + emoji(h.weather_code[j], !h.is_day || h.is_day[j] !== 0) + '</b><span>+' + n + ' h</span></div>';
+      html += '<div><b>' + emoji(h.weather_code[j], !h.is_day || h.is_day[j] !== 0) + '</b><span>dans ' + n + ' h</span></div>';
   });
   return html;
 }
-/* Tuile Dehors : temps actuel et temps dans 2 heures */
+/* Tuile Dehors : temps actuel et temps à midi (celui du lendemain une fois midi passé) */
 function cielTuileDehors(m){
   var z = el("ciel-tuile");
   if (!z || typeof m.current.weather_code !== "number") return;
-  var h = m.hourly, i = h.time.indexOf(m.current.time.slice(0, 13) + ":00");
-  if (i >= 0) i += 2;
-  var html = '<div><b>' + emoji(m.current.weather_code, m.current.is_day !== 0) + '</b><span>maint.</span></div>';
-  if (i >= 0 && i < h.time.length && typeof h.weather_code[i] === "number")
-    html += '<div><b>' + emoji(h.weather_code[i], !h.is_day || h.is_day[i] !== 0) + '</b><span>dans 2 h</span></div>';
+  var auj = m.current.time.slice(0, 10), heure = +m.current.time.slice(11, 13);
+  var cible = auj + "T12:00", libelle = "12 h";
+  if (heure >= 13) {
+    var d = new Date(auj + "T12:00"); d.setDate(d.getDate() + 1);
+    cible = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + "T12:00";
+    libelle = "dem. 12 h";
+  }
+  var i = m.hourly.time.indexOf(cible), html = '<div><b>' + emoji(m.current.weather_code, m.current.is_day !== 0) + '</b><span>maint.</span></div>';
+  if (i >= 0 && typeof m.hourly.weather_code[i] === "number") html += '<div><b>' + emoji(m.hourly.weather_code[i], true) + '</b><span>' + libelle + '</span></div>';
   z.innerHTML = html;
 }
 /* Courbe de la pression d'aujourd'hui (0 h à 24 h) : passé en trait plein, prévision en pointillés */
