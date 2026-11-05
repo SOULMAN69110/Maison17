@@ -1,0 +1,34 @@
+name: Horloge (relance toutes les 10 min)
+
+# GitHub ne lance les tâches planifiées que toutes les quelques heures.
+# Cette tâche reste active près de 6 h et relance « Mesures et publication »
+# toutes les 10 min. La suivante, déjà en attente, prend le relais.
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: horloge
+  cancel-in-progress: false
+
+jobs:
+  relancer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - name: Relancer la publication toutes les 10 minutes pendant 5 h 50
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fin=$(( $(date +%s) + 350*60 ))
+          while [ "$(date +%s)" -lt "$fin" ]; do
+            gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main \
+              && echo "Relancée à $(TZ=Europe/Paris date '+%H:%M')" \
+              || echo "Échec de la relance à $(TZ=Europe/Paris date '+%H:%M')"
+            sleep 600
+          done
