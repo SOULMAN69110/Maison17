@@ -2,7 +2,7 @@
    Toutes les 5 min, on relit la page, verrou.js et ce fichier ; si l'un a changé depuis le chargement,
    la page se recharge (le code d'accès reste retenu). Écrit pour les navigateurs anciens des télés. */
 (function(){
-  var fichiers = [(location.pathname.split("/").pop() || "index.html"), "verrou.js", "maj.js"];
+  var fichiers = [(location.pathname.split("/").pop() || "index.html"), "verrou.js", "maj.js", "nav.js"];
   var reference = null;
   function empreinte(){
     return Promise.all(fichiers.map(function(f){
