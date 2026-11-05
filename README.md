@@ -12,6 +12,7 @@ Mis en place le 3 novembre 2026.
 | Courbes et historique | https://soulman69110.github.io/Maison17/historique.html |
 | Énergie (panneaux solaires) | https://soulman69110.github.io/Maison17/energie.html |
 | Bilans énergie (semaine, mois, année, N/N-1) | https://soulman69110.github.io/Maison17/bilans.html |
+| Lieux météo (recherche, ma position, favoris) | https://soulman69110.github.io/Maison17/lieux.html |
 | Mesures brutes (CSV) | dossier [`historique/`](historique/) de ce dépôt |
 
 **Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.
@@ -53,7 +54,8 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | `energie.html` | page Énergie : production solaire, consommation, réseau, bilan du jour et courbe de la journée |
 | `bilans.html` | bilans solaires par semaine, mois, année et comparaison mois par mois avec l'année précédente |
 | `outils/estar.py` | récupère les données eStar Power (connexion avec les secrets GitHub) |
-| `historique.html` | page de courbes (24 h, 7 jours, 30 jours, 1 an) |
+| `historique.html` | page de courbes (jour, semaine, mois, année avec flèches ◀ ▶, ou dates libres) |
+| `lieux.html` | choix du lieu de la météo : recherche de ville, ma position, historique, favoris (gardés sur chaque appareil) |
 | `outils/historiser.py` | ajoute les mesures aux CSV sans doublons |
 | `.github/workflows/pages.yml` | la tâche automatique ; liste des identifiants à mettre à jour si on ajoute un capteur |
 | `.github/workflows/horloge.yml` | relance la tâche automatique toutes les 10 min |

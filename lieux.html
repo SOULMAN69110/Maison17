@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lieux météo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Même identité que le tableau de bord. Recherche, historique, lieu de l'écran d'accueil et favoris (comme l'appli Météo-France). */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a;
+  --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8; --rose:#f0a6ca;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nuit);color:var(--craie);font-family:var(--display)}
+.page{max-width:720px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{margin:0;font-size:clamp(28px,5vw,40px);font-weight:700;letter-spacing:-.02em}
+.sous{color:var(--brume);margin-top:4px;font-size:15px}
+a{color:var(--givre)}
+h2{display:flex;align-items:center;gap:10px;margin:30px 0 12px;font-size:20px;font-weight:600}
+h2 .act{margin-left:auto;font:500 14px var(--mono);color:var(--givre);background:none;border:0;cursor:pointer;padding:6px 0}
+.recherche{position:relative;margin-top:22px}
+.recherche input{width:100%;font:500 18px var(--display);color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;padding:15px 20px 15px 50px;outline:none}
+.recherche input:focus{border-color:var(--givre)}
+.recherche .loupe{position:absolute;left:19px;top:50%;transform:translateY(-50%);font-size:18px;opacity:.7;pointer-events:none}
+.resultats{list-style:none;margin:8px 0 0;padding:0;background:var(--ardoise);border:1px solid var(--trait);border-radius:16px;overflow:hidden}
+.resultats:empty{display:none}
+.resultats li{display:flex;align-items:center;gap:10px;padding:13px 18px;border-top:1px solid var(--trait);cursor:pointer}
+.resultats li:first-child{border-top:0}
+.resultats li:hover,.resultats li:focus{background:#1f2a33;outline:none}
+.resultats small{color:var(--brume);font-size:13px}
+.resultats .vide{color:var(--brume);cursor:default}
+.puces{display:flex;flex-wrap:wrap;gap:10px}
+.puces button{font:500 16px var(--display);color:var(--rose);background:rgba(240,166,202,.12);border:0;border-radius:99px;padding:9px 18px;cursor:pointer}
+.puces button:focus-visible,.liste button:focus-visible{outline:2px solid var(--givre);outline-offset:2px}
+.accueil{display:flex;align-items:center;gap:12px;font-size:20px;padding:4px 0 0 2px}
+.accueil .ok{color:var(--rose);font-size:22px}
+.accueil small{font:13px var(--mono);color:var(--brume)}
+.liste{list-style:none;margin:0;padding:0}
+.liste li{display:grid;grid-template-columns:minmax(0,1fr) 40px 56px 40px;align-items:center;gap:8px;padding:12px 0;border-top:1px solid var(--trait)}
+.liste li:first-child{border-top:0}
+.liste .nom{font:inherit;font-size:18px;color:var(--craie);background:none;border:0;text-align:left;padding:6px 0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.liste .nom.actif{color:var(--givre)}
+.liste .nom.actif:after{content:" ✓";color:var(--rose)}
+.liste .ciel{font-size:30px;text-align:center}
+.liste .t{font-size:26px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.liste .ret{font-size:22px;color:var(--rose);background:none;border:0;cursor:pointer;padding:6px}
+.liste .ret:disabled{opacity:.25;cursor:default}
+.note{margin-top:28px;font:13px/1.5 var(--mono);color:var(--brume)}
+.msg{margin-top:10px;font:14px var(--mono);color:var(--brume);min-height:1.4em}
+.msg.err{color:#f08a6a}
+</style>
+<script src="verrou.js"></script>
+</head>
+<body>
+<main class="page">
+  <h1>Recherche et favoris</h1>
+  <div class="sous">Lieu de la météo du tableau de bord · <a href="./">Tableau de bord</a></div>
+
+  <div class="recherche">
+    <span class="loupe" aria-hidden="true">🔍</span>
+    <input type="search" id="q" placeholder="Rechercher votre ville…" autocomplete="off" aria-label="Rechercher une ville" aria-controls="res">
+  </div>
+  <ul class="resultats" id="res" role="listbox" aria-label="Résultats"></ul>
+  <div class="msg" id="msg" role="status"></div>
+
+  <h2><span aria-hidden="true">🕘</span>Mon historique</h2>
+  <div class="puces" id="hist"></div>
+
+  <h2><span aria-hidden="true">🏠</span>Mon écran d'accueil</h2>
+  <div class="accueil" id="accueil"></div>
+
+  <h2><span aria-hidden="true">🤍</span>Mes favoris<button type="button" class="act" id="trier">⇅ Trier</button></h2>
+  <ul class="liste" id="fav"></ul>
+
+  <p class="note">Toucher un lieu pour l'afficher sur le tableau de bord. Ces choix sont gardés sur chaque appareil (télé, téléphone) séparément. La pluie dans l'heure vient de Météo-France pour les lieux en France ; ailleurs, de l'autre modèle.</p>
+</main>
+
+<script>
+var CLE = "maison17-meteo";
+var MAISON = { nom: "Sainte-Foy-lès-Lyon", code: "69", lat: 45.73, lon: 4.80 };
+var etat = lire();
+
+function el(id){ return document.getElementById(id); }
+function lire(){
+  var e = null;
+  try { e = JSON.parse(localStorage.getItem(CLE)); } catch (x) {}
+  if (!e || !e.accueil) e = { accueil: MAISON, favoris: [MAISON], historique: [], tri: "ajout" };
+  e.favoris = e.favoris || []; e.historique = e.historique || [];
+  return e;
+}
+function ecrire(){ try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (x) {} }
+function libelle(l){ return l.nom + (l.code ? " (" + l.code + ")" : ""); }
+function meme(a, b){ return a && b && Math.abs(a.lat - b.lat) < 0.01 && Math.abs(a.lon - b.lon) < 0.01; }
+function echap(t){ return String(t).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+function emoji(code, jour){
+  if (code === 0) return jour === false ? "🌙" : "☀️";
+  if (code === 1) return jour === false ? "🌙" : "🌤️";
+  if (code === 2) return jour === false ? "☁️" : "⛅";
+  if (code === 3) return "☁️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 57) return "🌦️";
+  if (code >= 61 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "❄️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code === 85 || code === 86) return "🌨️";
+  if (code >= 95) return "⛈️";
+  return "";
+}
+
+/* Choisir un lieu : il devient celui de l'écran d'accueil, entre dans l'historique et dans les favoris */
+function choisir(l, sansFavori){
+  l = { nom: l.nom, code: l.code || "", lat: +(+l.lat).toFixed(3), lon: +(+l.lon).toFixed(3), geo: !!l.geo };
+  etat.accueil = l;
+  etat.historique = [l].concat(etat.historique.filter(function(h){ return !meme(h, l); })).slice(0, 8);
+  if (!sansFavori && !etat.favoris.some(function(f){ return meme(f, l); })) etat.favoris.push(l);
+  ecrire();
+  el("q").value = ""; el("res").innerHTML = "";
+  el("msg").className = "msg"; el("msg").textContent = libelle(l) + " est maintenant sur le tableau de bord.";
+  rendre();
+}
+
+/* ===== Recherche (géocodage Open-Meteo, gratuit, sans clé) ===== */
+var minuteur = null, derniere = "";
+el("q").addEventListener("input", function(){
+  clearTimeout(minuteur);
+  var q = el("q").value.trim();
+  if (q.length < 2) { el("res").innerHTML = ""; return; }
+  minuteur = setTimeout(function(){ chercher(q); }, 300);
+});
+function chercher(q){
+  derniere = q;
+  fetch("https://geocoding-api.open-meteo.com/v1/search?count=8&language=fr&format=json&name=" + encodeURIComponent(q))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (q !== derniere) return;
+      var liste = (j.results || []).map(function(r){
+        var fr = r.country_code === "FR", dep = fr && r.postcodes && r.postcodes[0] ? r.postcodes[0].slice(0, 2) : "";
+        if (dep === "20") dep = (r.admin2 || "").indexOf("Haute") === 0 ? "2B" : "2A";
+        return { nom: r.name, code: fr ? dep : r.country_code, lat: r.latitude, lon: r.longitude,
+                 detail: [r.admin2, r.admin1, fr ? "" : r.country].filter(Boolean).join(", ") };
+      });
+      el("res").innerHTML = liste.length ? liste.map(function(l, i){
+        return '<li role="option" tabindex="0" data-i="' + i + '">' + echap(libelle(l)) + ' <small>' + echap(l.detail) + '</small></li>';
+      }).join("") : '<li class="vide">Aucune ville trouvée</li>';
+      el("res").querySelectorAll("li[data-i]").forEach(function(li){
+        function go(){ choisir(liste[+li.dataset.i]); }
+        li.addEventListener("click", go);
+        li.addEventListener("keydown", function(e){ if (e.keyCode === 13) go(); });
+      });
+    })
+    .catch(function(){ el("res").innerHTML = '<li class="vide">Recherche indisponible pour le moment</li>'; });
+}
+
+/* ===== Ma position ===== */
+function maPosition(){
+  if (!navigator.geolocation) { erreur("Cet appareil ne donne pas sa position (la télé, par exemple)."); return; }
+  el("msg").className = "msg"; el("msg").textContent = "Recherche de votre position…";
+  navigator.geolocation.getCurrentPosition(function(p){
+    var lat = p.coords.latitude, lon = p.coords.longitude;
+    fetch("https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=fr&latitude=" + lat + "&longitude=" + lon)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        var nom = j.city || j.locality || "Ma position", fr = j.countryCode === "FR";
+        var code = fr && j.postcode ? String(j.postcode).slice(0, 2) : (fr ? "" : j.countryCode || "");
+        choisir({ nom: nom, code: code, lat: lat, lon: lon, geo: true }, true);
+      })
+      .catch(function(){ choisir({ nom: "Ma position", code: "", lat: lat, lon: lon, geo: true }, true); });
+  }, function(e){
+    erreur(e.code === 1 ? "Accès à la position refusé : autorisez-le dans les réglages du navigateur." : "Position introuvable pour le moment.");
+  }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 600000 });
+}
+function erreur(t){ el("msg").className = "msg err"; el("msg").textContent = t; }
+
+/* ===== Affichage ===== */
+function rendre(){
+  var puces = '<button type="button" id="geo">📍 Ma position</button>' +
+    etat.historique.filter(function(h){ return !h.geo; }).map(function(h, i){ return '<button type="button" data-h="' + i + '">' + echap(h.nom) + '</button>'; }).join("");
+  el("hist").innerHTML = puces;
+  el("geo").addEventListener("click", maPosition);
+  var hs = etat.historique.filter(function(h){ return !h.geo; });
+  el("hist").querySelectorAll("[data-h]").forEach(function(b){ b.addEventListener("click", function(){ choisir(hs[+b.dataset.h], true); }); });
+
+  el("accueil").innerHTML = (etat.accueil.geo ? "📍 " : "") + echap(libelle(etat.accueil)) + ' <span class="ok">✓</span>' +
+    (meme(etat.accueil, MAISON) ? "" : ' <small>· <a href="#" id="maison">revenir à la maison</a></small>');
+  if (el("maison")) el("maison").addEventListener("click", function(e){ e.preventDefault(); choisir(MAISON, true); });
+
+  var favs = etat.favoris.slice();
+  if (etat.tri === "nom") favs.sort(function(a, b){ return a.nom.localeCompare(b.nom, "fr"); });
+  el("trier").textContent = etat.tri === "nom" ? "⇅ Ordre d'ajout" : "⇅ Trier A → Z";
+  el("fav").innerHTML = favs.length ? favs.map(function(f){
+    var i = etat.favoris.indexOf(f);
+    return '<li><button type="button" class="nom' + (meme(f, etat.accueil) ? " actif" : "") + '" data-f="' + i + '">' + echap(libelle(f)) + '</button>' +
+      '<span class="ciel" id="c' + i + '"></span><span class="t" id="t' + i + '"></span>' +
+      '<button type="button" class="ret" data-r="' + i + '" aria-label="Retirer ' + echap(f.nom) + ' des favoris"' + (meme(f, MAISON) ? ' disabled title="La maison reste dans les favoris"' : '') + '>💔</button></li>';
+  }).join("") : '<li><span class="nom">Aucun favori : cherchez une ville ci-dessus.</span></li>';
+  el("fav").querySelectorAll("[data-f]").forEach(function(b){ b.addEventListener("click", function(){ choisir(etat.favoris[+b.dataset.f], true); }); });
+  el("fav").querySelectorAll("[data-r]").forEach(function(b){ b.addEventListener("click", function(){
+    etat.favoris.splice(+b.dataset.r, 1); ecrire(); rendre();
+  }); });
+  meteoFavoris();
+}
+
+/* Temps et température actuels de tous les favoris en un seul appel */
+function meteoFavoris(){
+  if (!etat.favoris.length) return;
+  var lats = etat.favoris.map(function(f){ return f.lat; }).join(","), lons = etat.favoris.map(function(f){ return f.lon; }).join(",");
+  fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lats + "&longitude=" + lons + "&current=temperature_2m,weather_code,is_day&timezone=auto")
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var l = Array.isArray(j) ? j : [j];
+      l.forEach(function(m, i){
+        if (!m || !m.current || !el("t" + i)) return;
+        el("c" + i).textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
+        el("t" + i).textContent = Math.round(m.current.temperature_2m) + "°";
+      });
+    }).catch(function(){});
+}
+
+el("trier").addEventListener("click", function(){ etat.tri = etat.tri === "nom" ? "ajout" : "nom"; ecrire(); rendre(); });
+rendre();
+</script>
+</body>
+</html>
