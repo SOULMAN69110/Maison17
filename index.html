@@ -211,9 +211,11 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .bas>*+*,.pied>*+*{margin-left:calc(var(--u)*0.8)}
   .volet:not(.p15)>*+*{margin-top:calc(var(--u)*1)}
   /* Volet : 15 jours en 5 colonnes × 3 lignes */
-  .p15 .grille{display:flex;flex-wrap:wrap;align-content:stretch;margin:calc(var(--u)*-0.45)}
+  .p15 .grille{display:flex;flex-wrap:wrap;align-content:stretch;gap:0;margin:calc(var(--u)*-0.45)}
   .p15 .jc{width:calc(20% - var(--u)*0.9);margin:calc(var(--u)*0.45)}
   .p15 .jc .t4{display:flex}
+  .p15 .jc .e{display:flex}
+  .p15 .jc .e>div{flex:1 1 0%;min-width:0}
   .p15 .jc .t4>div{flex:1 1 0%;min-width:0}
   .p15 .jc .t4>div+div{margin-left:calc(var(--u)*0.35)}
 }
