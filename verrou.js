@@ -4,6 +4,8 @@
    Écrit pour rester lisible par les navigateurs anciens des télés Samsung (pas de inset, min() doublé d'une valeur de secours).
    Pour changer le code : calculer sha256("maison17:" + nouveau_code) et remplacer EMPREINTE. */
 (function(){
+  /* La page météo seule (et le choix du lieu qui en vient) est libre d'accès : pas de code */
+  if (/[?&](vue|retour)=meteo\b/.test(location.search)) return;
   var EMPREINTE = "d9f45b76d54f573dd3192137bc1334db02598ca6ec459332d5845cb6923ba294";
   var CLE = "maison17-acces";
   var DUREE_JOURS = 365;   // le code est redemandé au bout d'un an sur le même appareil

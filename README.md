@@ -13,6 +13,7 @@ Mis en place le 3 novembre 2026.
 | Énergie (panneaux solaires) | https://soulman69110.github.io/Maison17/energie.html |
 | Bilans énergie (semaine, mois, année, N/N-1) | https://soulman69110.github.io/Maison17/bilans.html |
 | Lieux météo (recherche, ma position, favoris) | https://soulman69110.github.io/Maison17/lieux.html |
+| Météo seule, sans code (à partager) | https://soulman69110.github.io/Maison17/meteo.html — avec `?lieu=meze` (ou une autre ville) pour régler le lieu à la première ouverture |
 | Mesures brutes (CSV) | dossier [`historique/`](historique/) de ce dépôt |
 
 **Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.

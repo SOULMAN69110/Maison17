@@ -85,6 +85,7 @@ h2 .act{margin-left:auto;font:500 14px var(--mono);color:var(--givre);background
 /* Venue de la page météo seule : le lien ramène à la météo, sans parler du tableau de bord */
 if (/[?&]retour=meteo\b/.test(location.search)) document.getElementById("sous").innerHTML = '<a href="./?vue=meteo">← Retour à la météo</a>';
 var CLE = "maison17-meteo";
+var DEPUIS_METEO = /[?&]retour=meteo\b/.test(location.search);   // page météo partagée : la maison n'a rien de spécial
 var MAISON = { nom: "Sainte-Foy-lès-Lyon", code: "69", lat: 45.73, lon: 4.80 };
 var etat = lire();
 
@@ -189,7 +190,7 @@ function rendre(){
   el("hist").querySelectorAll("[data-h]").forEach(function(b){ b.addEventListener("click", function(){ choisir(hs[+b.dataset.h], true); }); });
 
   el("accueil").innerHTML = (etat.accueil.geo ? "📍 " : "") + echap(libelle(etat.accueil)) + ' <span class="ok">✓</span>' +
-    (meme(etat.accueil, MAISON) ? "" : ' <small>· <a href="#" id="maison">revenir à la maison</a></small>');
+    (DEPUIS_METEO || meme(etat.accueil, MAISON) ? "" : ' <small>· <a href="#" id="maison">revenir à la maison</a></small>');
   if (el("maison")) el("maison").addEventListener("click", function(e){ e.preventDefault(); choisir(MAISON, true); });
 
   var favs = etat.favoris.slice();
@@ -199,7 +200,7 @@ function rendre(){
     var i = etat.favoris.indexOf(f);
     return '<li><button type="button" class="nom' + (meme(f, etat.accueil) ? " actif" : "") + '" data-f="' + i + '">' + echap(libelle(f)) + '</button>' +
       '<span class="ciel" id="c' + i + '"></span><span class="t" id="t' + i + '"></span>' +
-      '<button type="button" class="ret" data-r="' + i + '" aria-label="Retirer ' + echap(f.nom) + ' des favoris"' + (meme(f, MAISON) ? ' disabled title="La maison reste dans les favoris"' : '') + '>💔</button></li>';
+      '<button type="button" class="ret" data-r="' + i + '" aria-label="Retirer ' + echap(f.nom) + ' des favoris"' + (!DEPUIS_METEO && meme(f, MAISON) ? ' disabled title="La maison reste dans les favoris"' : '') + '>💔</button></li>';
   }).join("") : '<li><span class="nom">Aucun favori : cherchez une ville ci-dessus.</span></li>';
   el("fav").querySelectorAll("[data-f]").forEach(function(b){ b.addEventListener("click", function(){ choisir(etat.favoris[+b.dataset.f], true); }); });
   el("fav").querySelectorAll("[data-r]").forEach(function(b){ b.addEventListener("click", function(){

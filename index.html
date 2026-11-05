@@ -295,6 +295,25 @@ var LIEU = (function(){
   return MAISON;
 })();
 if (VUE_METEO) RACCOURCIS = [{ lien: "lieux.html?retour=meteo", texte: "📍 Lieu" }];
+/* Lien partagé avec un lieu, ex. meteo.html?lieu=meze : la première ouverture règle ce lieu sur l'appareil,
+   ensuite le choix fait sur place (📍 Lieu) reste prioritaire même si le lien garde ?lieu= */
+(function(){
+  var m = location.search.match(/[?&]lieu=([^&]+)/);
+  if (!m) return;
+  var nom = decodeURIComponent(m[1].replace(/\+/g, " ")), e = null;
+  try { e = JSON.parse(localStorage.getItem("maison17-meteo")); } catch (x) {}
+  if (e && e.lien === nom) return;
+  fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=fr&format=json&name=" + encodeURIComponent(nom))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      var r = (j.results || []).filter(function(x){ return x.country_code === "FR"; })[0] || (j.results || [])[0];
+      if (!r) return;
+      var fr = r.country_code === "FR", dep = fr && r.postcodes && r.postcodes[0] ? r.postcodes[0].slice(0, 2) : "";
+      var l = { nom: r.name, code: fr ? dep : r.country_code, lat: +r.latitude.toFixed(3), lon: +r.longitude.toFixed(3) };
+      try { localStorage.setItem("maison17-meteo", JSON.stringify({ accueil: l, favoris: [l], historique: [l], lien: nom, tri: "ajout" })); } catch (x) { return; }
+      location.reload();
+    }).catch(function(){});
+})();
 var LIEU_MAISON = Math.abs(LIEU.lat - MAISON.lat) < 0.01 && Math.abs(LIEU.lon - MAISON.lon) < 0.01;         // au-delà, la tuile est grisée
 /* =============================================================== */
 
