@@ -314,6 +314,8 @@ var LIEU = (function(){
   try { var e = JSON.parse(localStorage.getItem("maison17-meteo")); if (e && e.accueil && typeof e.accueil.lat === "number") return e.accueil; } catch (x) {}
   return MAISON;
 })();
+/* Page Chauffage : raccourci seulement sur les appareils où le jeton de réglage a été saisi (pas sur la télé) */
+try { if (localStorage.getItem("maison17-jeton-chauffage")) RACCOURCIS.push({ lien: "chauffage.html", texte: "🔥 Chauffage" }); } catch (x) {}
 if (VUE_METEO) RACCOURCIS = [{ lien: "lieux.html?retour=meteo", texte: "📍 Lieu" }];
 /* Lien partagé avec un lieu, ex. meteo.html?lieu=meze : la première ouverture règle ce lieu sur l'appareil,
    ensuite le choix fait sur place (📍 Lieu) reste prioritaire même si le lien garde ?lieu= */

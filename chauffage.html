@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chauffage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Page « Chauffage » : radiateur Carrera (Home-SmartLink). Lecture pour tous, réglages seulement sur les appareils
+   où le jeton GitHub a été saisi (gardé dans le navigateur de l'appareil, jamais dans le dépôt). Pensée pour l'iPhone et le PC. */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a;
+  --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8;
+  --soleil:#f0c36a; --ok:#7fd1a0; --alerte:#f08a6a;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nuit);color:var(--craie);font-family:var(--display);font-size:17px;line-height:1.4}
+main{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+.haut{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+h1{margin:0;font-size:34px;line-height:1.1}
+.haut a{font-family:var(--mono);font-size:14px;color:var(--givre);text-decoration:none}
+.sous,.etat{font-family:var(--mono);font-size:13px;color:var(--brume)}
+.carte{background:var(--ardoise);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.etiquette{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+h2{margin:4px 0 12px;font-size:24px}
+.ligne{display:flex;align-items:baseline;flex-wrap:wrap}
+.ligne>*+*{margin-left:18px}
+.grand{font-size:52px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.grand small{font-size:.45em;font-weight:400;color:var(--brume)}
+.mode{font-size:20px}
+.mode b{color:var(--soleil)}
+.details{display:flex;flex-wrap:wrap;margin:14px -6px 0}
+.details div{background:var(--nuit);border-radius:10px;padding:8px 12px;margin:6px;min-width:110px}
+.details span{display:block;font-family:var(--mono);font-size:12px;color:var(--brume)}
+.details b{font-size:20px;font-variant-numeric:tabular-nums}
+.modes{display:flex;flex-wrap:wrap;margin:8px -4px 14px}
+.modes button{flex:1 1 120px;margin:4px}
+button{font:inherit;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:10px 12px;cursor:pointer}
+button.choisi{border-color:var(--soleil);color:var(--soleil)}
+button.principal{background:var(--soleil);border-color:var(--soleil);color:var(--nuit);font-weight:600;width:100%;padding:14px}
+button:disabled{opacity:.5;cursor:default}
+.reglage{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--trait)}
+.reglage .nom span{display:block;font-family:var(--mono);font-size:12px;color:var(--brume)}
+.pas{display:flex;align-items:center}
+.pas button{width:44px;height:44px;padding:0;font-size:22px}
+.pas output{min-width:76px;text-align:center;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.change{color:var(--soleil)}
+input[type=password]{width:100%;font:inherit;font-family:var(--mono);font-size:14px;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:10px;margin:8px 0}
+ol{padding-left:20px;margin:8px 0;font-size:15px}
+a{color:var(--givre)}
+.retour{margin-top:12px;font-family:var(--mono);font-size:13px}
+.retour.ok{color:var(--ok)} .retour.erreur{color:var(--alerte)}
+</style>
+<script src="verrou.js"></script>
+<script src="maj.js"></script>
+</head>
+<body>
+<main>
+  <div class="haut">
+    <div><h1>🔥 Chauffage</h1><div class="sous" id="sous">Radiateur Carrera · Home-SmartLink</div></div>
+    <a href="./">← Tableau de bord</a>
+  </div>
+
+  <div id="pieces"><div class="carte etat">Lecture de l'état…</div></div>
+
+  <section class="carte" id="reglages" hidden>
+    <div class="etiquette">Réglages · <span id="regl-nom"></span></div>
+    <div class="modes" id="modes"></div>
+    <div class="reglage"><div class="nom">Consigne manuelle<span>mode Manuel · 13,5 à 30 °C</span></div><div class="pas" data-cle="manuelle" data-min="13.5" data-max="30"></div></div>
+    <div class="reglage"><div class="nom">Confort<span>mode Programme · 13 à 30 °C</span></div><div class="pas" data-cle="confort" data-min="13" data-max="30"></div></div>
+    <div class="reglage"><div class="nom">Éco<span>mode Programme · 13 à 19 °C</span></div><div class="pas" data-cle="eco" data-min="13" data-max="19"></div></div>
+    <button class="principal" id="envoyer" type="button" disabled>Envoyer au radiateur</button>
+    <div class="retour" id="retour"></div>
+    <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule. <a href="#" id="oublier">Oublier le jeton sur cet appareil</a></div>
+  </section>
+
+  <section class="carte" id="jeton" hidden>
+    <div class="etiquette">Réglages réservés</div>
+    <p style="margin:8px 0">Pour régler le radiateur depuis cet appareil, colle ton jeton GitHub. Il reste dans ce navigateur seulement, jamais dans le dépôt.</p>
+    <ol>
+      <li>Sur GitHub : <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens → Generate new token</a>.</li>
+      <li>Nom « Chauffage Maison17 », expiration au choix, <b>Only select repositories</b> → Maison17.</li>
+      <li>Permissions → Repository → <b>Actions : Read and write</b> (rien d'autre), puis Generate token.</li>
+    </ol>
+    <input type="password" id="jeton-saisie" placeholder="github_pat_…" autocomplete="off">
+    <button class="principal" id="jeton-ok" type="button">Enregistrer sur cet appareil</button>
+  </section>
+</main>
+
+<script>
+var DEPOT = "SOULMAN69110/Maison17";
+var CLE_JETON = "maison17-jeton-chauffage";
+var PIECE = 7;                       // SdB filles (« SDB2 » dans l'appli)
+var NOMS = { 7: "SdB filles" };      // nom affiché pour chaque numéro de pièce
+var MODES = ["Arrêt", "Hors-gel", "Manuel", "Programme"];
+
+function el(id){ return document.getElementById(id); }
+function deg(v){ return typeof v === "number" ? (Math.round(v * 10) / 10).toString().replace(".", ",") + "°" : "—"; }
+function jeton(){ try { return localStorage.getItem(CLE_JETON) || ""; } catch (e) { return ""; } }
+function heure(iso){ return iso ? new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "—"; }
+
+var actuel = null, choix = {};
+
+function afficher(j){
+  if (!j.disponible) { el("pieces").innerHTML = '<div class="carte etat">Chauffage indisponible (' + (j.raison || "raison inconnue") + ').</div>'; return; }
+  el("sous").textContent = "Radiateur Carrera · état lu à " + heure(j.mesure || j.maj) + " · box vue à " + heure(j.box_derniere_connexion);
+  el("pieces").innerHTML = (j.pieces || []).map(function(p){
+    return '<section class="carte"><div class="etiquette">Pièce ' + p.numero + ' · ' + p.nom + '</div>' +
+      '<h2>🛁 ' + (NOMS[p.numero] || p.nom) + '</h2>' +
+      '<div class="ligne"><div class="grand">' + deg(p.temperature).replace("°", "") + '<small>°C mesurés</small></div>' +
+      '<div class="mode">Mode <b>' + p.mode + '</b>' + ((p.mode_code === 3 || p.mode_code === 4) ? ' · vise ' + deg(p.consigne_actuelle) : '') + '</div></div>' +
+      '<div class="details"><div><span>Confort</span><b>' + deg(p.consigne_confort) + '</b></div><div><span>Éco</span><b>' + deg(p.consigne_eco) + '</b></div>' +
+      '<div><span>Manuelle</span><b>' + deg(p.consigne_manuelle) + '</b></div>' +
+      '<div><span>Fenêtre ouverte</span><b>' + (p.fenetre_ouverte_detection ? "détectée" : "non suivie") + '</b></div>' +
+      (j.vacances_retour ? '<div><span>Vacances</span><b>retour ' + new Date(j.vacances_retour).toLocaleDateString("fr-FR") + '</b></div>' : '') +
+      '</div></section>';
+  }).join("") || '<div class="carte etat">Aucun radiateur trouvé.</div>';
+  var p = (j.pieces || []).filter(function(x){ return x.numero === PIECE; })[0];
+  if (p && !choix.envoye) { actuel = { mode: p.mode, manuelle: p.consigne_manuelle, confort: p.consigne_confort, eco: p.consigne_eco }; reinitialiser(); }
+  el("regl-nom").textContent = p ? (NOMS[p.numero] || p.nom) : "";
+}
+
+function lire(){
+  fetch("chauffage.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(); return r.json(); })
+    .then(afficher).catch(function(){ el("pieces").innerHTML = '<div class="carte etat">État du chauffage illisible pour l\'instant.</div>'; });
+}
+
+/* ===== Réglages ===== */
+function reinitialiser(){
+  if (!actuel) return;
+  choix = { mode: actuel.mode, manuelle: actuel.manuelle, confort: actuel.confort, eco: actuel.eco };
+  dessiner();
+}
+function dessiner(){
+  el("modes").innerHTML = MODES.map(function(m){
+    return '<button type="button" data-mode="' + m + '" class="' + (choix.mode === m ? "choisi" : "") + '">' + m + '</button>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".pas"), function(z){
+    var c = z.getAttribute("data-cle");
+    z.innerHTML = '<button type="button" data-pas="-0.5">−</button><output class="' + (actuel && choix[c] !== actuel[c] ? "change" : "") + '">' + deg(choix[c]) + '</output><button type="button" data-pas="0.5">+</button>';
+  });
+  el("envoyer").disabled = !changements().length;
+}
+function changements(){
+  if (!actuel) return [];
+  return ["mode", "manuelle", "confort", "eco"].filter(function(c){ return choix[c] !== actuel[c]; });
+}
+el("modes").addEventListener("click", function(e){
+  var m = e.target.getAttribute("data-mode"); if (!m) return;
+  choix.mode = m; dessiner();
+});
+el("reglages").addEventListener("click", function(e){
+  var pas = parseFloat(e.target.getAttribute("data-pas")); if (!pas) return;
+  var z = e.target.parentNode, c = z.getAttribute("data-cle");
+  var v = Math.round(((choix[c] || 19) + pas) * 2) / 2;
+  v = Math.max(parseFloat(z.getAttribute("data-min")), Math.min(parseFloat(z.getAttribute("data-max")), v));
+  choix[c] = v; dessiner();
+});
+el("envoyer").addEventListener("click", function(){
+  var ch = changements(); if (!ch.length) return;
+  var conf = choix.confort, eco = choix.eco;
+  if (typeof conf === "number" && typeof eco === "number" && eco > conf - 0.5) { retour("L'éco doit être au moins 0,5° sous le confort.", "erreur"); return; }
+  var entrees = { piece: String(PIECE) };
+  ch.forEach(function(c){ entrees[c] = c === "mode" ? choix.mode : String(choix[c]); });
+  el("envoyer").disabled = true; retour("Envoi…", "");
+  fetch("https://api.github.com/repos/" + DEPOT + "/actions/workflows/chauffage-regler.yml/dispatches", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: entrees })
+  }).then(function(r){
+    if (r.status === 204) {
+      retour("Envoyé à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + ". Le nouvel état s'affichera d'ici 2 à 3 min.", "ok");
+      actuel = { mode: choix.mode, manuelle: choix.manuelle, confort: choix.confort, eco: choix.eco };
+      choix.envoye = true; dessiner();
+      var n = 0, t = setInterval(function(){ lire(); if (++n >= 10) { clearInterval(t); choix.envoye = false; } }, 30000);
+    } else if (r.status === 401 || r.status === 403 || r.status === 404) {
+      retour("Jeton refusé par GitHub (" + r.status + ") : vérifie qu'il a la permission Actions en écriture sur Maison17, ou recolle-le.", "erreur");
+      el("envoyer").disabled = false;
+    } else { retour("Échec de l'envoi (" + r.status + "). Réessaie dans un instant.", "erreur"); el("envoyer").disabled = false; }
+  }).catch(function(){ retour("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); el("envoyer").disabled = false; });
+});
+function retour(t, c){ var r = el("retour"); r.textContent = t; r.className = "retour " + c; }
+
+/* ===== Jeton (sur cet appareil seulement) ===== */
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("jeton").hidden = a; }
+el("jeton-ok").addEventListener("click", function(){
+  var v = el("jeton-saisie").value.trim(); if (!v) return;
+  try { localStorage.setItem(CLE_JETON, v); } catch (e) {}
+  el("jeton-saisie").value = ""; ecranJeton();
+});
+el("oublier").addEventListener("click", function(e){
+  e.preventDefault();
+  try { localStorage.removeItem(CLE_JETON); } catch (x) {}
+  ecranJeton();
+});
+
+ecranJeton();
+lire();
+setInterval(lire, 5 * 60 * 1000);
+</script>
+</body>
+</html>
