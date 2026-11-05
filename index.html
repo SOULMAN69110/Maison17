@@ -375,10 +375,7 @@ function afficher(appareils){
     tuile.classList.toggle("vieux", ts && age > VIEUX_MIN);
     tuile.querySelector(".pile").hidden = !(a.lowbattery || m.lb);
 
-    if (c.exterieur && typeof m.t2 === "number" && LIEU_MAISON) {   // ailleurs qu'à la maison, la carte Dehors montre la météo du lieu
-      el("ext-t").innerHTML = fmt(m.t2) + "<small>°C</small>";
-      el("ext-h").innerHTML = (typeof m.h2 === "number") ? '<span>Humidité</span><i class="emo">💧</i>' + Math.round(m.h2) + " %" : "";
-    }
+    /* La carte Dehors du haut est remplie par la météo (Météo-France) ; la sonde extérieure reste sur la tuile Dehors de la vue intérieure */
   });
 }
 
@@ -691,8 +688,8 @@ function meteo(){
     courbePression(m);
     previsions15(m);
     dernierMeteo = m;
-    /* Lieu choisi autre que la maison : température et humidité du lieu dans la carte Dehors (les capteurs restent dans la vue intérieure) */
-    if (!LIEU_MAISON && typeof m.current.temperature_2m === "number") {
+    /* Carte Dehors du haut : température et humidité actuelles de Météo-France pour le lieu (la sonde Mobile Alerts reste sur la tuile de la vue intérieure) */
+    if (typeof m.current.temperature_2m === "number") {
       el("ext-t").innerHTML = fmt(m.current.temperature_2m) + "<small>°C</small>";
       el("ext-h").innerHTML = typeof m.current.relative_humidity_2m === "number" ? '<span>Humidité</span><i class="emo">💧</i>' + Math.round(m.current.relative_humidity_2m) + " %" : "";
     }
