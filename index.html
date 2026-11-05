@@ -230,7 +230,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
     </div>
     <div class="dehors">
       <div class="carte">
-        <div class="etiquette"><i class="emo">🌳</i>Dehors</div>
+        <div class="etiquette"><i class="emo">🌳</i>Dehors<span id="dehors-lieu"></span></div>
         <div class="ligne"><div class="valeur" id="ext-t">--<small>°C</small></div><div class="ciel-act" id="ciel-act" aria-hidden="true"></div><div class="hum" id="ext-h"><i class="emo">💧</i>--</div></div>
       </div>
       <div class="carte"><div class="pluie" id="pluie"></div></div>
@@ -375,7 +375,7 @@ function afficher(appareils){
     tuile.classList.toggle("vieux", ts && age > VIEUX_MIN);
     tuile.querySelector(".pile").hidden = !(a.lowbattery || m.lb);
 
-    if (c.exterieur && typeof m.t2 === "number") {
+    if (c.exterieur && typeof m.t2 === "number" && LIEU_MAISON) {   // ailleurs qu'à la maison, la carte Dehors montre la météo du lieu
       el("ext-t").innerHTML = fmt(m.t2) + "<small>°C</small>";
       el("ext-h").innerHTML = (typeof m.h2 === "number") ? '<span>Humidité</span><i class="emo">💧</i>' + Math.round(m.h2) + " %" : "";
     }
@@ -658,18 +658,20 @@ function fusionMeteoFrance(m, mf){
   }
   if (mf.current && typeof mf.current.weather_code === "number") {
     m.current.weather_code = mf.current.weather_code;
+    ["temperature_2m", "relative_humidity_2m"].forEach(function(c){ if (typeof mf.current[c] === "number") m.current[c] = mf.current[c]; });
     if (typeof mf.current.is_day === "number") m.current.is_day = mf.current.is_day;
   }
   return m;
 }
+(function(){ var d = document.getElementById("dehors-lieu"); if (d && !LIEU_MAISON) d.textContent = " · " + LIEU.nom; })();
 (function(){ var a = document.getElementById("lieu"); if (a) a.textContent = "📍 " + LIEU.nom + (LIEU.code && !LIEU_MAISON ? " (" + LIEU.code + ")" : ""); })();
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl,temperature_2m,weather_code,is_day&past_days=1&forecast_days=16" +
+    "&current=pressure_msl,weather_code,is_day,temperature_2m,relative_humidity_2m&minutely_15=precipitation&hourly=pressure_msl,temperature_2m,weather_code,is_day&past_days=1&forecast_days=16" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   /* Modèles Météo-France (AROME 1,5 km puis ARPEGE) pour les 4 premiers jours : plus fidèles que le modèle par défaut */
   var urlMF = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=weather_code,is_day&minutely_15=precipitation&hourly=temperature_2m,weather_code,is_day&past_days=1&forecast_days=4" +
+    "&current=weather_code,is_day,temperature_2m,relative_humidity_2m&minutely_15=precipitation&hourly=temperature_2m,weather_code,is_day&past_days=1&forecast_days=4" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min&models=meteofrance_seamless&timezone=Europe%2FParis";
   Promise.all([
     fetch(url).then(lireJson),
@@ -689,6 +691,11 @@ function meteo(){
     courbePression(m);
     previsions15(m);
     dernierMeteo = m;
+    /* Lieu choisi autre que la maison : température et humidité du lieu dans la carte Dehors (les capteurs restent dans la vue intérieure) */
+    if (!LIEU_MAISON && typeof m.current.temperature_2m === "number") {
+      el("ext-t").innerHTML = fmt(m.current.temperature_2m) + "<small>°C</small>";
+      el("ext-h").innerHTML = typeof m.current.relative_humidity_2m === "number" ? '<span>Humidité</span><i class="emo">💧</i>' + Math.round(m.current.relative_humidity_2m) + " %" : "";
+    }
     pluieMF();
     if (typeof m.current.weather_code === "number") el("ciel-act").innerHTML = cielProchain(m);
     cielTuileDehors(m);
