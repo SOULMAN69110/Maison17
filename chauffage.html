@@ -75,6 +75,9 @@ a{color:var(--givre)}
 .heures{display:flex;align-items:center;flex-wrap:wrap}
 .heures select{font:inherit;font-variant-numeric:tabular-nums;color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:10px;padding:8px}
 .heures span{margin:0 8px;color:var(--brume)}
+.pied{margin:32px 0 0;text-align:center;font-family:var(--mono);font-size:11px}
+.pied a{color:var(--brume);opacity:.6;text-decoration:none}
+.pied a:hover,.pied a:focus{opacity:1;text-decoration:underline}
 .retour{margin-top:12px;font-family:var(--mono);font-size:13px}
 .retour.ok{color:var(--ok)} .retour.erreur{color:var(--alerte)}
 </style>
@@ -98,7 +101,7 @@ a{color:var(--givre)}
     <div class="reglage"><div class="nom">Éco<span>mode Programme · 13 à 19 °C</span></div><div class="pas" data-cle="eco" data-min="13" data-max="19"></div></div>
     <button class="principal" id="envoyer" type="button" disabled>Envoyer au radiateur</button>
     <div class="retour" id="retour"></div>
-    <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule. <a href="#" id="oublier">Oublier le jeton sur cet appareil</a></div>
+    <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule.</div>
   </section>
 
   <section class="carte" id="programme" hidden>
@@ -127,6 +130,7 @@ a{color:var(--givre)}
     <input type="password" id="jeton-saisie" placeholder="github_pat_…" autocomplete="off">
     <button class="principal" id="jeton-ok" type="button">Enregistrer sur cet appareil</button>
   </section>
+  <p class="pied" id="pied" hidden><a href="#" id="oublier">Oublier le jeton sur cet appareil</a></p>
 </main>
 
 <script>
@@ -310,7 +314,7 @@ function envoyer(entrees, fini){
 function retour(t, c){ var r = el("retour"); r.textContent = t; r.className = "retour " + c; }
 
 /* ===== Jeton (sur cet appareil seulement) ===== */
-function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("jeton").hidden = a; }
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; }
 el("jeton-ok").addEventListener("click", function(){
   var v = el("jeton-saisie").value.trim(); if (!v) return;
   try { localStorage.setItem(CLE_JETON, v); } catch (e) {}
