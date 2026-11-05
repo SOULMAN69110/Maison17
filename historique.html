@@ -27,6 +27,23 @@ a{color:var(--givre)}
 .periodes button{font:500 14px var(--mono);color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;padding:8px 14px;cursor:pointer}
 .periodes button[aria-pressed="true"]{background:var(--givre);border-color:var(--givre);color:var(--nuit)}
 .periodes button:focus-visible{outline:2px solid var(--givre);outline-offset:2px}
+.choix{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+/* Navigation d'une période à l'autre : ◀ libellé ▶ */
+.nav{display:flex;align-items:center;gap:8px}
+.nav button{font:600 18px var(--mono);color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;width:44px;height:40px;cursor:pointer}
+.nav button:disabled{opacity:.3;cursor:default}
+.nav button:focus-visible{outline:2px solid var(--givre);outline-offset:2px}
+.nav .lib{font:600 17px var(--display);min-width:15em;text-align:center}
+.nav .lib::first-letter{text-transform:uppercase}
+.nav .auj{width:auto;padding:0 14px;font-size:13px}
+/* Choix libre des dates (du … au …), ouvert par le bouton « 📅 Dates » */
+.dates{display:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;font:500 14px var(--mono);color:var(--brume)}
+.dates.ouvert{display:flex}
+.dates input{font:500 15px var(--mono);color:var(--craie);background:var(--ardoise);border:1px solid var(--trait);border-radius:10px;padding:7px 10px;color-scheme:dark;min-width:9.5em}
+.dates input:focus{outline:2px solid var(--givre);outline-offset:1px}
+.dates button{font:600 14px var(--mono);color:var(--nuit);background:var(--givre);border:0;border-radius:99px;padding:9px 16px;cursor:pointer}
+.dates .err{flex-basis:100%;text-align:right;color:#f08a6a;font-size:12px}
+@media (max-width:760px){.choix{align-items:stretch;width:100%}.nav{justify-content:space-between}.nav .lib{min-width:0;flex:1;font-size:15px}.dates{justify-content:flex-start}}
 .grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .bloc{background:var(--ardoise);border-radius:14px;padding:18px 18px 12px;min-width:0}
 .bloc.large{grid-column:1 / -1}
@@ -46,11 +63,26 @@ a{color:var(--givre)}
       <h1>Maison en courbes</h1>
       <div class="sous">Mesures enregistrées depuis le 3 novembre 2026 · <a href="./">Tableau de bord</a> · <a href="energie.html">☀️ Énergie</a> · <a href="bilans.html">📊 Bilans</a></div>
     </div>
-    <div class="periodes" role="group" aria-label="Période">
-      <button type="button" id="p-1" data-jours="1" aria-pressed="true">24 h</button>
-      <button type="button" id="p-7" data-jours="7" aria-pressed="false">7 jours</button>
-      <button type="button" id="p-30" data-jours="30" aria-pressed="false">30 jours</button>
-      <button type="button" id="p-365" data-jours="365" aria-pressed="false">1 an</button>
+    <div class="choix">
+      <div class="periodes" role="group" aria-label="Période">
+        <button type="button" data-unite="jour" aria-pressed="true">Jour</button>
+        <button type="button" data-unite="semaine" aria-pressed="false">Semaine</button>
+        <button type="button" data-unite="mois" aria-pressed="false">Mois</button>
+        <button type="button" data-unite="annee" aria-pressed="false">Année</button>
+        <button type="button" data-unite="libre" id="p-dates" aria-pressed="false" aria-controls="dates">📅 Dates</button>
+      </div>
+      <div class="nav">
+        <button type="button" id="prec" aria-label="Période précédente">◀</button>
+        <span class="lib" id="lib" aria-live="polite"></span>
+        <button type="button" id="suiv" aria-label="Période suivante">▶</button>
+        <button type="button" class="auj" id="auj">Aujourd'hui</button>
+      </div>
+      <form class="dates" id="dates" autocomplete="off">
+        <label for="d-du">du</label><input type="date" id="d-du" min="2026-11-03" placeholder="jj/mm/aaaa">
+        <label for="d-au">au</label><input type="date" id="d-au" min="2026-11-03" placeholder="jj/mm/aaaa">
+        <button type="submit">Afficher</button>
+        <div class="err" id="d-err" role="alert"></div>
+      </form>
     </div>
   </header>
   <div class="etat" id="etat">Chargement de l'historique…</div>
@@ -81,7 +113,9 @@ var SALON = "salon";
 var css = getComputedStyle(document.documentElement);
 var BRUME = css.getPropertyValue("--brume").trim(), TRAIT = css.getPropertyValue("--trait").trim(), GIVRE = css.getPropertyValue("--givre").trim();
 
-var lignes = { mesures: [], pression: [] }, graphiques = {}, jours = 1;   // 24 h par défaut
+var lignes = { mesures: [], pression: [] }, graphiques = {}, jours = 1;
+/* Période affichée : une unité (jour, semaine, mois, année) autour de la date « ref », ou des dates libres */
+var unite = "jour", ref = new Date(), plage = null, P = null;   // P = { debut, fin } en secondes, recalculé à chaque rendu
 
 function el(id){ return document.getElementById(id); }
 function fmt(n, d){ return n.toFixed(d === undefined ? 1 : d).replace(".", ","); }
@@ -112,10 +146,10 @@ function charger(){
 /* Moyenne par tranche de temps pour garder des courbes lisibles sur les longues périodes */
 function pasPour(j){ return j <= 1 ? 0 : j <= 7 ? 3600 : j <= 30 ? 3 * 3600 : 86400; }
 function serie(rangs, champ, debut){
-  var pas = pasPour(jours), seaux = {}, pts = [];
+  var pas = pasPour(jours), seaux = {}, pts = [], fin = P.fin;
   rangs.forEach(function(r){
     var ts = +r.horodatage, v = parseFloat(r[champ]);
-    if (ts < debut || isNaN(v)) return;
+    if (ts < debut || ts >= fin || isNaN(v)) return;
     if (!pas) { pts.push({ x: ts * 1000, y: v }); return; }
     var k = Math.floor(ts / pas) * pas;
     (seaux[k] = seaux[k] || []).push(v);
@@ -126,8 +160,8 @@ function serie(rangs, champ, debut){
   return pts.sort(function(a, b){ return a.x - b.x; });
 }
 function minMax(rangs, champ, debut){
-  var mi = Infinity, ma = -Infinity;
-  rangs.forEach(function(r){ var v = parseFloat(r[champ]); if (+r.horodatage >= debut && !isNaN(v)) { mi = Math.min(mi, v); ma = Math.max(ma, v); } });
+  var mi = Infinity, ma = -Infinity, fin = P.fin;
+  rangs.forEach(function(r){ var v = parseFloat(r[champ]), ts = +r.horodatage; if (ts >= debut && ts < fin && !isNaN(v)) { mi = Math.min(mi, v); ma = Math.max(ma, v); } });
   return mi === Infinity ? null : [mi, ma];
 }
 
@@ -144,7 +178,7 @@ function options(unite){
     interaction: { mode: "nearest", axis: "x", intersect: false },
     elements: { point: { radius: 0, hoverRadius: 4 }, line: { borderWidth: 2, tension: 0.25 } },
     scales: {
-      x: { type: "linear", ticks: { color: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, grid: { color: TRAIT } },
+      x: { type: "linear", min: P.debut * 1000, max: P.fin * 1000, ticks: { color: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, grid: { color: TRAIT } },
       y: { ticks: { color: BRUME, callback: function(v){ return fmt(v, Math.round(v) === v ? 0 : 1) + " " + unite; } }, grid: { color: TRAIT } },
       /* Même échelle répétée à droite, pour lire les valeurs des deux côtés du graphique */
       y2: { position: "right", grid: { drawOnChartArea: false }, ticks: { color: BRUME, callback: function(v){ return fmt(v, Math.round(v) === v ? 0 : 1) + " " + unite; } },
@@ -168,7 +202,7 @@ function options2(unite){
     hover: { mode: "nearest", axis: "x", intersect: false },
     elements: { point: { radius: 0, hoverRadius: 4, hitRadius: 6 }, line: { borderWidth: 2, tension: 0.25 } },
     scales: {
-      xAxes: [{ type: "linear", ticks: { fontColor: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, gridLines: { color: TRAIT } }],
+      xAxes: [{ type: "linear", ticks: { min: P.debut * 1000, max: P.fin * 1000, fontColor: BRUME, maxTicksLimit: 8, callback: etiquetteDate }, gridLines: { color: TRAIT } }],
       yAxes: [
         { id: "g", position: "left", ticks: { fontColor: BRUME, callback: graduation }, gridLines: { color: TRAIT } },
         { id: "d", position: "right", ticks: { fontColor: BRUME, callback: graduation }, gridLines: { drawOnChartArea: false },
@@ -190,8 +224,50 @@ function dessiner(id, jeux, unite){
   graphiques[id] = new Chart(el(id), { type: "line", data: { datasets: jeux }, options: CHART_MODERNE ? options(unite) : options2(unite) });
 }
 
+/* ===== Périodes ===== */
+function minuit(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function bornes(u, r){
+  var a, b;
+  if (u === "libre") return plage;
+  if (u === "jour") { a = minuit(r); b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 1); }
+  else if (u === "semaine") { a = minuit(r); a.setDate(a.getDate() - (a.getDay() + 6) % 7); b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 7); }
+  else if (u === "mois") { a = new Date(r.getFullYear(), r.getMonth(), 1); b = new Date(r.getFullYear(), r.getMonth() + 1, 1); }
+  else { a = new Date(r.getFullYear(), 0, 1); b = new Date(r.getFullYear() + 1, 0, 1); }
+  return { debut: a.getTime() / 1000, fin: b.getTime() / 1000 };
+}
+function decaler(n){
+  if (unite === "libre") {
+    var l = plage.fin - plage.debut;
+    plage = { debut: plage.debut + n * l, fin: plage.fin + n * l };
+    return;
+  }
+  var r = new Date(ref.getFullYear(), ref.getMonth(), unite === "mois" || unite === "annee" ? 1 : ref.getDate());
+  if (unite === "jour") r.setDate(r.getDate() + n);
+  else if (unite === "semaine") r.setDate(r.getDate() + 7 * n);
+  else if (unite === "mois") r.setMonth(r.getMonth() + n);
+  else r.setFullYear(r.getFullYear() + n);
+  ref = r;
+}
+function libelle(){
+  var d1 = new Date(P.debut * 1000), d2 = new Date(P.fin * 1000 - 1000), auj = minuit(new Date()).getTime();
+  var court = { day: "numeric", month: "short" }, long = { day: "numeric", month: "long", year: "numeric" };
+  if (unite === "jour") {
+    var t = d1.getTime(), pre = t === auj ? "Aujourd'hui · " : t === auj - 86400000 ? "Hier · " : "";
+    return pre + d1.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  }
+  if (unite === "semaine") return "Semaine du " + d1.toLocaleDateString("fr-FR", d1.getMonth() === d2.getMonth() ? { day: "numeric" } : court) + " au " + d2.toLocaleDateString("fr-FR", long);
+  if (unite === "mois") return d1.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  if (unite === "annee") return "Année " + d1.getFullYear();
+  return "Du " + d1.toLocaleDateString("fr-FR", long) + " au " + d2.toLocaleDateString("fr-FR", long);
+}
+
 function rendre(){
-  var debut = Date.now() / 1000 - jours * 86400;
+  P = bornes(unite, ref);
+  jours = unite === "jour" ? 1 : unite === "semaine" ? 7 : unite === "mois" ? 31 : unite === "annee" ? 365 : Math.max(1, Math.round((P.fin - P.debut) / 86400));
+  el("lib").textContent = libelle();
+  el("suiv").disabled = P.fin * 1000 > Date.now();
+  el("auj").style.display = unite !== "libre" && P.fin * 1000 <= Date.now() ? "" : "none";
+  var debut = P.debut;
   var parCapteur = {};
   lignes.mesures.forEach(function(r){ (parCapteur[r.capteur] = parCapteur[r.capteur] || []).push(r); });
 
@@ -216,12 +292,63 @@ function rendre(){
   el("i-temp").textContent = el("i-hum").textContent = pas ? "Moyenne par " + (pas === 86400 ? "jour" : pas === 3600 ? "heure" : "tranche de 3 h") : "Toutes les mesures";
 }
 
+function marquer(u){
+  document.querySelectorAll(".periodes button").forEach(function(x){ x.setAttribute("aria-pressed", x.dataset.unite === u ? "true" : "false"); });
+}
 document.querySelectorAll(".periodes button").forEach(function(b){
   b.addEventListener("click", function(){
-    jours = +b.dataset.jours;
-    document.querySelectorAll(".periodes button").forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    if (b.dataset.unite === "libre") {
+      var ouvert = !el("dates").classList.contains("ouvert");
+      el("dates").classList.toggle("ouvert", ouvert);
+      if (ouvert) { preRemplir(); el("d-du").focus(); }
+      return;
+    }
+    if (unite === "libre") ref = new Date(Math.min(plage.fin * 1000 - 1000, Date.now()));   // garde la position dans le temps
+    unite = b.dataset.unite;
+    el("dates").classList.remove("ouvert");
+    marquer(unite);
     rendre();
   });
+});
+el("prec").addEventListener("click", function(){ decaler(-1); rendre(); });
+el("suiv").addEventListener("click", function(){ decaler(1); rendre(); });
+el("auj").addEventListener("click", function(){ ref = new Date(); rendre(); });
+/* Flèches gauche / droite du clavier ou de la télécommande quand le focus n'est pas dans un champ */
+document.addEventListener("keydown", function(e){
+  if (e.target && e.target.tagName === "INPUT") return;
+  if (e.keyCode === 37) { e.preventDefault(); decaler(-1); rendre(); }
+  else if (e.keyCode === 39 && !el("suiv").disabled) { e.preventDefault(); decaler(1); rendre(); }
+});
+
+function iso(d){ return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+/* Accepte AAAA-MM-JJ (champ date) ou JJ/MM/AAAA (navigateurs sans calendrier) */
+function lireDate(txt){
+  txt = (txt || "").trim();
+  var m = txt.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/), a, mo, j;
+  if (m) { a = +m[1]; mo = +m[2]; j = +m[3]; }
+  else if ((m = txt.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/))) { j = +m[1]; mo = +m[2]; a = +m[3]; if (a < 100) a += 2000; }
+  else return null;
+  var d = new Date(a, mo - 1, j);
+  return d.getMonth() === mo - 1 && d.getDate() === j ? d : null;
+}
+function versChamp(d){ return el("d-du").type === "date" ? iso(d) : ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear(); }
+function preRemplir(){
+  var b = bornes(unite === "libre" ? "libre" : unite, ref);
+  el("d-au").max = el("d-du").max = iso(new Date());
+  el("d-du").value = versChamp(new Date(b.debut * 1000));
+  el("d-au").value = versChamp(new Date(b.fin * 1000 - 1000));
+  el("d-err").textContent = "";
+}
+el("dates").addEventListener("submit", function(e){
+  e.preventDefault();
+  var du = lireDate(el("d-du").value), au = lireDate(el("d-au").value);
+  if (!du || !au) { el("d-err").textContent = "Date incomplète ou invalide (jj/mm/aaaa)."; return; }
+  if (du > au) { var t = du; du = au; au = t; el("d-du").value = versChamp(du); el("d-au").value = versChamp(au); }
+  el("d-err").textContent = "";
+  plage = { debut: du.getTime() / 1000, fin: new Date(au.getFullYear(), au.getMonth(), au.getDate() + 1).getTime() / 1000 };
+  unite = "libre";
+  marquer("libre");
+  rendre();
 });
 
 charger().then(function(){
