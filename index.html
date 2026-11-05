@@ -220,6 +220,22 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .p15 .jc .t4>div+div{margin-left:calc(var(--u)*0.35)}
 }
 </style>
+<script>
+/* Vue « météo seule » installable comme une appli (iPhone : Partager → Sur l'écran d'accueil ; Android : Installer l'application).
+   Pas d'adresse de départ dans le manifeste : l'appli démarre sur l'adresse ouverte, donc avec ?lieu=… si le lien en a un. */
+if (/[?&]vue=meteo\b/.test(location.search)) (function(){
+  function lien(rel, href, extra){ var l = document.createElement("link"); l.rel = rel; l.href = href; if (extra) l.sizes = extra; document.head.appendChild(l); }
+  function meta(nom, val){ var m = document.createElement("meta"); m.name = nom; m.content = val; document.head.appendChild(m); }
+  lien("manifest", "app/meteo.webmanifest");
+  lien("apple-touch-icon", "app/meteo-180.png", "180x180");
+  lien("icon", "app/meteo-192.png", "192x192");
+  meta("theme-color", "#0f1418");
+  meta("apple-mobile-web-app-capable", "yes");
+  meta("mobile-web-app-capable", "yes");
+  meta("apple-mobile-web-app-status-bar-style", "black");
+  meta("apple-mobile-web-app-title", "Météo");
+})();
+</script>
 <script src="verrou.js"></script>
 </head>
 <body>
