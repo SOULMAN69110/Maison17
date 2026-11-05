@@ -130,13 +130,17 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .bascule{align-self:flex-start;font-family:var(--mono);font-size:calc(var(--u)*0.95);padding:calc(var(--u)*0.4) calc(var(--u)*1.1);border-radius:99px;border:1px solid var(--trait);background:var(--ardoise);color:var(--craie);cursor:pointer}
 .bascule:hover{border-color:var(--givre)}
 .pied{display:flex;justify-content:space-between;gap:calc(var(--u)*0.6);flex-wrap:wrap}
+.ciel-tuile{position:absolute;top:calc(var(--u)*1.1);right:calc(var(--u)*1.3);display:flex;text-align:center;line-height:1}
+.ciel-tuile div+div{margin-left:calc(var(--u)*1)}
+.ciel-tuile b{display:block;font-size:calc(var(--u)*2.4);font-weight:400}
+.ciel-tuile span{display:block;margin-top:calc(var(--u)*0.3);font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume)}
 .pile{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--alerte)}
 @media (max-width:800px){
   body{overflow:auto}
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
-  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}
+  .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
 }
 /* Tuiles teintées selon le confort : chiffre en couleur, bordure et fond légèrement colorés, pastille pleine */
 .piece{border-left:calc(var(--u)*0.3) solid var(--c,var(--trait));background:linear-gradient(135deg,var(--fond,var(--ardoise)) 0%,var(--ardoise) 75%)}
@@ -303,6 +307,7 @@ function construire(){
   CAPTEURS.forEach(function(c){
     html += '<article class="piece' + (c.principale ? " principale" : "") + '" id="p-' + (c.cle || c.id) + '">' +
       '<h2>' + (c.emo ? '<i class="emo">' + c.emo + '</i>' : '') + c.nom + '</h2>' +
+      (c.dehors ? '<div class="ciel-tuile" id="ciel-tuile" aria-hidden="true"></div>' : '') +
       '<div class="temp">--<small>°C</small></div>' +
       '<div class="bas"><span class="pastille p-gris">En attente</span><span class="humid"></span></div>' +
       '<div class="pied"><span class="maj"></span><span class="pile" hidden>Pile faible</span></div>' +
@@ -398,6 +403,21 @@ function ciel(code){
   if (code === 85 || code === 86) return "Averses de neige";
   if (code >= 95) return "Orage";
   return "—";
+}
+/* Tuile Dehors : temps actuel et temps à midi (celui du lendemain une fois midi passé) */
+function cielTuileDehors(m){
+  var z = el("ciel-tuile");
+  if (!z || typeof m.current.weather_code !== "number") return;
+  var auj = m.current.time.slice(0, 10), heure = +m.current.time.slice(11, 13);
+  var cible = auj + "T12:00", libelle = "12 h";
+  if (heure >= 13) {
+    var d = new Date(auj + "T12:00"); d.setDate(d.getDate() + 1);
+    cible = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + "T12:00";
+    libelle = "dem. 12 h";
+  }
+  var i = m.hourly.time.indexOf(cible), html = '<div><b>' + emoji(m.current.weather_code, m.current.is_day !== 0) + '</b><span>maint.</span></div>';
+  if (i >= 0 && typeof m.hourly.weather_code[i] === "number") html += '<div><b>' + emoji(m.hourly.weather_code[i], true) + '</b><span>' + libelle + '</span></div>';
+  z.innerHTML = html;
 }
 /* Courbe de la pression d'aujourd'hui (0 h à 24 h) : passé en trait plein, prévision en pointillés */
 function courbePression(m){
@@ -510,7 +530,7 @@ function previsions15(m){
 }
 function meteo(){
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + LIEU.lat + "&longitude=" + LIEU.lon +
-    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl,temperature_2m&past_days=1&forecast_days=16" +
+    "&current=pressure_msl,weather_code,is_day&minutely_15=precipitation&hourly=pressure_msl,temperature_2m,weather_code&past_days=1&forecast_days=16" +
     "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Europe%2FParis";
   fetch(url).then(lireJson).then(function(m){
     /* Pression et tendance sur 3 h */
@@ -527,6 +547,7 @@ function meteo(){
     previsions15(m);
     pluieHeure(m);
     if (typeof m.current.weather_code === "number") el("ciel-act").textContent = emoji(m.current.weather_code, m.current.is_day !== 0);
+    cielTuileDehors(m);
     /* Aujourd'hui + les jours suivants */
     var dj = m.daily, html = "", auj = Math.max(0, dj.time.indexOf(m.current.time.slice(0, 10)));
     for (var k = auj; k < dj.time.length && k < auj + JOURS_PREVISION; k++) {
