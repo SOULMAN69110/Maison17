@@ -109,14 +109,6 @@ a{color:var(--givre)}
     <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule.</div>
   </section>
 
-  <section class="carte" id="courbe-carte">
-    <div class="titre-courbe"><div class="etiquette">Température relevée par le radiateur</div>
-      <div class="periodes"><button type="button" data-h="24" class="choisi">24 h</button><button type="button" data-h="168">7 jours</button></div></div>
-    <div class="cadre-courbe"><canvas id="courbe"></canvas></div>
-    <div class="legende"><span style="color:var(--soleil)">━</span> radiateur · <span style="color:var(--brume)">┅</span> consigne · <span style="color:var(--givre)">━</span> capteur de la pièce</div>
-    <div class="etat" id="courbe-etat"></div>
-  </section>
-
   <section class="carte" id="programme" hidden>
     <div class="etiquette">Programmation de la semaine · <span id="prog-type"></span></div>
     <div class="semaine" id="semaine"></div>
@@ -143,6 +135,14 @@ a{color:var(--givre)}
     <input type="password" id="jeton-saisie" placeholder="github_pat_…" autocomplete="off">
     <button class="principal" id="jeton-ok" type="button">Enregistrer sur cet appareil</button>
   </section>
+  <section class="carte" id="courbe-carte">
+    <div class="titre-courbe"><div class="etiquette">Température relevée par le radiateur</div>
+      <div class="periodes"><button type="button" data-h="24" class="choisi">24 h</button><button type="button" data-h="168">7 jours</button></div></div>
+    <div class="cadre-courbe"><canvas id="courbe"></canvas></div>
+    <div class="legende"><span style="color:var(--soleil)">━</span> radiateur · <span style="color:var(--brume)">┅</span> consigne · <span style="color:var(--givre)">━</span> capteur de la pièce</div>
+    <div class="etat" id="courbe-etat"></div>
+  </section>
+
   <p class="pied" id="pied" hidden><a href="#" id="oublier">Oublier le jeton sur cet appareil</a></p>
 </main>
 
