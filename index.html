@@ -35,12 +35,13 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 /* Raccourcis vers les autres pages, à droite de l'heure (liste RACCOURCIS en tête du script) */
 .entete{display:flex;justify-content:space-between;align-items:flex-start}
 .raccourcis{display:flex;flex-direction:column;align-items:stretch;margin-left:calc(var(--u)*1)}
-.raccourcis.deux{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:calc(var(--u)*24)}
+.raccourcis.deux{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;max-width:calc(var(--u)*34)}
 .raccourcis.deux a{width:calc(50% - var(--u)*0.2);margin-left:calc(var(--u)*0.4)}
-.raccourcis a{display:block;font-family:var(--mono);font-size:calc(var(--u)*0.95);color:var(--craie);text-decoration:none;background:var(--ardoise);border:1px solid var(--trait);border-radius:99px;padding:calc(var(--u)*0.35) calc(var(--u)*1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.raccourcis a+a{margin-top:calc(var(--u)*0.4)}
-.raccourcis a:focus,.raccourcis a:hover{border-color:var(--givre);outline:none}
+.raccourcis a{display:block;font-family:var(--mono);font-size:calc(var(--u)*1.45);color:var(--craie);text-decoration:none;background:var(--ardoise);border:2px solid var(--trait);border-radius:99px;padding:calc(var(--u)*0.55) calc(var(--u)*1.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.raccourcis a+a{margin-top:calc(var(--u)*0.55)}
+.raccourcis a:focus,.raccourcis a:hover{border-color:var(--givre);box-shadow:0 0 0 2px var(--givre);outline:none}
 .raccourcis a span{color:var(--soleil)}
+.raccourcis a .w{display:block;font-size:.75em;padding-left:2.45em;margin-top:.1em}
 .date{font-size:calc(var(--u)*1.7);color:var(--brume);margin-top:calc(var(--u)*0.6);text-transform:capitalize}
 /* Colonne de gauche en cadres, comme les tuiles des pièces */
 .carte{background:var(--ardoise);border-radius:calc(var(--u)*0.9);padding:calc(var(--u)*0.75) calc(var(--u)*1.1)}
@@ -140,6 +141,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
+  .raccourcis a{font-size:4.2vw;padding:2vw 4vw}
   .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e{font-size:8vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:12vw 6vw minmax(0,1fr) auto}.dehors .ciel-act{font-size:12vw}.humid{font-size:4vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
 }
 /* Tuiles teintées selon le confort : chiffre en couleur, bordure et fond légèrement colorés, pastille pleine */
@@ -629,7 +631,7 @@ function solaire(){
     var a = document.getElementById("racc-energie");
     if (!a || !s || !s.disponible || typeof s.production_w !== "number") return;
     var w = s.production_w;
-    a.innerHTML = '☀️ Énergie · <span>' + (w >= 1000 ? (w / 1000).toFixed(1).replace(".", ",") + " kW" : Math.round(w) + " W") + '</span>';
+    a.innerHTML = '☀️ Énergie<span class="w">' + (w >= 1000 ? (w / 1000).toFixed(1).replace(".", ",") + " kW" : Math.round(w) + " W") + '</span>';
   }).catch(function(){});
 }
 solaire();
