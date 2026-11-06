@@ -48,7 +48,12 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .jauge i{display:block;height:100%;border-radius:99px}
 .c-soleil .val{color:var(--soleil)} .c-soleil .jauge i{background:var(--soleil)}
 .c-reseau.achat .val{color:var(--reseau)} .c-reseau.vente .val{color:var(--vente)}
-.c-reseau .jauge i{width:0} .c-reseau.achat .jauge i{background:var(--reseau)} .c-reseau.vente .jauge i{background:var(--vente)}
+.tete-carte{display:flex;justify-content:space-between;align-items:baseline}
+.direct{font-family:var(--mono);font-size:.95rem;color:var(--brume)}
+.direct b{color:var(--craie);font-weight:500}
+.flux .barre{height:1.2rem;margin-top:.8rem}
+.flux .legende{font-size:1.15rem;margin-top:.5rem}
+.flux .legende b{color:var(--craie);font-weight:500}
 /* Barre de période commune (cartes du haut et graphique) */
 .barre-periode{flex:0 0 auto;margin:0 0 .8rem}
 .barre-periode .periodes button,.barre-periode .choix-dates button{margin-bottom:0}
@@ -183,6 +188,8 @@ body.plein .filtres button{font-size:1.15rem}
   .flux .val{font-size:3.9rem;margin-top:.4rem}
   .flux .detail{margin-top:.4rem}
   .jauge{margin-top:.6rem}
+  .taux{margin-top:1.4rem}
+  .taux b{font-size:4.2rem;margin-top:.6rem}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -224,33 +231,23 @@ body.plein .filtres button{font-size:1.15rem}
 
   <div class="rangee flux" id="flux">
     <div class="carte c-soleil">
-      <div class="etiquette">☀️ Prod.</div>
-      <div class="val" id="v-prod">--<small>W</small></div>
-      <div><div class="detail" id="d-prod">&nbsp;</div><div class="jauge"><i id="j-prod" style="width:0"></i></div></div>
+      <div class="tete-carte"><span class="etiquette">☀️ Prod.</span><span class="direct" id="w-prod"></span></div>
+      <div class="val" id="v-prod">--<small>kWh</small></div>
+      <div><div class="barre"><i id="b-auto" style="background:var(--soleil);width:0"></i><i id="b-vente" style="background:var(--vente);width:0"></i></div>
+      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>consommée sur place <b id="l-auto"></b></em><em><i class="point" style="background:var(--vente)"></i>revendue <b id="l-vente"></b></em></div></div>
     </div>
     <div class="fleche" aria-hidden="true">→</div>
     <div class="carte">
-      <div class="etiquette">🏠 Conso</div>
-      <div class="val" id="v-conso">--<small>W</small></div>
-      <div class="detail" id="d-conso">&nbsp;</div>
-    </div>
-    <div class="fleche" aria-hidden="true">↔</div>
-    <div class="carte c-reseau" id="c-reseau">
-      <div class="etiquette" id="t-reseau">⚡ Réseau</div>
-      <div class="val" id="v-reseau">--<small>W</small></div>
-      <div><div class="detail" id="d-reseau">&nbsp;</div><div class="jauge"><i id="j-reseau"></i></div></div>
+      <div class="tete-carte"><span class="etiquette">🏠 Conso</span><span class="direct" id="w-conso"></span></div>
+      <div class="val" id="v-conso">--<small>kWh</small></div>
+      <div><div class="barre"><i id="b-sol" style="background:var(--soleil);width:0"></i><i id="b-achat" style="background:var(--reseau);width:0"></i></div>
+      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>produite <b id="l-sol"></b></em><em><i class="point" style="background:var(--reseau)"></i>achetée <b id="l-achat"></b></em></div></div>
     </div>
   </div>
 
   <div class="rangee bas">
     <div class="carte bilan">
       <div class="etiquette" id="t-jour">📅 Aujourd'hui</div>
-      <div class="ligne-kwh"><span>Produit</span><b id="k-prod">--</b></div>
-      <div class="barre"><i id="b-auto" style="background:var(--soleil);width:0"></i><i id="b-vente" style="background:var(--vente);width:0"></i></div>
-      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>consommé sur place <span id="l-auto"></span></em><em><i class="point" style="background:var(--vente)"></i>revendu <span id="l-vente"></span></em></div>
-      <div class="ligne-kwh"><span>Consommé</span><b id="k-conso">--</b></div>
-      <div class="barre"><i id="b-sol" style="background:var(--soleil);width:0"></i><i id="b-achat" style="background:var(--reseau);width:0"></i></div>
-      <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>solaire <span id="l-sol"></span></em><em><i class="point" style="background:var(--reseau)"></i>acheté <span id="l-achat"></span></em></div>
       <div class="taux">
         <div><div class="etiquette">Autoconsommation</div><b id="t-auto">--</b></div>
         <div><div class="etiquette">Autonomie</div><b id="t-autonomie">--</b></div>
@@ -314,7 +311,6 @@ function afficher(s){
     return;
   }
   dernierS = s;
-  var crete = parseFloat(s.puissance_kw) || 0;
   /* L'onduleur (et son boîtier eStar) s'éteint la nuit : la dernière mesure peut dater de la veille au soir.
      Ses compteurs « du jour » sont alors ceux d'hier, à ne pas présenter comme ceux d'aujourd'hui. */
   var jourMesure = (s.mesure || "").slice(0, 10), duJour = jourMesure === cleJ(new Date());
@@ -323,28 +319,8 @@ function afficher(s){
             : "dernière mesure " + (jourMesure === cleJ(veille()) ? "hier" : "le " + jourMesure.slice(8, 10) + "/" + jourMesure.slice(5, 7)) +
               " à " + (s.mesure || "").slice(11, 16) + " · l'onduleur dort la nuit");
 
-  /* Aujourd'hui, ou hier tant que l'onduleur n'a rien envoyé ce matin
-     (dans ce cas, le bilan complet d'hier de solaire-jours.csv, qui compte aussi la soirée et la nuit) */
-  var j = s.jour || {};
-  if (duJour) {
-    el("t-jour").textContent = "📅 Aujourd'hui";
-    aujourdhui = j;
-  } else {
-    var h = joursBruts && joursBruts[cleJ(veille())];
-    if (h) j = h;
-    el("t-jour").textContent = "📅 Hier (en attente de l'onduleur)";
-    aujourdhui = null;
-  }
-  el("k-prod").innerHTML = kwh(j.production_wh);
-  el("k-conso").innerHTML = kwh(j.consommation_wh);
-  var pAuto = pourcent(j.autoconsommee_wh, j.production_wh), pVente = pourcent(j.vendue_wh, j.production_wh);
-  el("b-auto").style.width = pAuto.toFixed(1) + "%"; el("b-vente").style.width = pVente.toFixed(1) + "%";
-  el("l-auto").textContent = texteKwh(j.autoconsommee_wh); el("l-vente").textContent = texteKwh(j.vendue_wh);
-  var pSol = pourcent(j.autoconsommee_wh, j.consommation_wh), pAchat = pourcent(j.achetee_wh, j.consommation_wh);
-  el("b-sol").style.width = pSol.toFixed(1) + "%"; el("b-achat").style.width = pAchat.toFixed(1) + "%";
-  el("l-sol").textContent = texteKwh(j.autoconsommee_wh); el("l-achat").textContent = texteKwh(j.achetee_wh);
-  el("t-auto").textContent = Math.round(pAuto) + " %";
-  el("t-autonomie").textContent = Math.round(pSol) + " %";
+  /* Compteurs du jour : seulement s'ils sont bien d'aujourd'hui (sinon cartes() prend le bilan complet d'hier) */
+  aujourdhui = duJour ? (s.jour || {}) : null;
 
   resume();
   cartes();
@@ -354,51 +330,34 @@ function afficher(s){
     (typeof s.total_production_wh === "number" ? " · ☀️ produit depuis l'installation : " + kwh(s.total_production_wh).replace(/<\/?small>/g, " ") : "");
 }
 
-/* ===== Cartes du haut : en direct (W) pour aujourd'hui, sinon l'énergie (kWh) de la période choisie ===== */
+/* ===== Cartes du haut : énergie de la période choisie (aujourd'hui par défaut, ou hier tant que l'onduleur dort) ===== */
+function txtE(wh){ return kwh(wh).replace(/<small>/g, " ").replace(/<\/small>/g, ""); }
 function cartes(){
-  if (!choix) { if (dernierS && dernierS.disponible) cartesDirect(dernierS); return; }
-  var t = totauxBruts(choix), carte = el("c-reseau");
-  el("t-reseau").textContent = "⚡ Revente";
-  carte.className = "carte c-reseau vente";
+  var c = choix, hier = false;
+  if (!c) { c = bornes("jour", new Date()); if (!aujourdhui) { c = bornes("jour", veille()); hier = true; } }
+  el("t-jour").textContent = "📅 " + (choix ? libPeriode(choix).charAt(0).toUpperCase() + libPeriode(choix).slice(1) : hier ? "Hier (en attente de l'onduleur)" : "Aujourd'hui");
+  /* Puissance du moment, en petit, quand on regarde aujourd'hui */
+  var direct = !choix && !hier && dernierS && dernierS.disponible;
+  function w(v){ return "en ce moment <b>" + puissance(v).replace(/<small>/g, " ").replace(/<\/small>/g, "") + "</b>"; }
+  el("w-prod").innerHTML = direct ? w(dernierS.production_w) : "";
+  el("w-conso").innerHTML = direct ? w(dernierS.consommation_w) : "";
+  var t = totauxBruts(c);
   if (!t.n) {
-    ["v-prod", "v-conso", "v-reseau"].forEach(function(id){ el(id).innerHTML = '--<small>kWh</small>'; });
-    ["d-prod", "d-conso", "d-reseau"].forEach(function(id){ el(id).innerHTML = joursBruts ? "pas de données sur la période" : "chargement…"; });
-    el("j-prod").style.width = el("j-reseau").style.width = "0";
+    el("v-prod").innerHTML = el("v-conso").innerHTML = '--<small>kWh</small>';
+    ["b-auto", "b-vente", "b-sol", "b-achat"].forEach(function(id){ el(id).style.width = "0"; });
+    ["l-auto", "l-vente", "l-sol", "l-achat"].forEach(function(id){ el(id).textContent = ""; });
+    el("t-auto").textContent = el("t-autonomie").textContent = "--";
     return;
   }
-  var pAuto = pourcent(t.s, t.p), pVente = pourcent(t.v, t.p);
+  var pAuto = pourcent(t.s, t.p), pVente = pourcent(t.v, t.p), pSol = pourcent(t.s, t.c), pAchat = pourcent(t.a, t.c);
   el("v-prod").innerHTML = kwh(t.p);
-  el("d-prod").innerHTML = "<b>" + Math.round(pAuto) + " %</b> consommée sur place";
-  el("j-prod").style.width = pAuto.toFixed(1) + "%";
+  el("b-auto").style.width = pAuto.toFixed(1) + "%"; el("b-vente").style.width = pVente.toFixed(1) + "%";
+  el("l-auto").textContent = txtE(t.s); el("l-vente").textContent = txtE(t.v);
   el("v-conso").innerHTML = kwh(t.c);
-  el("d-conso").innerHTML = "<b>" + Math.round(pourcent(t.s, t.c)) + " %</b> couverte par le soleil";
-  el("v-reseau").innerHTML = kwh(t.v);
-  el("d-reseau").innerHTML = "<b>" + Math.round(pVente) + " %</b> de la production revendue";
-  el("j-reseau").style.width = pVente.toFixed(1) + "%";
-}
-function cartesDirect(s){
-  var crete = parseFloat(s.puissance_kw) || 0;
-  el("v-prod").innerHTML = puissance(s.production_w);
-  var pc = pourcent(s.production_w, crete * 1000);
-  el("d-prod").innerHTML = "<b>" + Math.round(pc) + " %</b> de la puissance des panneaux";
-  el("j-prod").style.width = pc.toFixed(1) + "%";
-
-  el("v-conso").innerHTML = puissance(s.consommation_w);
-  var solPart = pourcent(Math.min(s.production_w || 0, s.consommation_w || 0), s.consommation_w);
-  el("d-conso").innerHTML = "<b>" + Math.round(solPart) + " %</b> couverte par le soleil";
-
-  /* Barre du réseau : part de la production revendue, ou part de la conso achetée */
-  var r = s.reseau_w, carte = el("c-reseau"), part = 0;
-  el("t-reseau").textContent = "⚡ Réseau";
-  el("v-reseau").innerHTML = puissance(r);
-  if (typeof r === "number" && r < -5) {
-    part = pourcent(-r, s.consommation_w);
-    carte.className = "carte c-reseau achat"; el("d-reseau").innerHTML = "<b>Achat</b> · " + Math.round(part) + " % de la conso";
-  } else if (typeof r === "number" && r > 5) {
-    part = pourcent(r, s.production_w);
-    carte.className = "carte c-reseau vente"; el("d-reseau").innerHTML = "<b>Revente</b> · " + Math.round(part) + " % de la production";
-  } else { carte.className = "carte c-reseau"; el("d-reseau").innerHTML = "Équilibre"; }
-  el("j-reseau").style.width = part.toFixed(1) + "%";
+  el("b-sol").style.width = pSol.toFixed(1) + "%"; el("b-achat").style.width = pAchat.toFixed(1) + "%";
+  el("l-sol").textContent = txtE(t.s); el("l-achat").textContent = txtE(t.a);
+  el("t-auto").textContent = Math.round(pAuto) + " %";
+  el("t-autonomie").textContent = Math.round(pSol) + " %";
 }
 
 /* ===== Production et consommation à date (semaine, mois, année) comparées aux mêmes jours de l'an dernier =====
