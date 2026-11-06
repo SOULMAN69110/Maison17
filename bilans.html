@@ -218,7 +218,8 @@ function charger(){
     }
     var s = res[1];
     var trous = estimerTrous();
-    if (s && s.disponible && s.jour) jours[cle(aujourdhui())] = s.jour;   // aujourd'hui, en cours
+    /* aujourd'hui, en cours ; la nuit, si la dernière mesure date de la veille, ses chiffres sont ceux d'hier : on ne les prend pas */
+    if (s && s.disponible && s.jour && String(s.mesure || "").slice(0, 10) === cle(aujourdhui())) jours[cle(aujourdhui())] = s.jour;
     var n = Object.keys(jours).length;
     el("etat").className = "etat";
     el("etat").textContent = n + " jours d'historique" + (trous ? " (dont " + trous + " estimés)" : "") + " · mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });

@@ -241,13 +241,19 @@ def completer_courbes(jeton):
             if j not in presents or (j == auj - timedelta(days=1) and presents[j] < "23:45"):
                 a_lire.append(j)
         j -= timedelta(days=1)
-    nouveaux_vides = []
+    nouveaux_vides, lus, echecs = [], 0, 0
     for j in a_lire:
         try:
             c = courbe_du_jour(jeton, j.isoformat())
+            echecs = 0
         except Exception as e:
             print("eStar : courbe du %s non lue : %s" % (j, str(e)[:120]))
+            echecs += 1
+            if echecs >= 2:      # serveur des courbes en panne : on réessaiera au passage suivant
+                print("eStar : rattrapage des courbes interrompu (deux échecs de suite)")
+                break
             continue
+        lus += 1
         if len(c["heures"]) == 0:
             if j < auj - timedelta(days=2):
                 nouveaux_vides.append(j.isoformat())
@@ -257,8 +263,8 @@ def completer_courbes(jeton):
     if nouveaux_vides:
         with open(FICHIER_VIDES, "a", encoding="utf-8") as fh:
             fh.write("\n".join(nouveaux_vides) + "\n")
-    if a_lire:
-        print("eStar : %d courbe(s) de jours passés lue(s)" % len(a_lire))
+    if lus:
+        print("eStar : %d courbe(s) de jours passés lue(s)" % lus)
 
 
 def bilan_du_jour(d, f):
@@ -421,7 +427,7 @@ def courbe_du_jour(jeton, jour):
     derniere = None
     for hote in HOTES_COURBES:
         u = urllib.parse.urlsplit(hote + "/pvm-data/api/0/station/data/count_power_by_day")
-        cnx = http.client.HTTPSConnection(u.netloc, timeout=30)
+        cnx = http.client.HTTPSConnection(u.netloc, timeout=20)
         try:
             cnx.request("POST", u.path, body=json.dumps({"sid": STATION, "date": jour}).encode(),
                         headers={"content-type": "application/json", "accept": "application/json, text/plain, */*",
