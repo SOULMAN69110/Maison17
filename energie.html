@@ -240,7 +240,7 @@ body.plein .filtres button{font-size:1.15rem}
           <button type="button" data-mode="jour">Jour</button><button type="button" data-mode="semaine">Semaine</button><button type="button" data-mode="mois">Mois</button><button type="button" data-mode="annee">Année</button>
         </div>
         <div class="series" role="group" aria-label="Courbes affichées">
-          <button type="button" data-serie="p"><i class="point" style="background:var(--soleil)"></i>Production</button><button type="button" data-serie="c"><i class="point" style="background:var(--maison)"></i>Consommation</button><button type="button" data-serie="a"><i class="point" style="background:var(--reseau)"></i>Achat</button>
+          <button type="button" data-serie="p"><i class="point" style="background:var(--soleil)"></i>Production</button><button type="button" data-serie="c"><i class="point" style="background:var(--maison)"></i>Consommation</button><button type="button" data-serie="a"><i class="point" style="background:var(--reseau)"></i>Achat</button><button type="button" data-serie="v"><i class="point" style="background:var(--vente)"></i>Vente</button>
         </div>
       </div>
       <div class="choix-dates">
@@ -485,7 +485,7 @@ function echelle(){ return ""; }
 /* Courbe de puissance ; un trou de plus d'une heure entre deux points coupe le trait */
 function dessinerPuissance(pts, pasMax){
   var svg = el("graphe"), brut = 500;
-  pts.forEach(function(q){ q.a = Math.max(0, q.c - q.p); });   // achat au réseau : ce que le soleil ne couvre pas
+  pts.forEach(function(q){ q.a = Math.max(0, q.c - q.p); q.v = Math.max(0, q.p - q.c); });   // achat : ce que le soleil ne couvre pas ; vente : le surplus solaire
   pts.forEach(function(q){ SERIES.forEach(function(k){ if (series[k]) brut = Math.max(brut, q[k]); }); });
   var g = graduer(brut), max = g.max;
   function Y(v){ return (300 - v / max * 290).toFixed(1); }
@@ -504,6 +504,7 @@ function dessinerPuissance(pts, pasMax){
   var html = grilleSvg(g, "W");
   if (series.p) html += '<path d="' + aire("p") + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
   if (series.a) html += '<path d="' + aire("a") + '" fill="#f08a6a" fill-opacity=".3" stroke="#f08a6a" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  if (series.v) html += '<path d="' + aire("v") + '" fill="#7fd1a0" fill-opacity=".3" stroke="#7fd1a0" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   if (series.c) html += '<path d="' + trait("c") + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   svg.innerHTML = html;
   el("echelle").textContent = "";
@@ -596,9 +597,9 @@ function decaler(sens){
     choisir(bornes(b.getAttribute("data-mode"), a));
   };
 });
-/* Courbes affichées : Production, Consommation, Achat (choix retenu sur l'appareil) */
-var SERIES = ["p", "c", "a"], COULEURS = { p: "#f0c36a", c: "#e8eef2", a: "#f08a6a" };
-var series = { p: true, c: true, a: true };
+/* Courbes affichées : Production, Consommation, Achat, Vente (choix retenu sur l'appareil) */
+var SERIES = ["p", "c", "a", "v"], COULEURS = { p: "#f0c36a", c: "#e8eef2", a: "#f08a6a", v: "#7fd1a0" };
+var series = { p: true, c: true, a: true, v: true };
 try { var memo = JSON.parse(localStorage.getItem("maison17-energie-series") || "null"); if (memo) SERIES.forEach(function(k){ if (typeof memo[k] === "boolean") series[k] = memo[k]; }); } catch (e) {}
 function majSeries(){
   [].forEach.call(document.querySelectorAll(".series button"), function(b){ b.setAttribute("aria-pressed", series[b.getAttribute("data-serie")] ? "true" : "false"); });
@@ -685,6 +686,7 @@ function totauxPeriode(c){
   if (series.p) morceaux.push("☀️ <b>" + f(t.p) + "</b> produits");
   if (series.c) morceaux.push("🏠 <b>" + f(t.c) + "</b> consommés");
   if (series.a) morceaux.push("⚡ <b>" + f(t.a) + "</b> achetés");
+  if (series.v) morceaux.push("↩ <b>" + f(t.v) + "</b> revendus");
   return morceaux.length ? "Sur la période : " + morceaux.join(" · ") : "";
 }
 function courbePeriode(c, jeton){
@@ -712,7 +714,7 @@ function courbePeriode(c, jeton){
   var barres = [], lib = [], parMois = n > 62, auj = cleJ(new Date());
   function val(k){ return k === auj ? aujourdhui : joursBruts[k]; }
   if (!parMois) {
-    for (var d = new Date(c.du.getTime()); d <= c.au; d = plus(d, 1)) { var j = val(cleJ(d)); barres.push(j ? { p: j.production_wh, c: j.consommation_wh, a: j.achetee_wh } : {}); }
+    for (var d = new Date(c.du.getTime()); d <= c.au; d = plus(d, 1)) { var j = val(cleJ(d)); barres.push(j ? { p: j.production_wh, c: j.consommation_wh, a: j.achetee_wh, v: j.vendue_wh } : {}); }
     el("t-courbe").textContent = "📊 Énergie par jour · " + n + " jours";
     var pas = Math.ceil(n / 6); for (var k = 0; k < n; k += pas) lib.push(dc(plus(c.du, k)));
   } else {
@@ -722,7 +724,7 @@ function courbePeriode(c, jeton){
       if (!tot[m]) { tot[m] = { p: 0, c: 0, a: 0, v: 0, n: 0, d: d2 }; cles.push(m); }
       if (j2) { tot[m].p += j2.production_wh || 0; tot[m].c += j2.consommation_wh || 0; tot[m].a += j2.achetee_wh || 0; tot[m].v += j2.vendue_wh || 0; tot[m].n++; }
     }
-    cles.forEach(function(m){ barres.push(tot[m].n ? { p: tot[m].p, c: tot[m].c, a: tot[m].a } : {}); });
+    cles.forEach(function(m){ barres.push(tot[m].n ? { p: tot[m].p, c: tot[m].c, a: tot[m].a, v: tot[m].v } : {}); });
     el("t-courbe").textContent = "📊 Énergie par mois · " + cles.length + " mois";
     var pas2 = Math.ceil(cles.length / 12); for (var k2 = 0; k2 < cles.length; k2 += pas2) lib.push(MOIS_C[tot[cles[k2]].d.getMonth()] + (cles.length > 12 ? " " + String(tot[cles[k2]].d.getFullYear()).slice(2) : ""));
   }
