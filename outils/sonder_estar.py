@@ -18,13 +18,23 @@ for c in set(re.findall(r'"(/platform/js/chunk-[0-9a-f]+\.[0-9a-f]+\.js)"', js))
     try: js += urllib.request.urlopen(urllib.request.Request(base + c, headers={"User-Agent": "Mozilla/5.0"}), timeout=60).read().decode("utf-8", "replace")
     except Exception: pass
 print("scripts :", len(js))
-for motif in [r"pvmRequests", r"data_select_eq_by_date", r"baseURL", r"api/0/", r"gateway:function", r"\.pvm\(", r"pvmUrl"]:
+# fichiers de configuration éventuels
+for n in ["/platform/config.js", "/config.js", "/platform/static/config.js", "/platform/js/config.js"]:
+    try:
+        t = urllib.request.urlopen(urllib.request.Request(base + n, headers={"User-Agent": "Mozilla/5.0"}), timeout=20).read().decode("utf-8", "replace")
+        print("##### fichier", n, len(t)); print(t[:3000])
+    except Exception as e:
+        print("##### fichier", n, "absent", str(e)[:60])
+print("##### scripts cités par la page :", sorted(re.findall(r'(?:src|href)="([^"]+)"', html))[:40])
+for motif, avant, apres, maxi in [(r"openHost", 200, 300, 8), (r'"station_day"', 400, 900, 6), (r"ajaxGetPvmProtoData\(", 200, 700, 8),
+                                  (r"application/x-protobuf|protobuf", 200, 300, 4), (r"LineChart:\{", 50, 1500, 2), (r'"LineChart"', 100, 1200, 4),
+                                  (r"message LineChart", 50, 1500, 2)]:
     vus = 0
     for m in re.finditer(motif, js):
-        if vus >= 3: break
-        print("----- %s : %s" % (motif, js[max(0, m.start() - 300): m.end() + 400].replace("\n", " ")))
+        if vus >= maxi: break
+        print("----- %s : %s" % (motif, js[max(0, m.start() - avant): m.end() + apres].replace("\n", " ")))
         vus += 1
-
+sys.exit(0)
 # 2. Essais authentifiés
 jeton = estar.chercher_jeton(estar.appel("/iam/auth_login", {"user_name": os.environ["ESTAR_UTILISATEUR"], "password": estar.mot_de_passe_chiffre(os.environ["ESTAR_MOT_DE_PASSE"])}))
 auj = datetime.now(estar.PARIS).strftime("%Y-%m-%d")
