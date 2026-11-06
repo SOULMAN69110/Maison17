@@ -106,6 +106,16 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .c-form input{font:500 .95rem var(--mono);color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:.6rem;padding:.25rem .5rem;margin-right:.7rem;color-scheme:dark}
 .c-form button{color:var(--nuit);background:var(--givre);border:0}
 .c-err{color:var(--reseau);margin-left:.4rem}
+/* Plein écran de la carte du graphique (superposition CSS : marche aussi sur iPhone, qui ne permet pas le vrai plein écran d'un élément) */
+body.plein{overflow:hidden}
+body.plein .ecran{transform:none !important}
+body.plein .carte.courbe{position:fixed;top:0;left:0;right:0;bottom:0;z-index:50;border-radius:0;margin:0;padding:2rem 2.6rem;background:var(--nuit)}
+body.plein .courbe .etiquette{font-size:1.2rem}
+body.plein .courbe .leg,body.plein .courbe .axe,body.plein .grad span,body.plein .totaux{font-size:1.15rem}
+body.plein .toile-g{padding-left:5.2rem}
+body.plein .grad{width:4.8rem}
+body.plein #axe-x{margin-left:5.2rem}
+body.plein #c-plein{color:var(--nuit);background:var(--givre);border-color:var(--givre)}
 .totaux{font-family:var(--mono);font-size:.95rem;color:var(--brume);margin-top:.5rem}
 .totaux b{color:var(--craie);font-weight:500}
 .totaux:empty{display:none}
@@ -132,8 +142,23 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
   .choix-dates .c-lib{min-width:0;flex-basis:100%;order:-1;text-align:left;margin:0 0 6px;font-size:14px}
   .c-form input,.c-form button{font-size:14px;margin-bottom:4px}
   .totaux{font-size:12px}
+  body.plein .carte.courbe{padding:14px 12px calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+  body.plein .courbe svg{height:auto}
+  body.plein .courbe .leg,body.plein .courbe .axe,body.plein .grad span,body.plein .totaux{font-size:12px}
+  body.plein .toile-g{padding-left:4.2rem}
+  body.plein .grad{width:3.8rem}
+  body.plein #axe-x{margin-left:4.2rem}
   .courbe .leg{margin-top:6px}
   .courbe .leg span{margin-left:0;margin-right:1.4rem}
+}
+/* Plein écran sur un téléphone à l'horizontale : textes lisibles malgré l'unité rem calée sur la largeur */
+@media (max-height:500px) and (min-width:801px){
+  body.plein .carte.courbe{padding:12px 20px}
+  body.plein .courbe .etiquette,body.plein .courbe .leg,body.plein .courbe .axe,body.plein .grad span,body.plein .totaux,body.plein .etat{font-size:13px}
+  body.plein .choix-dates,body.plein .choix-dates button,body.plein .c-form input{font-size:13px}
+  body.plein .toile-g{padding-left:54px}
+  body.plein .grad{width:48px}
+  body.plein #axe-x{margin-left:54px}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -206,6 +231,7 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
         <button type="button" id="c-suiv" aria-label="Période suivante">▶</button>
         <button type="button" id="c-auj" class="c-texte">Aujourd'hui</button>
         <button type="button" id="c-ouvrir" class="c-texte" aria-controls="c-form" aria-expanded="false">📅 Dates</button>
+        <button type="button" id="c-plein" class="c-texte" aria-pressed="false">⛶ Plein écran</button>
         <form id="c-form" class="c-form" autocomplete="off">
           <label for="c-du">du</label><input type="date" id="c-du" min="2024-10-30">
           <label for="c-au">au</label><input type="date" id="c-au" min="2024-10-30">
@@ -510,6 +536,27 @@ function decaler(sens){
   var c = choix || { du: jourDe(new Date()), au: jourDe(new Date()) }, n = nbJours(c.du, c.au);
   choisir({ du: plus(c.du, sens * n), au: plus(c.au, sens * n) });
 }
+/* Plein écran : superposition CSS, et vrai plein écran du navigateur quand il le permet (télé, ordinateur) */
+function pleinEcran(oui){
+  document.body.className = oui ? "plein" : "";
+  var b = el("c-plein"); b.textContent = oui ? "✕ Fermer" : "⛶ Plein écran"; b.setAttribute("aria-pressed", oui ? "true" : "false");
+  var d = document, de = d.documentElement;
+  try {
+    if (oui && !(d.fullscreenElement || d.webkitFullscreenElement)) {
+      var f = de.requestFullscreen || de.webkitRequestFullscreen;
+      if (f) { var r = f.call(de); if (r && r.catch) r.catch(function(){}); }
+    } else if (!oui && (d.fullscreenElement || d.webkitFullscreenElement)) {
+      var x = d.exitFullscreen || d.webkitExitFullscreen;
+      if (x) { var r2 = x.call(d); if (r2 && r2.catch) r2.catch(function(){}); }
+    }
+  } catch (e) {}
+  courbe();
+}
+el("c-plein").onclick = function(){ pleinEcran(!/plein/.test(document.body.className)); };
+document.addEventListener("keydown", function(e){ if ((e.key === "Escape" || e.keyCode === 27 || e.keyCode === 10009) && /plein/.test(document.body.className)) pleinEcran(false); });
+function surSortiePlein(){ if (!(document.fullscreenElement || document.webkitFullscreenElement) && /plein/.test(document.body.className)) pleinEcran(false); }
+document.addEventListener("fullscreenchange", surSortiePlein);
+document.addEventListener("webkitfullscreenchange", surSortiePlein);
 el("c-prec").onclick = function(){ decaler(-1); };
 el("c-suiv").onclick = function(){ decaler(1); };
 el("c-auj").onclick = function(){ choisir(null); };
