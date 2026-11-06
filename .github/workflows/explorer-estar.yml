@@ -1,7 +1,6 @@
 name: Explorer eStar (temporaire)
 
-# Tâche provisoire : repère dans le site eStar les adresses de son interface (courbe du jour).
-# Aucun identifiant n'est utilisé ni affiché. À supprimer après usage.
+# Tâche provisoire : essaie l'adresse eStar de la courbe du jour. À supprimer après usage.
 
 on:
   workflow_dispatch:
@@ -9,28 +8,11 @@ on:
 jobs:
   explorer:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Lister les adresses de l'interface eStar
-        run: |
-          mkdir -p e && cd e
-          curl -sSL -m 30 -A "Mozilla/5.0" https://monitor.estarpower.com/ -o index.html
-          grep -oE '(src|href)="[^"]+\.js[^"]*"' index.html | sed -E 's/^(src|href)="//; s/"$//' | sort -u > js.txt
-          cat js.txt
-          while read u; do
-            case "$u" in http*) url="$u";; /*) url="https://monitor.estarpower.com$u";; *) url="https://monitor.estarpower.com/$u";; esac
-            curl -sSL -m 60 -A "Mozilla/5.0" "$url" >> tout.js; echo >> tout.js
-          done < js.txt
-          # Les morceaux chargés à la demande (chunks) : on suit les noms de fichiers .js cités dans les scripts
-          for tour in 1 2; do
-            grep -oE '"[A-Za-z0-9_./-]*(chunk|js/)[A-Za-z0-9_./-]*\.js"' tout.js | tr -d '"' | sort -u > chunks.txt || true
-            while read c; do
-              case "$c" in http*) url="$c";; /*) url="https://monitor.estarpower.com$c";; *) url="https://monitor.estarpower.com/$c";; esac
-              grep -qF "$c" vus.txt 2>/dev/null && continue; echo "$c" >> vus.txt
-              curl -sSL -m 60 -A "Mozilla/5.0" "$url" >> tout.js; echo >> tout.js
-            done < chunks.txt
-          done
-          echo "Taille des scripts : $(wc -c < tout.js) octets"
-          echo "===== Adresses pvm-data ====="
-          grep -oE '/pvm-data/[A-Za-z0-9_/]+' tout.js | sort | uniq -c | sort -rn
-          echo "===== Contexte autour de « curve », « chart », « power » ====="
-          grep -oE '.{0,80}pvm-data/[A-Za-z0-9_/]*(curve|chart|power|line|day|real)[A-Za-z0-9_/]*.{0,160}' tout.js | head -40
+      - uses: actions/checkout@v4
+      - name: Essayer la courbe du jour
+        env:
+          ESTAR_UTILISATEUR: ${{ secrets.ESTAR_UTILISATEUR }}
+          ESTAR_MOT_DE_PASSE: ${{ secrets.ESTAR_MOT_DE_PASSE }}
+        run: python3 outils/sonder_estar.py
