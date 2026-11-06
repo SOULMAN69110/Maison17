@@ -103,6 +103,10 @@ def main(sortie):
             "total_production_wh": nombre(d.get("total_eq")),
             "taux_autoconsommation": nombre(d.get("self_rate")),
         }
+        try:
+            completer_avec_courbe(resultat, jeton)
+        except Exception as e:
+            print("eStar : courbe du jour non lue :", str(e)[:200])
         historiser(resultat)
         try:
             completer_jours(jeton)
@@ -113,6 +117,49 @@ def main(sortie):
         print("eStar :", resultat["erreur"])
     with open(sortie, "w", encoding="utf-8") as fh:
         json.dump(resultat, fh, ensure_ascii=False)
+
+
+def completer_avec_courbe(r, jeton):
+    """Ajoute la courbe du jour (points toutes les 15 min depuis minuit, nuit comprise : le compteur côté Linky
+    est relevé même quand l'onduleur dort). Si elle est plus récente que la mesure de l'onduleur, son dernier
+    point sert de mesure en direct, et le bilan du jour est demandé pour aujourd'hui."""
+    auj = datetime.now(PARIS).date()
+    c = courbe_du_jour(jeton, auj.isoformat())
+    jour_courbe = auj
+    if len(c["heures"]) < 2:                      # juste après minuit : on garde la courbe d'hier
+        jour_courbe = auj - timedelta(days=1)
+        c = courbe_du_jour(jeton, jour_courbe.isoformat())
+    h, se = c["heures"], c["series"]
+    prod, conso, res = se.get("grid_power") or [], se.get("consumption_power") or [], se.get("grid_p_power") or []
+    def arrondi(v):
+        return [round(x) for x in v] if len(v) == len(h) else []
+    r["courbe"] = {"date": jour_courbe.isoformat(), "heures": h,
+                   "production_w": arrondi(prod), "consommation_w": arrondi(conso), "reseau_w": arrondi(res)}
+    if jour_courbe != auj or not h:
+        return
+    derniere = auj.isoformat() + " " + h[-1] + ":00"
+    if (r.get("mesure") or "") < derniere:
+        r["mesure"] = derniere
+        r["mesure_source"] = "courbe"
+        if len(prod) == len(h): r["production_w"] = float(prod[-1])
+        if len(conso) == len(h): r["consommation_w"] = float(conso[-1])
+        if len(res) == len(h): r["reseau_w"] = float(res[-1])
+        # Bilan d'aujourd'hui : celui de la plateforme, sinon l'intégrale de la courbe (pas de 15 min)
+        j = None
+        try:
+            b = bilan_periode(jeton, 1, auj.isoformat())
+            if b.get("consommation_wh") is not None and (not b.get("debut") or b["debut"] == auj.isoformat()):
+                j = {k: b.get(k) for k in ("production_wh", "consommation_wh", "autoconsommee_wh", "achetee_wh", "vendue_wh")}
+        except Exception as e:
+            print("eStar : bilan d'aujourd'hui non lu :", str(e)[:200])
+        if j is None and len(conso) == len(h):
+            p_wh = sum(prod) * 0.25 if len(prod) == len(h) else 0.0
+            achat = sum(-x for x in res if x < 0) * 0.25 if len(res) == len(h) else None
+            vente = sum(x for x in res if x > 0) * 0.25 if len(res) == len(h) else None
+            j = {"production_wh": p_wh, "consommation_wh": sum(conso) * 0.25, "achetee_wh": achat, "vendue_wh": vente,
+                 "autoconsommee_wh": max(0.0, p_wh - vente) if vente is not None else None}
+        if j:
+            r["jour"] = j
 
 
 def bilan_du_jour(d, f):

@@ -73,13 +73,13 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .cumul-tete{display:flex;justify-content:space-between;align-items:baseline}
 .cumul-tete a{font-family:var(--mono);font-size:.95rem;color:var(--givre);text-decoration:none}
 .resume3{display:flex;margin-top:.6rem}
-.resume3 > div{flex:1 1 0;margin-right:.8rem}
+.resume3 > div{flex:1 1 0;margin-right:.5rem;min-width:0}
 .resume3 > div:last-child{margin-right:0}
 .resume3 span{display:block;font-family:var(--mono);font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
 .resume3 b{display:block;font-size:1.7rem;font-variant-numeric:tabular-nums;margin-top:.15rem;white-space:nowrap}
 .resume3 em{display:block;font-style:normal;font-family:var(--mono);font-size:.95rem;margin-top:.1rem}
 .resume3 b{color:var(--soleil);font-size:1.45rem}
-.resume3 b.conso{color:var(--craie);font-size:1.25rem;margin-top:.35rem}
+.resume3 b.conso{color:var(--craie);font-size:1.2rem;margin-top:.35rem}
 .resume3 b.conso span{display:inline;font-family:var(--display);font-size:1em;letter-spacing:0;text-transform:none}
 .resume3 b.conso em{display:inline;font-size:.65em;font-weight:400;color:var(--brume)}
 .hausse{color:var(--vente)} .baisse{color:var(--reseau)}
@@ -348,8 +348,8 @@ function resume(){
   });
 }
 
-/* Courbe de la journée, à partir de l'historique enregistré par la tâche toutes les 10 min.
-   Tant que l'onduleur n'a rien envoyé aujourd'hui, on montre celle d'hier. */
+/* Courbe de la journée : de préférence celle d'eStar (depuis minuit), sinon l'historique enregistré par la tâche,
+   et à défaut celle d'hier. */
 function lirePoints(jour){
   var mois = jour.getFullYear() + "-" + ("0" + (jour.getMonth() + 1)).slice(-2);
   var minuit = jour.getTime() / 1000, fin = new Date(jour.getFullYear(), jour.getMonth(), jour.getDate() + 1).getTime() / 1000;
@@ -365,12 +365,24 @@ function lirePoints(jour){
     return pts;
   });
 }
+/* Courbe eStar publiée dans solaire.json (un point toutes les 15 min depuis minuit, nuit comprise) */
+function pointsCourbeEstar(){
+  var c = dernierS && dernierS.courbe;
+  if (!c || !c.heures || c.heures.length < 2 || !c.consommation_w || c.consommation_w.length !== c.heures.length) return null;
+  var pts = c.heures.map(function(h, k){
+    var m = (+h.slice(0, 2)) * 60 + (+h.slice(3, 5));
+    return { x: m / 1440 * 1000, p: c.production_w && c.production_w.length === c.heures.length ? Math.max(0, c.production_w[k]) : 0, c: c.consommation_w[k] };
+  });
+  return { pts: pts, hier: c.date !== cleJ(new Date()) };
+}
 function courbe(){
   var d = new Date(), auj = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  lirePoints(auj).then(function(pts){
+  var estar = pointsCourbeEstar();
+  (estar && !estar.hier ? Promise.resolve(estar) : lirePoints(auj).then(function(pts){
     if (pts.length >= 2) return { pts: pts, hier: false };
+    if (estar) return estar;
     return lirePoints(veille()).then(function(p2){ return { pts: p2, hier: true }; });
-  }).then(function(r){
+  })).then(function(r){
     var pts = r.pts, svg = el("graphe");
     el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : "📈 La journée en puissance";
     if (pts.length < 2) { svg.innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
@@ -396,11 +408,11 @@ function charger(){
   fetch("solaire.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
-  }).then(afficher).catch(function(e){
+  }).then(function(s){ afficher(s); courbe(); }).catch(function(e){
     var etat = el("etat"); etat.className = "etat erreur";
     etat.textContent = "Données indisponibles (" + e.message + "). Nouvel essai dans " + RAFRAICHIR_MIN + " min.";
+    courbe();
   });
-  courbe();
 }
 
 /* Léger décalage périodique pour ménager la dalle de la télé */
