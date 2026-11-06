@@ -215,5 +215,82 @@ def historiser(r):
         w.writerow([ts, r["production_w"], r["consommation_w"], r["reseau_w"], j["production_wh"], j["consommation_wh"]])
 
 
+# ===== Courbe du jour à la minute (serveur des courbes Hoymiles, sur lequel repose eStar) =====
+# Le site eStar l'obtient par POST JSON {sid, date} et reçoit un message protobuf « LineChart » :
+#   LineChart  : 1 xAxis (chaînes répétées, heures), 2 series (LineSeries répétées), 3 type
+#   LineSeries : 1 type (ex. "power", "consumption_power", "grid_power"), 2 data (flottants répétés), 3 did, 4 port
+HOTES_COURBES = ["https://neapi.hoymiles.com", "https://euapi.hoymiles.com"]
+
+
+def _varint(b, i):
+    n = dec = 0
+    while True:
+        c = b[i]; i += 1
+        n |= (c & 0x7F) << dec; dec += 7
+        if c < 0x80:
+            return n, i
+
+
+def _champs(b):
+    """Décodage protobuf minimal : liste de (numéro, type, valeur brute)."""
+    i, out = 0, []
+    while i < len(b):
+        cle, i = _varint(b, i)
+        num, typ = cle >> 3, cle & 7
+        if typ == 0:
+            v, i = _varint(b, i)
+        elif typ == 1:
+            v = b[i:i + 8]; i += 8
+        elif typ == 2:
+            n, i = _varint(b, i); v = b[i:i + n]; i += n
+        elif typ == 5:
+            v = b[i:i + 4]; i += 4
+        else:
+            raise ValueError("type protobuf inattendu %d" % typ)
+        out.append((num, typ, v))
+    return out
+
+
+def decoder_courbe(b):
+    import struct
+    heures, series = [], {}
+    for num, typ, v in _champs(b):
+        if num == 1 and typ == 2:
+            heures.append(v.decode("utf-8", "replace"))
+        elif num == 2 and typ == 2:
+            nom, vals = "", []
+            for n2, t2, v2 in _champs(v):
+                if n2 == 1 and t2 == 2:
+                    nom = v2.decode("utf-8", "replace")
+                elif n2 == 2 and t2 == 2:        # flottants « packed »
+                    vals.extend(struct.unpack("<%df" % (len(v2) // 4), v2))
+                elif n2 == 2 and t2 == 5:
+                    vals.append(struct.unpack("<f", v2)[0])
+            series[nom] = vals
+    return {"heures": heures, "series": series}
+
+
+def courbe_du_jour(jeton, jour):
+    """Courbe du jour (AAAA-MM-JJ) : {"heures": [...], "series": {type: [valeurs]}}."""
+    derniere = None
+    for hote in HOTES_COURBES:
+        u = urllib.parse.urlsplit(hote + "/pvm-data/api/0/station/data/count_power_by_day")
+        cnx = http.client.HTTPSConnection(u.netloc, timeout=30)
+        try:
+            cnx.request("POST", u.path, body=json.dumps({"sid": STATION, "date": jour}).encode(),
+                        headers={"content-type": "application/json", "accept": "application/json, text/plain, */*",
+                                 "user-agent": "Mozilla/5.0 (Maison17 tableau de bord)", "authorization": jeton,
+                                 "cookie": "estar_token=" + urllib.parse.quote(jeton, safe=""), "language": "fr-fr"})
+            r = cnx.getresponse(); b = r.read()
+        finally:
+            cnx.close()
+        if r.status == 200 and b and not b.lstrip().startswith(b"{"):
+            c = decoder_courbe(b)
+            if c["heures"]:
+                return c
+        derniere = "%s : HTTP %s %s" % (u.netloc, r.status, b[:120])
+    raise RuntimeError("courbe du jour indisponible (" + str(derniere) + ")")
+
+
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else "site/solaire.json")
