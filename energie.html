@@ -87,11 +87,28 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .resume3 b.conso em.c-hausse{color:var(--reseau)} .resume3 b.conso em.c-baisse{color:var(--vente)}
 .total-inst{margin-top:.5rem}
 
-.courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;margin-top:.8rem;overflow:visible}
+.toile-g{position:relative;flex:1 1 auto;display:flex;flex-direction:column;min-height:8rem;margin-top:.8rem;padding-left:4.2rem}
+.courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;overflow:visible}
+.grad{position:absolute;left:0;top:0;bottom:0;width:3.8rem}
+.grad span{position:absolute;right:0;transform:translateY(-50%);font-family:var(--mono);font-size:.85rem;color:var(--brume);white-space:nowrap}
+#axe-x{margin-left:4.2rem}
 .courbe .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.4rem}
 .courbe .leg{font-family:var(--mono);font-size:.95rem;color:var(--brume)}
 .courbe-tete{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
 .courbe .leg span{margin-left:1.4rem;white-space:nowrap}
+.choix-dates{display:flex;align-items:center;flex-wrap:wrap;margin-top:.5rem;font-family:var(--mono);font-size:.95rem;color:var(--brume)}
+.choix-dates button{font:500 .95rem var(--mono);color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:99px;padding:.25rem .8rem;margin-right:.5rem;cursor:pointer}
+.choix-dates .c-lib{color:var(--craie);margin-right:.5rem;min-width:11rem;text-align:center}
+.choix-dates button.c-texte{color:var(--givre)}
+.c-form{display:none;align-items:center;flex-wrap:wrap;margin-top:.4rem;flex-basis:100%}
+.c-form.ouvert{display:flex}
+.c-form label{margin-right:.4rem}
+.c-form input{font:500 .95rem var(--mono);color:var(--craie);background:var(--nuit);border:1px solid var(--trait);border-radius:.6rem;padding:.25rem .5rem;margin-right:.7rem;color-scheme:dark}
+.c-form button{color:var(--nuit);background:var(--givre);border:0}
+.c-err{color:var(--reseau);margin-left:.4rem}
+.totaux{font-family:var(--mono);font-size:.95rem;color:var(--brume);margin-top:.5rem}
+.totaux b{color:var(--craie);font-weight:500}
+.totaux:empty{display:none}
 .vide{font-family:var(--mono);font-size:1.1rem;color:var(--brume);margin:auto}
 
 .etat{font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.8rem}
@@ -110,6 +127,11 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
   .fleche{display:none}
   .courbe svg{height:40vw}
   .courbe-tete{display:block}
+  .choix-dates{font-size:13px}
+  .choix-dates button{font-size:13px;padding:4px 10px;margin-bottom:4px}
+  .choix-dates .c-lib{min-width:0;flex-basis:100%;order:-1;text-align:left;margin:0 0 6px;font-size:14px}
+  .c-form input,.c-form button{font-size:14px;margin-bottom:4px}
+  .totaux{font-size:12px}
   .courbe .leg{margin-top:6px}
   .courbe .leg span{margin-left:0;margin-right:1.4rem}
 }
@@ -178,9 +200,23 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
         <div class="etiquette" id="t-courbe">📈 La journée en puissance</div>
         <div class="leg"><span><i class="point" style="background:var(--soleil)"></i>production</span><span><i class="point" style="background:var(--maison)"></i>consommation</span></div>
       </div>
+      <div class="choix-dates">
+        <button type="button" id="c-prec" aria-label="Période précédente">◀</button>
+        <span class="c-lib" id="c-lib">Aujourd'hui</span>
+        <button type="button" id="c-suiv" aria-label="Période suivante">▶</button>
+        <button type="button" id="c-auj" class="c-texte">Aujourd'hui</button>
+        <button type="button" id="c-ouvrir" class="c-texte" aria-controls="c-form" aria-expanded="false">📅 Dates</button>
+        <form id="c-form" class="c-form" autocomplete="off">
+          <label for="c-du">du</label><input type="date" id="c-du" min="2024-10-30">
+          <label for="c-au">au</label><input type="date" id="c-au" min="2024-10-30">
+          <button type="submit">Afficher</button>
+          <span class="c-err" id="c-err" role="alert"></span>
+        </form>
+      </div>
       <div class="axe" style="margin-top:.6rem"><span id="echelle"></span><span id="attente"></span></div>
-      <svg id="graphe" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="Production et consommation d'aujourd'hui"></svg>
-      <div class="axe"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+      <div class="toile-g"><div class="grad" id="grad" aria-hidden="true"></div><svg id="graphe" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="Production et consommation"></svg></div>
+      <div class="axe" id="axe-x"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
+      <div class="totaux" id="totaux"></div>
       <div class="etat" id="etat">Connexion…</div>
     </div>
   </div>
@@ -304,6 +340,7 @@ function chargerJours(){
     }
     jours = m; joursBruts = bruts;
     if (dernierS) afficher(dernierS); else resume();
+    if (choix) courbe();
   }).catch(function(){});
 }
 /* Somme d'un champ (p : production, c : consommation) du début à la fin incluse ; aujourd'hui vient du direct */
@@ -379,7 +416,198 @@ function pointsCourbeEstar(){
   });
   return { pts: pts, hier: c.date !== cleJ(new Date()) };
 }
+/* ===== Dessin ===== */
+/* Graduation : pas « rond » (1, 2, 2,5 ou 5 × 10^n) pour 3 à 5 lignes, libellés à gauche */
+function graduer(maxBrut){
+  var cible = Math.max(maxBrut, 1) / 4, p10 = Math.pow(10, Math.floor(Math.log(cible) / Math.LN10)), pas = p10;
+  [1, 2, 2.5, 5, 10].some(function(m){ pas = m * p10; return pas >= cible; });
+  return { pas: pas, max: Math.max(pas * Math.ceil(maxBrut / pas), pas) };
+}
+function grilleSvg(g, unite){
+  var html = "", lib = "";
+  function Y(v){ return 300 - v / g.max * 290; }
+  for (var v = 0; v <= g.max + 1e-9; v += g.pas) {
+    var y = Y(v);
+    if (v > 0) html += '<line x1="0" x2="1000" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#26313a" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+    var t = unite === "W" ? (g.max >= 2000 ? (v / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " kW" : Math.round(v) + " W")
+                          : (g.max >= 10000 ? (v / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " kWh" : (v / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " kWh");
+    if (g.max >= 2e6 && unite !== "W") t = (v / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " MWh";
+    lib += '<span style="top:' + (y / 300 * 100).toFixed(2) + '%">' + t + "</span>";
+  }
+  el("grad").innerHTML = lib;
+  return html;
+}
+function echelle(){ return ""; }
+/* Courbe de puissance ; un trou de plus d'une heure entre deux points coupe le trait */
+function dessinerPuissance(pts, pasMax){
+  var svg = el("graphe"), brut = 500;
+  pts.forEach(function(q){ brut = Math.max(brut, q.p, q.c); });
+  var g = graduer(brut), max = g.max;
+  function Y(v){ return (300 - v / max * 290).toFixed(1); }
+  var morceaux = [], cur = [];
+  pts.forEach(function(q, k){ if (k && q.x - pts[k - 1].x > pasMax) { morceaux.push(cur); cur = []; } cur.push(q); });
+  morceaux.push(cur);
+  var aire = "", conso = "";
+  morceaux.forEach(function(m){
+    if (!m.length) return;
+    aire += "M" + m[0].x.toFixed(1) + " 300 " + m.map(function(q){ return "L" + q.x.toFixed(1) + " " + Y(q.p); }).join(" ") + " L" + m[m.length - 1].x.toFixed(1) + " 300 Z ";
+    conso += m.map(function(q, k){ return (k ? "L" : "M") + q.x.toFixed(1) + " " + Y(q.c); }).join(" ") + " ";
+  });
+  svg.innerHTML = grilleSvg(g, "W") +
+    '<path d="' + aire + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>' +
+    '<path d="' + conso + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  el("echelle").textContent = "";
+}
+/* Barres d'énergie (kWh) : production pleine, consommation en contour */
+function dessinerBarres(barres){
+  var svg = el("graphe"), brut = 1;
+  barres.forEach(function(b){ brut = Math.max(brut, b.p || 0, b.c || 0); });
+  var g = graduer(brut), max = g.max;
+  var w = 1000 / barres.length, l = Math.max(1, w * 0.36), html = grilleSvg(g, "Wh");
+  barres.forEach(function(b, k){
+    var x = k * w + w * 0.12;
+    if (typeof b.p === "number") html += '<rect x="' + x.toFixed(1) + '" y="' + (300 - b.p / max * 290).toFixed(1) + '" width="' + l.toFixed(1) + '" height="' + (b.p / max * 290).toFixed(1) + '" fill="#f0c36a"/>';
+    if (typeof b.c === "number") html += '<rect x="' + (x + l + w * 0.04).toFixed(1) + '" y="' + (300 - b.c / max * 290).toFixed(1) + '" width="' + l.toFixed(1) + '" height="' + (b.c / max * 290).toFixed(1) + '" fill="#e8eef2" fill-opacity=".8"/>';
+  });
+  svg.innerHTML = html;
+  el("echelle").textContent = "";
+}
+function axeX(libelles, centres){ el("axe-x").innerHTML = libelles.map(function(t){ return centres ? '<span style="flex:1 1 0;text-align:center">' + t + "</span>" : "<span>" + t + "</span>"; }).join(""); }
+var AXE_JOUR = ["0 h", "6 h", "12 h", "18 h", "24 h"];
+
+/* ===== Choix de la période (du … au …) ; sans choix : aujourd'hui ===== */
+var choix = null, minuterieRetour = null;
+var JOURS_C = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+var MOIS_C = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+function jourDe(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function plus(d, n){ return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+function nbJours(a, b){ return Math.round((jourDe(b) - jourDe(a)) / 864e5) + 1; }
+function dc(d){ return d.getDate() + (d.getDate() === 1 ? "er" : "") + " " + MOIS_C[d.getMonth()]; }
+function libPeriode(c){
+  if (nbJours(c.du, c.au) === 1) return JOURS_C[c.du.getDay()] + " " + dc(c.du) + " " + c.du.getFullYear();
+  return "du " + dc(c.du) + (c.du.getFullYear() !== c.au.getFullYear() ? " " + c.du.getFullYear() : "") + " au " + dc(c.au) + " " + c.au.getFullYear();
+}
+function versInput(d){ return cleJ(d); }
+function depuisInput(v){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function choisir(c){
+  var auj = jourDe(new Date()), debut = new Date(2024, 9, 30);
+  if (c) {
+    if (c.au > auj) c.au = auj;
+    if (c.du < debut) c.du = debut;
+    if (c.du > c.au) c.du = c.au;
+    if (nbJours(c.du, c.au) === 1 && cleJ(c.du) === cleJ(auj)) c = null;   // aujourd'hui = vue normale
+  }
+  choix = c;
+  el("c-lib").textContent = c ? libPeriode(c) : "Aujourd'hui";
+  el("c-auj").style.display = c ? "" : "none";
+  el("c-suiv").style.visibility = c ? "visible" : "hidden";
+  el("c-du").max = el("c-au").max = cleJ(auj);
+  clearTimeout(minuterieRetour);
+  if (c) minuterieRetour = setTimeout(function(){ choisir(null); }, 15 * 60 * 1000);   // la télé revient seule à aujourd'hui
+  courbe();
+}
+function decaler(sens){
+  var c = choix || { du: jourDe(new Date()), au: jourDe(new Date()) }, n = nbJours(c.du, c.au);
+  choisir({ du: plus(c.du, sens * n), au: plus(c.au, sens * n) });
+}
+el("c-prec").onclick = function(){ decaler(-1); };
+el("c-suiv").onclick = function(){ decaler(1); };
+el("c-auj").onclick = function(){ choisir(null); };
+el("c-ouvrir").onclick = function(){
+  var f = el("c-form"), o = !/ouvert/.test(f.className);
+  f.className = "c-form" + (o ? " ouvert" : "");
+  el("c-ouvrir").setAttribute("aria-expanded", o ? "true" : "false");
+  if (o) { var c = choix || { du: jourDe(new Date()), au: jourDe(new Date()) }; el("c-du").value = versInput(c.du); el("c-au").value = versInput(c.au); }
+};
+el("c-form").onsubmit = function(e){
+  e.preventDefault();
+  var du = depuisInput(el("c-du").value), au = depuisInput(el("c-au").value) || du;
+  if (!du) { el("c-err").textContent = "Choisissez au moins la date de début."; return; }
+  if (au < du) { el("c-err").textContent = "La date de fin est avant celle du début."; return; }
+  el("c-err").textContent = "";
+  el("c-form").className = "c-form"; el("c-ouvrir").setAttribute("aria-expanded", "false");
+  choisir({ du: du, au: au });
+};
+
+/* Courbes enregistrées (historique/solaire-courbe-AAAA-MM.csv), entre deux instants */
+function lireCourbes(debutTs, finTs){
+  var mois = {}, d = new Date(debutTs * 1000);
+  for (var x = new Date(d.getFullYear(), d.getMonth(), 1); x.getTime() / 1000 < finTs; x = new Date(x.getFullYear(), x.getMonth() + 1, 1))
+    mois[x.getFullYear() + "-" + ("0" + (x.getMonth() + 1)).slice(-2)] = 1;
+  return Promise.all(Object.keys(mois).map(function(m){
+    return fetch("historique/solaire-courbe-" + m + ".csv?t=" + Math.floor(Date.now() / 6e5), { cache: "no-store" })
+      .then(function(r){ return r.ok ? r.text() : ""; }).catch(function(){ return ""; });
+  })).then(function(textes){
+    var pts = [];
+    textes.join("\n").split("\n").forEach(function(l){
+      var c = l.split(","), ts = +c[0];
+      if (ts >= debutTs && ts < finTs && c.length >= 3 && c[2] !== "") pts.push({ ts: ts, p: Math.max(0, parseFloat(c[1]) || 0), c: parseFloat(c[2]) || 0 });
+    });
+    pts.sort(function(a, b){ return a.ts - b.ts; });
+    return pts;
+  });
+}
+/* Totaux de la période (solaire-jours.csv, et le direct pour aujourd'hui) */
+function totauxPeriode(c){
+  var t = { p: 0, c: 0, a: 0, v: 0 }, n = 0, auj = cleJ(new Date());
+  for (var d = new Date(c.du.getTime()); d <= c.au; d = plus(d, 1)) {
+    var k = cleJ(d), j = k === auj ? aujourdhui : (joursBruts && joursBruts[k]);
+    if (!j) continue;
+    n++; t.p += j.production_wh || 0; t.c += j.consommation_wh || 0; t.a += j.achetee_wh || 0; t.v += j.vendue_wh || 0;
+  }
+  if (!n) return "";
+  function f(wh){ return kwh(wh).replace(/<\/?small>/g, " ").trim(); }
+  return "Sur la période : ☀️ <b>" + f(t.p) + "</b> produits · 🏠 <b>" + f(t.c) + "</b> consommés · ⚡ <b>" + f(t.a) + "</b> achetés · ↩ <b>" + f(t.v) + "</b> revendus";
+}
+function courbePeriode(c, jeton){
+  var n = nbJours(c.du, c.au), svg = el("graphe");
+  el("totaux").innerHTML = totauxPeriode(c);
+  el("attente").textContent = "";
+  if (n <= 7) {
+    el("t-courbe").textContent = "📈 Puissance · " + (n === 1 ? JOURS_C[c.du.getDay()] + " " + dc(c.du) : n + " jours");
+    var debut = c.du.getTime() / 1000, fin = plus(c.au, 1).getTime() / 1000;
+    return lireCourbes(debut, fin).then(function(pts){
+      if (choix !== c || jeton !== tracage) return;
+      if (pts.length < 2) {
+        svg.innerHTML = ""; el("grad").innerHTML = ""; el("echelle").textContent = "";
+        el("attente").textContent = "Courbe pas encore récupérée pour ces dates (rattrapage en cours, 30 jours par passage)";
+        axeX(n === 1 ? AXE_JOUR : []); return;
+      }
+      pts.forEach(function(q){ q.x = (q.ts - debut) / (fin - debut) * 1000; });
+      dessinerPuissance(pts, 3600 / (fin - debut) * 1000);
+      if (n === 1) axeX(AXE_JOUR);
+      else { var l = []; for (var k = 0; k < n; k++) { var d = plus(c.du, k); l.push(n > 5 ? d.getDate() : JOURS_C[d.getDay()] + " " + d.getDate()); } axeX(l, true); }
+    });
+  }
+  /* Plus de 7 jours : une barre par jour (jusqu'à 62 jours) ou par mois */
+  if (!joursBruts) { svg.innerHTML = ""; el("attente").textContent = "Chargement…"; return; }
+  var barres = [], lib = [], parMois = n > 62, auj = cleJ(new Date());
+  function val(k){ return k === auj ? aujourdhui : joursBruts[k]; }
+  if (!parMois) {
+    for (var d = new Date(c.du.getTime()); d <= c.au; d = plus(d, 1)) { var j = val(cleJ(d)); barres.push({ p: j && j.production_wh, c: j && j.consommation_wh }); }
+    el("t-courbe").textContent = "📊 Énergie par jour · " + n + " jours";
+    var pas = Math.ceil(n / 6); for (var k = 0; k < n; k += pas) lib.push(dc(plus(c.du, k)));
+  } else {
+    var cles = [], tot = {};
+    for (var d2 = new Date(c.du.getTime()); d2 <= c.au; d2 = plus(d2, 1)) {
+      var m = d2.getFullYear() + "-" + d2.getMonth(), j2 = val(cleJ(d2));
+      if (!tot[m]) { tot[m] = { p: 0, c: 0, n: 0, d: d2 }; cles.push(m); }
+      if (j2) { tot[m].p += j2.production_wh || 0; tot[m].c += j2.consommation_wh || 0; tot[m].n++; }
+    }
+    cles.forEach(function(m){ barres.push(tot[m].n ? { p: tot[m].p, c: tot[m].c } : {}); });
+    el("t-courbe").textContent = "📊 Énergie par mois · " + cles.length + " mois";
+    var pas2 = Math.ceil(cles.length / 8); for (var k2 = 0; k2 < cles.length; k2 += pas2) lib.push(MOIS_C[tot[cles[k2]].d.getMonth()] + (cles.length > 12 ? " " + String(tot[cles[k2]].d.getFullYear()).slice(2) : ""));
+  }
+  dessinerBarres(barres);
+  axeX(lib);
+}
+
+var tracage = 0;   // seul le dernier tracé demandé s'affiche (les réponses peuvent arriver dans le désordre)
 function courbe(){
+  var n = ++tracage;
+  if (choix) return courbePeriode(choix, n);
+  el("totaux").innerHTML = "";
+  axeX(AXE_JOUR);
   var d = new Date(), auj = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   var estar = pointsCourbeEstar();
   (estar && !estar.hier ? Promise.resolve(estar) : lirePoints(auj).then(function(pts){
@@ -387,23 +615,14 @@ function courbe(){
     if (estar) return estar;
     return lirePoints(veille()).then(function(p2){ return { pts: p2, hier: true }; });
   })).then(function(r){
+    if (choix || n !== tracage) return;
     var pts = r.pts, svg = el("graphe");
     el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : "📈 La journée en puissance";
-    if (pts.length < 2) { svg.innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
+    if (pts.length < 2) { svg.innerHTML = ""; el("grad").innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
     el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : "";
-    var max = 500;
-    pts.forEach(function(q){ max = Math.max(max, q.p, q.c); });
-    max = Math.ceil(max / 500) * 500;
-    function Y(v){ return (300 - v / max * 290).toFixed(1); }
-    var aire = "M" + pts[0].x.toFixed(1) + " 300 " + pts.map(function(q){ return "L" + q.x.toFixed(1) + " " + Y(q.p); }).join(" ") + " L" + pts[pts.length - 1].x.toFixed(1) + " 300 Z";
-    var conso = pts.map(function(q, k){ return (k ? "L" : "M") + q.x.toFixed(1) + " " + Y(q.c); }).join(" ");
-    var grille = "";
-    for (var g = 1; g < 4; g++) grille += '<line x1="0" x2="1000" y1="' + (g * 75) + '" y2="' + (g * 75) + '" stroke="#26313a" stroke-width="1" vector-effect="non-scaling-stroke"/>';
-    svg.innerHTML = grille +
-      '<path d="' + aire + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>' +
-      '<path d="' + conso + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
-    el("echelle").textContent = "Échelle : " + (max >= 1000 ? (max / 1000).toString().replace(".", ",") + " kW" : max + " W") + " en haut";
+    dessinerPuissance(pts, 3600 / 86400 * 1000);
   }).catch(function(){
+    if (choix || n !== tracage) return;
     el("graphe").innerHTML = ""; el("attente").textContent = "La courbe se remplit au fil de la journée";
   });
 }
@@ -426,7 +645,7 @@ setInterval(function(){
   el("ecran").style.transform = "translate(" + decalages[iDec][0] + "px," + decalages[iDec][1] + "px)";
 }, 10 * 60 * 1000);
 
-horloge(); charger(); chargerJours();
+horloge(); choisir(null); charger(); chargerJours();
 setInterval(chargerJours, 30 * 60 * 1000);
 setInterval(horloge, 1000);
 setInterval(charger, RAFRAICHIR_MIN * 60 * 1000);
