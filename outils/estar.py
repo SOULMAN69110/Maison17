@@ -112,6 +112,10 @@ def main(sortie):
             completer_jours(jeton)
         except Exception as e:
             print("eStar : historique par jour non complété :", str(e)[:200])
+        try:
+            completer_courbes(jeton)
+        except Exception as e:
+            print("eStar : historique des courbes non complété :", str(e)[:200])
     except Exception as e:  # on ne bloque jamais la publication du tableau de bord
         resultat["erreur"] = str(e)[:200]
         print("eStar :", resultat["erreur"])
@@ -135,6 +139,10 @@ def completer_avec_courbe(r, jeton):
         return [round(x) for x in v] if len(v) == len(h) else []
     r["courbe"] = {"date": jour_courbe.isoformat(), "heures": h,
                    "production_w": arrondi(prod), "consommation_w": arrondi(conso), "reseau_w": arrondi(res)}
+    try:
+        enregistrer_courbe(jour_courbe, c)
+    except Exception as e:
+        print("eStar : courbe non enregistrée :", str(e)[:200])
     if jour_courbe != auj or not h:
         return
     derniere = auj.isoformat() + " " + h[-1] + ":00"
@@ -160,6 +168,97 @@ def completer_avec_courbe(r, jeton):
                  "autoconsommee_wh": max(0.0, p_wh - vente) if vente is not None else None}
         if j:
             r["jour"] = j
+
+
+# ===== Historique des courbes (un point toutes les 15 min) : historique/solaire-courbe-AAAA-MM.csv =====
+# Colonnes : horodatage (Unix), production_w, consommation_w, reseau_w (négatif : achat).
+# historique/solaire-courbe-vides.txt liste les jours sans aucune donnée chez eStar (pour ne pas les redemander).
+COURBES_PAR_PASSAGE = 30
+FICHIER_VIDES = "historique/solaire-courbe-vides.txt"
+
+
+def _chemin_courbe(jour):
+    return "historique/solaire-courbe-%s.csv" % jour.strftime("%Y-%m")
+
+
+def _lire_courbe_mois(chemin):
+    lignes = []
+    if os.path.exists(chemin):
+        with open(chemin, encoding="utf-8") as fh:
+            for i, l in enumerate(fh):
+                if i and l.strip():
+                    lignes.append(l.rstrip("\n").split(","))
+    return lignes
+
+
+def enregistrer_courbe(jour, c):
+    """Remplace dans le fichier du mois les points du jour donné par ceux de la courbe c."""
+    h, se = c["heures"], c["series"]
+    prod, conso, res = se.get("grid_power") or [], se.get("consumption_power") or [], se.get("grid_p_power") or []
+    def val(v, k):
+        return ("%.0f" % v[k]) if len(v) == len(h) else ""
+    debut = int(datetime(jour.year, jour.month, jour.day, tzinfo=PARIS).timestamp())
+    lend = jour + timedelta(days=1)
+    fin = int(datetime(lend.year, lend.month, lend.day, tzinfo=PARIS).timestamp())
+    nouveaux = []
+    for k, hh in enumerate(h):
+        try:
+            t = datetime(jour.year, jour.month, jour.day, int(hh[:2]), int(hh[3:5]), tzinfo=PARIS)
+        except ValueError:
+            continue
+        nouveaux.append([str(int(t.timestamp())), val(prod, k), val(conso, k), val(res, k)])
+    chemin = _chemin_courbe(jour)
+    garde = [l for l in _lire_courbe_mois(chemin) if not (debut <= int(l[0]) < fin)]
+    toutes = sorted(garde + nouveaux, key=lambda l: int(l[0]))
+    os.makedirs("historique", exist_ok=True)
+    with open(chemin, "w", encoding="utf-8") as fh:
+        fh.write("horodatage,production_w,consommation_w,reseau_w\n")
+        for l in toutes:
+            fh.write(",".join(l) + "\n")
+    return len(nouveaux)
+
+
+def completer_courbes(jeton):
+    """Rattrape les courbes des jours passés (les plus récents d'abord), et relit hier tant qu'il est incomplet."""
+    auj = datetime.now(PARIS).date()
+    vides = set()
+    if os.path.exists(FICHIER_VIDES):
+        with open(FICHIER_VIDES, encoding="utf-8") as fh:
+            vides = {l.strip() for l in fh if l.strip()}
+    # jours présents et heure du dernier point de chaque jour
+    presents, mois_lus = {}, set()
+    j = auj - timedelta(days=1)
+    a_lire = []
+    while j >= MISE_EN_SERVICE and len(a_lire) < COURBES_PAR_PASSAGE:
+        m = j.strftime("%Y-%m")
+        if m not in mois_lus:
+            mois_lus.add(m)
+            for l in _lire_courbe_mois(_chemin_courbe(j)):
+                d = datetime.fromtimestamp(int(l[0]), PARIS)
+                presents[d.date()] = max(presents.get(d.date(), ""), d.strftime("%H:%M"))
+        cle = j.isoformat()
+        if cle not in vides:
+            if j not in presents or (j == auj - timedelta(days=1) and presents[j] < "23:45"):
+                a_lire.append(j)
+        j -= timedelta(days=1)
+    nouveaux_vides = []
+    for j in a_lire:
+        try:
+            c = courbe_du_jour(jeton, j.isoformat())
+        except Exception as e:
+            print("eStar : courbe du %s non lue : %s" % (j, str(e)[:120]))
+            continue
+        if len(c["heures"]) == 0:
+            if j < auj - timedelta(days=2):
+                nouveaux_vides.append(j.isoformat())
+            continue
+        enregistrer_courbe(j, c)
+        time.sleep(0.15)
+    if nouveaux_vides:
+        with open(FICHIER_VIDES, "a", encoding="utf-8") as fh:
+            fh.write("\n".join(nouveaux_vides) + "\n")
+    if a_lire:
+        print("eStar : %d courbe(s) de jours passés lue(s)" % len(a_lire))
 
 
 def bilan_du_jour(d, f):
@@ -335,9 +434,7 @@ def courbe_du_jour(jeton, jour):
             import gzip
             b = gzip.decompress(b)
         if r.status == 200 and b and not b.lstrip().startswith(b"{"):
-            c = decoder_courbe(b)
-            if c["heures"]:
-                return c
+            return decoder_courbe(b)          # peut être vide (jour sans données)
         derniere = "%s : HTTP %s %s" % (u.netloc, r.status, b[:120])
     raise RuntimeError("courbe du jour indisponible (" + str(derniere) + ")")
 
