@@ -1,16 +1,16 @@
-"""Provisoire : affiche le début brut de la réponse de la courbe du jour (jamais le jeton)."""
-import os, sys, json, http.client, urllib.parse
+"""Provisoire : teste la courbe du jour eStar (n'affiche jamais le jeton)."""
+import os, sys
 sys.path.insert(0, "outils")
 import estar
-from datetime import datetime
+from datetime import datetime, timedelta
 jeton = estar.chercher_jeton(estar.appel("/iam/auth_login", {"user_name": os.environ["ESTAR_UTILISATEUR"], "password": estar.mot_de_passe_chiffre(os.environ["ESTAR_MOT_DE_PASSE"])}))
-j = datetime.now(estar.PARIS).date().isoformat()
-for hote in estar.HOTES_COURBES:
-    u = urllib.parse.urlsplit(hote + "/pvm-data/api/0/station/data/count_power_by_day")
-    cnx = http.client.HTTPSConnection(u.netloc, timeout=30)
-    cnx.request("POST", u.path, body=json.dumps({"sid": estar.STATION, "date": j}).encode(),
-                headers={"content-type": "application/json", "authorization": jeton, "user-agent": "Mozilla/5.0"})
-    r = cnx.getresponse(); b = r.read()
-    print("=====", u.netloc, r.status, r.getheader("content-type"), r.getheader("content-encoding"), "longueur", len(b))
-    print("hex :", b[:160].hex())
-    print("texte :", b[:300])
+for j in [datetime.now(estar.PARIS).date(), datetime.now(estar.PARIS).date() - timedelta(days=1)]:
+    try:
+        c = estar.courbe_du_jour(jeton, j.isoformat())
+        h = c["heures"]
+        print("=====", j, "| points", len(h), "| de", h[:3], "à", h[-3:])
+        for nom, v in c["series"].items():
+            print("   série %-22s n=%d  min=%s max=%s  début=%s  fin=%s" % (nom, len(v), round(min(v)) if v else None, round(max(v)) if v else None, [round(x) for x in v[:4]], [round(x) for x in v[-4:]]))
+        print("   12 h :", {n: round(v[h.index("12:00")]) for n, v in c["series"].items() if "12:00" in h and len(v) == len(h)})
+    except Exception as e:
+        print("=====", j, "erreur", e)

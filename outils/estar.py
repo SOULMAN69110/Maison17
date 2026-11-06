@@ -284,6 +284,9 @@ def courbe_du_jour(jeton, jour):
             r = cnx.getresponse(); b = r.read()
         finally:
             cnx.close()
+        if b[:2] == b"\x1f\x8b":          # réponse compressée (gzip)
+            import gzip
+            b = gzip.decompress(b)
         if r.status == 200 and b and not b.lstrip().startswith(b"{"):
             c = decoder_courbe(b)
             if c["heures"]:
