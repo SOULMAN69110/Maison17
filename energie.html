@@ -54,20 +54,21 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .bas{flex:1 1 auto;min-height:0}
 .bilan{flex:0 0 36%;display:flex;flex-direction:column}
 .courbe{flex:1 1 auto;display:flex;flex-direction:column}
-.ligne-kwh{display:flex;justify-content:space-between;align-items:baseline;margin-top:.9rem}
+.ligne-kwh{display:flex;justify-content:space-between;align-items:baseline;margin-top:.5rem}
 .ligne-kwh span{font-size:1.4rem;color:var(--brume)}
-.ligne-kwh b{font-size:2.4rem;font-weight:600;font-variant-numeric:tabular-nums}
+.ligne-kwh b{font-size:2.2rem;font-weight:600;font-variant-numeric:tabular-nums}
 .ligne-kwh b small{font-size:.5em;font-weight:400;color:var(--brume);margin-left:.15em}
-.barre{display:flex;height:1.5rem;border-radius:.4rem;overflow:hidden;margin-top:.5rem;background:var(--nuit)}
+.bilan > *{flex-shrink:0}
+.barre{display:flex;height:1rem;border-radius:.4rem;overflow:hidden;margin-top:.5rem;background:var(--nuit)}
 .barre i{display:block;height:100%}
 .legende{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.35rem}
 .legende em{font-style:normal}
 .point{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:middle}
-.taux{display:flex;margin-top:1.2rem}
+.taux{display:flex;margin-top:.7rem}
 .taux > div{flex:1 1 0;margin-right:1rem}
 .taux > div:last-child{margin-right:0}
-.taux b{display:block;font-size:2.6rem;font-weight:700;line-height:1;margin-top:.3rem}
-.cumul{margin-top:auto;padding-top:.9rem;border-top:1px dashed var(--trait);font-size:1.25rem;color:var(--brume)}
+.taux b{display:block;font-size:2.1rem;font-weight:700;line-height:1;margin-top:.3rem}
+.cumul{margin-top:auto;padding-top:.6rem;border-top:1px dashed var(--trait);font-size:1.25rem;color:var(--brume)}
 .cumul b{color:var(--craie);font-weight:600}
 .cumul-tete{display:flex;justify-content:space-between;align-items:baseline}
 .cumul-tete a{font-family:var(--mono);font-size:.95rem;color:var(--givre);text-decoration:none}
@@ -77,7 +78,13 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .resume3 span{display:block;font-family:var(--mono);font-size:.85rem;letter-spacing:.1em;text-transform:uppercase}
 .resume3 b{display:block;font-size:1.7rem;font-variant-numeric:tabular-nums;margin-top:.15rem;white-space:nowrap}
 .resume3 em{display:block;font-style:normal;font-family:var(--mono);font-size:.95rem;margin-top:.1rem}
+.resume3 b{color:var(--soleil);font-size:1.45rem}
+.resume3 b.conso{color:var(--craie);font-size:1.25rem;margin-top:.35rem}
+.resume3 b.conso span{display:inline;font-family:var(--display);font-size:1em;letter-spacing:0;text-transform:none}
+.resume3 b.conso em{display:inline;font-size:.65em;font-weight:400;color:var(--brume)}
 .hausse{color:var(--vente)} .baisse{color:var(--reseau)}
+/* Pour la consommation, une hausse est une mauvaise nouvelle : couleurs inversées */
+.resume3 b.conso em.c-hausse{color:var(--reseau)} .resume3 b.conso em.c-baisse{color:var(--vente)}
 .total-inst{margin-top:.5rem}
 
 .courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;margin-top:.8rem;overflow:visible}
@@ -142,7 +149,7 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 
   <div class="rangee bas">
     <div class="carte bilan">
-      <div class="etiquette">📅 Aujourd'hui</div>
+      <div class="etiquette" id="t-jour">📅 Aujourd'hui</div>
       <div class="ligne-kwh"><span>Produit</span><b id="k-prod">--</b></div>
       <div class="barre"><i id="b-auto" style="background:var(--soleil);width:0"></i><i id="b-vente" style="background:var(--vente);width:0"></i></div>
       <div class="legende"><em><i class="point" style="background:var(--soleil)"></i>consommé sur place <span id="l-auto"></span></em><em><i class="point" style="background:var(--vente)"></i>revendu <span id="l-vente"></span></em></div>
@@ -154,18 +161,17 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
         <div><div class="etiquette">Autonomie</div><b id="t-autonomie">--</b></div>
       </div>
       <div class="cumul">
-        <div class="cumul-tete"><span class="etiquette">☀️ Production à date · vs N-1</span><a href="bilans.html">📊 Bilans →</a></div>
+        <div class="cumul-tete"><span class="etiquette">À date · vs N-1</span><a href="bilans.html">📊 Bilans →</a></div>
         <div class="resume3">
-          <div><span>Semaine</span><b id="r-sem">--</b><em id="e-sem">&nbsp;</em></div>
-          <div><span>Mois</span><b id="r-mois">--</b><em id="e-mois">&nbsp;</em></div>
-          <div><span>Année</span><b id="r-an">--</b><em id="e-an">&nbsp;</em></div>
+          <div><span id="n-sem">Semaine</span><b id="r-sem">--</b><em id="e-sem">&nbsp;</em><b class="conso"><span id="rc-sem">--</span> <em id="ec-sem"></em></b></div>
+          <div><span id="n-mois">Mois</span><b id="r-mois">--</b><em id="e-mois">&nbsp;</em><b class="conso"><span id="rc-mois">--</span> <em id="ec-mois"></em></b></div>
+          <div><span id="n-an">Année</span><b id="r-an">--</b><em id="e-an">&nbsp;</em><b class="conso"><span id="rc-an">--</span> <em id="ec-an"></em></b></div>
         </div>
-        <div class="total-inst">Depuis l'installation : <b id="c-total">--</b></div>
       </div>
     </div>
     <div class="carte courbe">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <div class="etiquette">📈 La journée en puissance</div>
+        <div class="etiquette" id="t-courbe">📈 La journée en puissance</div>
         <div class="leg"><span><i class="point" style="background:var(--soleil)"></i>production</span><span><i class="point" style="background:var(--maison)"></i>consommation</span></div>
       </div>
       <div class="axe" style="margin-top:.6rem"><span id="echelle"></span><span id="attente"></span></div>
@@ -207,8 +213,15 @@ function afficher(s){
     etat.textContent = s && s.erreur ? "Données eStar indisponibles : " + s.erreur : "Données eStar indisponibles.";
     return;
   }
+  dernierS = s;
   var crete = parseFloat(s.puissance_kw) || 0;
-  el("sous").textContent = "Panneaux solaires " + String(s.puissance_kw).replace(".", ",") + " kWc · mesure de " + (s.mesure || "").slice(11, 16);
+  /* L'onduleur (et son boîtier eStar) s'éteint la nuit : la dernière mesure peut dater de la veille au soir.
+     Ses compteurs « du jour » sont alors ceux d'hier, à ne pas présenter comme ceux d'aujourd'hui. */
+  var jourMesure = (s.mesure || "").slice(0, 10), duJour = jourMesure === cleJ(new Date());
+  el("sous").textContent = "Panneaux solaires " + String(s.puissance_kw).replace(".", ",") + " kWc · " +
+    (duJour ? "mesure de " + (s.mesure || "").slice(11, 16)
+            : "dernière mesure " + (jourMesure === cleJ(veille()) ? "hier" : "le " + jourMesure.slice(8, 10) + "/" + jourMesure.slice(5, 7)) +
+              " à " + (s.mesure || "").slice(11, 16) + " · l'onduleur dort la nuit");
 
   /* En direct */
   el("v-prod").innerHTML = puissance(s.production_w);
@@ -226,8 +239,18 @@ function afficher(s){
   else if (typeof r === "number" && r > 5) { carte.className = "carte c-reseau vente"; el("d-reseau").innerHTML = "<b>Revente</b> au réseau"; }
   else { carte.className = "carte c-reseau"; el("d-reseau").innerHTML = "Équilibre"; }
 
-  /* Aujourd'hui */
+  /* Aujourd'hui, ou hier tant que l'onduleur n'a rien envoyé ce matin
+     (dans ce cas, le bilan complet d'hier de solaire-jours.csv, qui compte aussi la soirée et la nuit) */
   var j = s.jour || {};
+  if (duJour) {
+    el("t-jour").textContent = "📅 Aujourd'hui";
+    aujourdhui = j;
+  } else {
+    var h = joursBruts && joursBruts[cleJ(veille())];
+    if (h) j = h;
+    el("t-jour").textContent = "📅 Hier (en attente de l'onduleur)";
+    aujourdhui = null;
+  }
   el("k-prod").innerHTML = kwh(j.production_wh);
   el("k-conso").innerHTML = kwh(j.consommation_wh);
   var pAuto = pourcent(j.autoconsommee_wh, j.production_wh), pVente = pourcent(j.vendue_wh, j.production_wh);
@@ -239,42 +262,53 @@ function afficher(s){
   el("t-auto").textContent = Math.round(pAuto) + " %";
   el("t-autonomie").textContent = Math.round(pSol) + " %";
 
-  aujourdhuiProd = j.production_wh;
   resume();
-  el("c-total").innerHTML = kwh(s.total_production_wh).replace(/<\/?small>/g, " ");
 
   etat.className = "etat";
-  etat.textContent = "eStar Power · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  etat.textContent = "eStar Power · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
+    (typeof s.total_production_wh === "number" ? " · ☀️ produit depuis l'installation : " + kwh(s.total_production_wh).replace(/<\/?small>/g, " ") : "");
 }
 
-/* ===== Production à date (semaine, mois, année) comparée aux mêmes jours de l'an dernier =====
+/* ===== Production et consommation à date (semaine, mois, année) comparées aux mêmes jours de l'an dernier =====
    Historique : historique/solaire-jours.csv. Les jours de panne du suivi eStar (aucune production et moins
    de 0,5 kWh consommé) sont estimés par la moyenne des 7 jours valides avant et après, comme dans la page Bilans. */
-var prodJours = null, aujourdhuiProd = null;
+var jours = null, joursBruts = null, aujourdhui = null, dernierS = null;
 function cleJ(d){ return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+function veille(){ var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1); }
 function chargerJours(){
   fetch("historique/solaire-jours.csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){ if (!r.ok) throw new Error(); return r.text(); }).then(function(txt){
-    var l = txt.trim().split("\n"), t = l[0].split(","), iP = t.indexOf("production_wh"), iC = t.indexOf("consommation_wh"), rangs = [];
-    for (var k = 1; k < l.length; k++) { var c = l[k].split(","); rangs.push({ d: c[0], p: parseFloat(c[iP]) || 0, c: parseFloat(c[iC]) || 0 }); }
+    var l = txt.trim().split("\n"), t = l[0].split(","), rangs = [], bruts = {};
+    function col(c, nom){ var i = t.indexOf(nom), v = i < 0 ? NaN : parseFloat(c[i]); return isNaN(v) ? null : v; }
+    for (var k = 1; k < l.length; k++) {
+      var c = l[k].split(",");
+      bruts[c[0]] = { production_wh: col(c, "production_wh"), consommation_wh: col(c, "consommation_wh"), autoconsommee_wh: col(c, "autoconsommee_wh"),
+                      achetee_wh: col(c, "achetee_wh"), vendue_wh: col(c, "vendue_wh") };
+      rangs.push({ d: c[0], p: bruts[c[0]].production_wh || 0, c: bruts[c[0]].consommation_wh || 0 });
+    }
     function valide(x){ return x.p > 0 || x.c >= 500; }
     var m = {};
     for (var i = 0; i < rangs.length; i++) {
-      if (valide(rangs[i])) { m[rangs[i].d] = rangs[i].p; continue; }
+      if (valide(rangs[i])) { m[rangs[i].d] = { p: rangs[i].p, c: rangs[i].c }; continue; }
       var fin = i; while (fin + 1 < rangs.length && !valide(rangs[fin + 1])) fin++;
       var v = [], a, b, n = 0;
-      for (a = i - 1; a >= 0 && v.length < 7; a--) if (valide(rangs[a])) v.push(rangs[a].p);
-      for (b = fin + 1; b < rangs.length && n < 7; b++) if (valide(rangs[b])) { v.push(rangs[b].p); n++; }
-      var moy = v.length ? v.reduce(function(x, y){ return x + y; }, 0) / v.length : 0;
-      for (var k2 = i; k2 <= fin; k2++) m[rangs[k2].d] = moy;
+      for (a = i - 1; a >= 0 && v.length < 7; a--) if (valide(rangs[a])) v.push(rangs[a]);
+      for (b = fin + 1; b < rangs.length && n < 7; b++) if (valide(rangs[b])) { v.push(rangs[b]); n++; }
+      var mp = 0, mc = 0;
+      v.forEach(function(x){ mp += x.p / v.length; mc += x.c / v.length; });
+      for (var k2 = i; k2 <= fin; k2++) m[rangs[k2].d] = { p: mp, c: mc };
       i = fin;
     }
-    prodJours = m; resume();
+    jours = m; joursBruts = bruts;
+    if (dernierS) afficher(dernierS); else resume();
   }).catch(function(){});
 }
-function somme(debut, finIncluse){
-  var s = 0, n = 0;
+/* Somme d'un champ (p : production, c : consommation) du début à la fin incluse ; aujourd'hui vient du direct */
+function somme(debut, finIncluse, champ){
+  var s = 0, n = 0, auj = cleJ(new Date());
   for (var d = new Date(debut.getTime()); d <= finIncluse; d.setDate(d.getDate() + 1)) {
-    var k = cleJ(d), v = k === cleJ(new Date()) && typeof aujourdhuiProd === "number" ? aujourdhuiProd : prodJours[k];
+    var k = cleJ(d), v;
+    if (k === auj) v = aujourdhui ? aujourdhui[champ === "p" ? "production_wh" : "consommation_wh"] : null;
+    else v = jours[k] ? jours[k][champ] : null;
     if (typeof v === "number") { s += v; n++; }
   }
   return n ? s : null;
@@ -285,40 +319,62 @@ function ecart(n, n1){
   var txt = (v > 0 ? "+" : v < 0 ? "-" : "") + (a < 10 ? Math.abs(v).toFixed(1) : String(Math.abs(v))).replace(".", ",") + " %";
   return { t: txt + " vs N-1", c: a < 1 ? "" : p > 0 ? "hausse" : "baisse" };
 }
+var MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 function resume(){
-  if (!prodJours) return;
-  var auj = new Date(), a = new Date(auj.getFullYear(), auj.getMonth(), auj.getDate());
+  if (!jours) return;
+  /* Sans mesure de ce matin, les cumuls s'arrêtent à hier (les mêmes jours sont pris l'an dernier) */
+  var auj = new Date(), a = new Date(auj.getFullYear(), auj.getMonth(), auj.getDate() - (aujourdhui ? 0 : 1));
   var lun = new Date(a.getTime()); lun.setDate(lun.getDate() - ((a.getDay() + 6) % 7));
   function an1(d){ var x = new Date(d.getTime()); x.setFullYear(x.getFullYear() - 1); return x; }
   function sem1(d){ var x = new Date(d.getTime()); x.setDate(x.getDate() - 364); return x; }   // même jour de semaine, 52 semaines avant
+  var COURT = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  function jm(d){ return d.getDate() + (d.getDate() === 1 ? "er" : "") + " " + COURT[d.getMonth()]; }
+  var debMois = new Date(a.getFullYear(), a.getMonth(), 1), debAn = new Date(a.getFullYear(), 0, 1);
+  el("n-sem").textContent = "Sem. " + (lun.getMonth() === a.getMonth() ? lun.getDate() + (lun.getDate() === 1 ? "er" : "") : jm(lun)) + "–" + jm(a);
+  el("n-mois").textContent = MOIS[a.getMonth()].charAt(0).toUpperCase() + MOIS[a.getMonth()].slice(1) + " " + a.getFullYear();
+  el("n-an").textContent = "Année " + a.getFullYear();
   var periodes = [
     ["sem", lun, a, sem1(lun), sem1(a)],
-    ["mois", new Date(a.getFullYear(), a.getMonth(), 1), a, an1(new Date(a.getFullYear(), a.getMonth(), 1)), an1(a)],
-    ["an", new Date(a.getFullYear(), 0, 1), a, new Date(a.getFullYear() - 1, 0, 1), an1(a)]
+    ["mois", debMois, a, an1(debMois), an1(a)],
+    ["an", debAn, a, new Date(a.getFullYear() - 1, 0, 1), an1(a)]
   ];
   periodes.forEach(function(p){
-    var n = somme(p[1], p[2]), n1 = somme(p[3], p[4]), e = ecart(n, n1);
-    el("r-" + p[0]).innerHTML = kwh(n).replace(/<\/?small>/g, " ");
+    var n = somme(p[1], p[2], "p"), n1 = somme(p[3], p[4], "p"), e = ecart(n, n1);
+    el("r-" + p[0]).innerHTML = "☀️ " + kwh(n).replace(/<\/?small>/g, " ");
     var em = el("e-" + p[0]); em.textContent = e.t; em.className = e.c;
+    var c = somme(p[1], p[2], "c"), c1 = somme(p[3], p[4], "c"), ec = ecart(c, c1);
+    el("rc-" + p[0]).textContent = "🏠 " + kwh(c).replace(/<\/?small>/g, " ");
+    var emc = el("ec-" + p[0]); emc.textContent = ec.t.replace(" vs N-1", ""); emc.className = ec.c ? "c-" + ec.c : "";
   });
 }
 
-/* Courbe de la journée, à partir de l'historique enregistré par la tâche toutes les 10 min */
-function courbe(){
-  var d = new Date(), mois = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2);
-  var minuit = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
-  fetch("historique/solaire-" + mois + ".csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){
-    if (!r.ok) throw new Error("pas encore d'historique");
+/* Courbe de la journée, à partir de l'historique enregistré par la tâche toutes les 10 min.
+   Tant que l'onduleur n'a rien envoyé aujourd'hui, on montre celle d'hier. */
+function lirePoints(jour){
+  var mois = jour.getFullYear() + "-" + ("0" + (jour.getMonth() + 1)).slice(-2);
+  var minuit = jour.getTime() / 1000, fin = new Date(jour.getFullYear(), jour.getMonth(), jour.getDate() + 1).getTime() / 1000;
+  return fetch("historique/solaire-" + mois + ".csv?t=" + Date.now(), { cache: "no-store" }).then(function(r){
+    if (!r.ok) return "";
     return r.text();
   }).then(function(txt){
     var pts = [];
     txt.trim().split("\n").slice(1).forEach(function(l){
       var c = l.split(","), ts = +c[0];
-      if (ts >= minuit && ts < minuit + 86400) pts.push({ x: (ts - minuit) / 86400 * 1000, p: parseFloat(c[1]) || 0, c: parseFloat(c[2]) || 0 });
+      if (ts >= minuit && ts < fin) pts.push({ x: (ts - minuit) / (fin - minuit) * 1000, p: parseFloat(c[1]) || 0, c: parseFloat(c[2]) || 0 });
     });
-    var svg = el("graphe");
+    return pts;
+  });
+}
+function courbe(){
+  var d = new Date(), auj = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  lirePoints(auj).then(function(pts){
+    if (pts.length >= 2) return { pts: pts, hier: false };
+    return lirePoints(veille()).then(function(p2){ return { pts: p2, hier: true }; });
+  }).then(function(r){
+    var pts = r.pts, svg = el("graphe");
+    el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : "📈 La journée en puissance";
     if (pts.length < 2) { svg.innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
-    el("attente").textContent = "";
+    el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : "";
     var max = 500;
     pts.forEach(function(q){ max = Math.max(max, q.p, q.c); });
     max = Math.ceil(max / 500) * 500;
