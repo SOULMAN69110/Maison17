@@ -90,7 +90,8 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .courbe svg{display:block;width:100%;flex:1 1 auto;min-height:8rem;margin-top:.8rem;overflow:visible}
 .courbe .axe{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.4rem}
 .courbe .leg{font-family:var(--mono);font-size:.95rem;color:var(--brume)}
-.courbe .leg span{margin-left:1.4rem}
+.courbe-tete{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap}
+.courbe .leg span{margin-left:1.4rem;white-space:nowrap}
 .vide{font-family:var(--mono);font-size:1.1rem;color:var(--brume);margin:auto}
 
 .etat{font-family:var(--mono);font-size:.9rem;color:var(--brume);margin-top:.8rem}
@@ -108,6 +109,9 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
   .rangee > *{margin:0 0 12px}
   .fleche{display:none}
   .courbe svg{height:40vw}
+  .courbe-tete{display:block}
+  .courbe .leg{margin-top:6px}
+  .courbe .leg span{margin-left:0;margin-right:1.4rem}
 }
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
@@ -170,7 +174,7 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
       </div>
     </div>
     <div class="carte courbe">
-      <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div class="courbe-tete">
         <div class="etiquette" id="t-courbe">📈 La journée en puissance</div>
         <div class="leg"><span><i class="point" style="background:var(--soleil)"></i>production</span><span><i class="point" style="background:var(--maison)"></i>consommation</span></div>
       </div>
