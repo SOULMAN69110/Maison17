@@ -25,7 +25,7 @@ html{font-size:1vw}
 html,body{height:100%;margin:0}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
 .ecran{height:100%;display:flex;flex-direction:column;padding:2.4rem 3.2rem;transition:transform 2s ease}
-.haut{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.4rem}
+.haut{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1rem}
 h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1}
 .sous{font-family:var(--mono);font-size:1rem;color:var(--brume);margin-top:.6rem;letter-spacing:.06em}
 .heure{font-size:3.4rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
@@ -48,6 +48,12 @@ h1{margin:0;font-size:3.2rem;font-weight:700;letter-spacing:-.02em;line-height:1
 .jauge i{display:block;height:100%;border-radius:99px}
 .c-soleil .val{color:var(--soleil)} .c-soleil .jauge i{background:var(--soleil)}
 .c-reseau.achat .val{color:var(--reseau)} .c-reseau.vente .val{color:var(--vente)}
+.c-reseau .jauge i{width:0} .c-reseau.achat .jauge i{background:var(--reseau)} .c-reseau.vente .jauge i{background:var(--vente)}
+/* Barre de période commune (cartes du haut et graphique) */
+.barre-periode{flex:0 0 auto;margin:0 0 .8rem}
+.barre-periode .periodes button,.barre-periode .choix-dates button{margin-bottom:0}
+.barre-periode .choix-dates{margin-top:0}
+body.plein .barre-periode{margin:.5rem 0 0}
 .fleche{flex:0 0 auto;align-self:center;font-size:2.6rem;color:var(--brume)}
 
 /* Bas : bilan du jour à gauche, courbe à droite */
@@ -171,6 +177,13 @@ body.plein .filtres button{font-size:1.15rem}
   body.plein .grad{width:48px}
   body.plein #axe-x{margin-left:54px}
 }
+/* Télé : cartes du haut plus compactes pour laisser la place à la barre de période */
+@media (min-width:801px){
+  .flux .carte{padding:1rem 1.6rem}
+  .flux .val{font-size:3.9rem;margin-top:.4rem}
+  .flux .detail{margin-top:.4rem}
+  .jauge{margin-top:.6rem}
+}
 @media (prefers-reduced-motion:reduce){.ecran{transition:none}}
 </style>
 <script src="verrou.js"></script>
@@ -189,7 +202,27 @@ body.plein .filtres button{font-size:1.15rem}
     </div>
   </div>
 
-  <div class="rangee flux">
+  <div class="filtres barre-periode" id="barre-periode">
+    <div class="periodes" role="group" aria-label="Période">
+      <button type="button" data-mode="jour">Jour</button><button type="button" data-mode="semaine">Semaine</button><button type="button" data-mode="mois">Mois</button><button type="button" data-mode="annee">Année</button>
+    </div>
+    <div class="choix-dates">
+      <button type="button" id="c-prec" aria-label="Période précédente">◀</button>
+      <span class="c-lib" id="c-lib">Aujourd'hui</span>
+      <button type="button" id="c-suiv" aria-label="Période suivante">▶</button>
+      <button type="button" id="c-auj" class="c-texte">Aujourd'hui</button>
+      <button type="button" id="c-ouvrir" class="c-texte" aria-controls="c-form" aria-expanded="false">📅 Dates</button>
+      <button type="button" id="c-plein" class="c-texte" aria-pressed="false">⛶ Plein écran</button>
+      <form id="c-form" class="c-form" autocomplete="off">
+        <label for="c-du">du</label><input type="date" id="c-du" min="2024-10-30">
+        <label for="c-au">au</label><input type="date" id="c-au" min="2024-10-30">
+        <button type="submit">Afficher</button>
+        <span class="c-err" id="c-err" role="alert"></span>
+      </form>
+    </div>
+  </div>
+
+  <div class="rangee flux" id="flux">
     <div class="carte c-soleil">
       <div class="etiquette">☀️ Production</div>
       <div class="val" id="v-prod">--<small>W</small></div>
@@ -197,15 +230,15 @@ body.plein .filtres button{font-size:1.15rem}
     </div>
     <div class="fleche" aria-hidden="true">→</div>
     <div class="carte">
-      <div class="etiquette">🏠 Consommation</div>
+      <div class="etiquette">🏠 Conso</div>
       <div class="val" id="v-conso">--<small>W</small></div>
       <div class="detail" id="d-conso">&nbsp;</div>
     </div>
     <div class="fleche" aria-hidden="true">↔</div>
     <div class="carte c-reseau" id="c-reseau">
-      <div class="etiquette">⚡ Réseau</div>
+      <div class="etiquette" id="t-reseau">⚡ Réseau</div>
       <div class="val" id="v-reseau">--<small>W</small></div>
-      <div class="detail" id="d-reseau">&nbsp;</div>
+      <div><div class="detail" id="d-reseau">&nbsp;</div><div class="jauge"><i id="j-reseau"></i></div></div>
     </div>
   </div>
 
@@ -231,33 +264,16 @@ body.plein .filtres button{font-size:1.15rem}
         </div>
       </div>
     </div>
-    <div class="carte courbe">
+    <div class="carte courbe" id="carte-courbe">
       <div class="courbe-tete">
         <div class="etiquette" id="t-courbe">📈 La journée en puissance</div>
       </div>
       <div class="filtres">
-        <div class="periodes" role="group" aria-label="Période">
-          <button type="button" data-mode="jour">Jour</button><button type="button" data-mode="semaine">Semaine</button><button type="button" data-mode="mois">Mois</button><button type="button" data-mode="annee">Année</button>
-        </div>
         <div class="series" role="group" aria-label="Courbes affichées">
           <button type="button" data-serie="p"><i class="point" style="background:var(--soleil)"></i>Production</button><button type="button" data-serie="c"><i class="point" style="background:var(--maison)"></i>Consommation</button><button type="button" data-serie="a"><i class="point" style="background:var(--reseau)"></i>Achat</button><button type="button" data-serie="v"><i class="point" style="background:var(--vente)"></i>Vente</button>
         </div>
       </div>
-      <div class="choix-dates">
-        <button type="button" id="c-prec" aria-label="Période précédente">◀</button>
-        <span class="c-lib" id="c-lib">Aujourd'hui</span>
-        <button type="button" id="c-suiv" aria-label="Période suivante">▶</button>
-        <button type="button" id="c-auj" class="c-texte">Aujourd'hui</button>
-        <button type="button" id="c-ouvrir" class="c-texte" aria-controls="c-form" aria-expanded="false">📅 Dates</button>
-        <button type="button" id="c-plein" class="c-texte" aria-pressed="false">⛶ Plein écran</button>
-        <form id="c-form" class="c-form" autocomplete="off">
-          <label for="c-du">du</label><input type="date" id="c-du" min="2024-10-30">
-          <label for="c-au">au</label><input type="date" id="c-au" min="2024-10-30">
-          <button type="submit">Afficher</button>
-          <span class="c-err" id="c-err" role="alert"></span>
-        </form>
-      </div>
-      <div class="axe" style="margin-top:.6rem"><span id="echelle"></span><span id="attente"></span></div>
+      <div class="axe" id="axe-haut" style="margin-top:.6rem"><span id="echelle"></span><span id="attente"></span></div>
       <div class="toile-g"><div class="grad" id="grad" aria-hidden="true"></div><svg id="graphe" viewBox="0 0 1000 300" preserveAspectRatio="none" role="img" aria-label="Production et consommation"></svg></div>
       <div class="axe" id="axe-x"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>24 h</span></div>
       <div class="totaux" id="totaux"></div>
@@ -307,22 +323,6 @@ function afficher(s){
             : "dernière mesure " + (jourMesure === cleJ(veille()) ? "hier" : "le " + jourMesure.slice(8, 10) + "/" + jourMesure.slice(5, 7)) +
               " à " + (s.mesure || "").slice(11, 16) + " · l'onduleur dort la nuit");
 
-  /* En direct */
-  el("v-prod").innerHTML = puissance(s.production_w);
-  var pc = pourcent(s.production_w, crete * 1000);
-  el("d-prod").innerHTML = "<b>" + Math.round(pc) + " %</b> de la puissance des panneaux";
-  el("j-prod").style.width = pc.toFixed(1) + "%";
-
-  el("v-conso").innerHTML = puissance(s.consommation_w);
-  var solPart = pourcent(Math.min(s.production_w || 0, s.consommation_w || 0), s.consommation_w);
-  el("d-conso").innerHTML = "<b>" + Math.round(solPart) + " %</b> couverte par le soleil";
-
-  var r = s.reseau_w, carte = el("c-reseau");
-  el("v-reseau").innerHTML = puissance(r);
-  if (typeof r === "number" && r < -5) { carte.className = "carte c-reseau achat"; el("d-reseau").innerHTML = "<b>Achat</b> au réseau"; }
-  else if (typeof r === "number" && r > 5) { carte.className = "carte c-reseau vente"; el("d-reseau").innerHTML = "<b>Revente</b> au réseau"; }
-  else { carte.className = "carte c-reseau"; el("d-reseau").innerHTML = "Équilibre"; }
-
   /* Aujourd'hui, ou hier tant que l'onduleur n'a rien envoyé ce matin
      (dans ce cas, le bilan complet d'hier de solaire-jours.csv, qui compte aussi la soirée et la nuit) */
   var j = s.jour || {};
@@ -347,10 +347,58 @@ function afficher(s){
   el("t-autonomie").textContent = Math.round(pSol) + " %";
 
   resume();
+  cartes();
 
   etat.className = "etat";
   etat.textContent = "eStar Power · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
     (typeof s.total_production_wh === "number" ? " · ☀️ produit depuis l'installation : " + kwh(s.total_production_wh).replace(/<\/?small>/g, " ") : "");
+}
+
+/* ===== Cartes du haut : en direct (W) pour aujourd'hui, sinon l'énergie (kWh) de la période choisie ===== */
+function cartes(){
+  if (!choix) { if (dernierS && dernierS.disponible) cartesDirect(dernierS); return; }
+  var t = totauxBruts(choix), carte = el("c-reseau");
+  el("t-reseau").textContent = "⚡ Revente";
+  carte.className = "carte c-reseau vente";
+  if (!t.n) {
+    ["v-prod", "v-conso", "v-reseau"].forEach(function(id){ el(id).innerHTML = '--<small>kWh</small>'; });
+    ["d-prod", "d-conso", "d-reseau"].forEach(function(id){ el(id).innerHTML = joursBruts ? "pas de données sur la période" : "chargement…"; });
+    el("j-prod").style.width = el("j-reseau").style.width = "0";
+    return;
+  }
+  var pAuto = pourcent(t.s, t.p), pVente = pourcent(t.v, t.p);
+  el("v-prod").innerHTML = kwh(t.p);
+  el("d-prod").innerHTML = "<b>" + Math.round(pAuto) + " %</b> consommée sur place";
+  el("j-prod").style.width = pAuto.toFixed(1) + "%";
+  el("v-conso").innerHTML = kwh(t.c);
+  el("d-conso").innerHTML = "<b>" + Math.round(pourcent(t.s, t.c)) + " %</b> couverte par le soleil";
+  el("v-reseau").innerHTML = kwh(t.v);
+  el("d-reseau").innerHTML = "<b>" + Math.round(pVente) + " %</b> de la production revendue";
+  el("j-reseau").style.width = pVente.toFixed(1) + "%";
+}
+function cartesDirect(s){
+  var crete = parseFloat(s.puissance_kw) || 0;
+  el("v-prod").innerHTML = puissance(s.production_w);
+  var pc = pourcent(s.production_w, crete * 1000);
+  el("d-prod").innerHTML = "<b>" + Math.round(pc) + " %</b> de la puissance des panneaux";
+  el("j-prod").style.width = pc.toFixed(1) + "%";
+
+  el("v-conso").innerHTML = puissance(s.consommation_w);
+  var solPart = pourcent(Math.min(s.production_w || 0, s.consommation_w || 0), s.consommation_w);
+  el("d-conso").innerHTML = "<b>" + Math.round(solPart) + " %</b> couverte par le soleil";
+
+  /* Barre du réseau : part de la production revendue, ou part de la conso achetée */
+  var r = s.reseau_w, carte = el("c-reseau"), part = 0;
+  el("t-reseau").textContent = "⚡ Réseau";
+  el("v-reseau").innerHTML = puissance(r);
+  if (typeof r === "number" && r < -5) {
+    part = pourcent(-r, s.consommation_w);
+    carte.className = "carte c-reseau achat"; el("d-reseau").innerHTML = "<b>Achat</b> · " + Math.round(part) + " % de la conso";
+  } else if (typeof r === "number" && r > 5) {
+    part = pourcent(r, s.production_w);
+    carte.className = "carte c-reseau vente"; el("d-reseau").innerHTML = "<b>Revente</b> · " + Math.round(part) + " % de la production";
+  } else { carte.className = "carte c-reseau"; el("d-reseau").innerHTML = "Équilibre"; }
+  el("j-reseau").style.width = part.toFixed(1) + "%";
 }
 
 /* ===== Production et consommation à date (semaine, mois, année) comparées aux mêmes jours de l'an dernier =====
@@ -383,7 +431,7 @@ function chargerJours(){
       i = fin;
     }
     jours = m; joursBruts = bruts;
-    if (dernierS) afficher(dernierS); else resume();
+    if (dernierS) afficher(dernierS); else { resume(); cartes(); }
     if (choix) courbe();
   }).catch(function(){});
 }
@@ -572,6 +620,7 @@ function choisir(c){
   el("c-du").max = el("c-au").max = cleJ(auj);
   clearTimeout(minuterieRetour);
   if (c) minuterieRetour = setTimeout(function(){ choisir(null); }, 15 * 60 * 1000);   // la télé revient seule à aujourd'hui
+  cartes();
   courbe();
 }
 function decaler(sens){
@@ -617,6 +666,8 @@ majSeries();
 /* Plein écran : superposition CSS, et vrai plein écran du navigateur quand il le permet (télé, ordinateur) */
 function pleinEcran(oui){
   document.body.className = oui ? "plein" : "";
+  if (oui) el("carte-courbe").insertBefore(el("barre-periode"), el("axe-haut"));
+  else el("ecran").insertBefore(el("barre-periode"), el("flux"));
   var b = el("c-plein"); b.textContent = oui ? "✕ Fermer" : "⛶ Plein écran"; b.setAttribute("aria-pressed", oui ? "true" : "false");
   var d = document, de = d.documentElement;
   try {
@@ -673,14 +724,19 @@ function lireCourbes(debutTs, finTs){
   });
 }
 /* Totaux de la période (solaire-jours.csv, et le direct pour aujourd'hui) */
-function totauxPeriode(c){
-  var t = { p: 0, c: 0, a: 0, v: 0 }, n = 0, auj = cleJ(new Date());
+function totauxBruts(c){
+  var t = { p: 0, c: 0, a: 0, v: 0, s: 0, n: 0 }, auj = cleJ(new Date());
   for (var d = new Date(c.du.getTime()); d <= c.au; d = plus(d, 1)) {
     var k = cleJ(d), j = k === auj ? aujourdhui : (joursBruts && joursBruts[k]);
     if (!j) continue;
-    n++; t.p += j.production_wh || 0; t.c += j.consommation_wh || 0; t.a += j.achetee_wh || 0; t.v += j.vendue_wh || 0;
+    t.n++; t.p += j.production_wh || 0; t.c += j.consommation_wh || 0; t.a += j.achetee_wh || 0; t.v += j.vendue_wh || 0;
+    t.s += typeof j.autoconsommee_wh === "number" ? j.autoconsommee_wh : Math.max(0, (j.production_wh || 0) - (j.vendue_wh || 0));   // consommé sur place
   }
-  if (!n) return "";
+  return t;
+}
+function totauxPeriode(c){
+  var t = totauxBruts(c);
+  if (!t.n) return "";
   function f(wh){ return kwh(wh).replace(/<\/?small>/g, " ").trim(); }
   var morceaux = [];
   if (series.p) morceaux.push("☀️ <b>" + f(t.p) + "</b> produits");
