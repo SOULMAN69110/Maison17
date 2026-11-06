@@ -189,6 +189,20 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .piece.vieux{opacity:.7}
 /* Téléphone : bordure d'épaisseur fixe, sinon trop fine */
 @media (max-width:800px) and (orientation:portrait),(max-height:500px) and (orientation:landscape){.piece{border-left-width:4px}}
+/* Téléphone à l'horizontale (écran bas) : tout doit tenir sur la hauteur de l'écran.
+   Le bouton « Ouvrir le volet » est retiré (toucher le volet suffit) et la colonne de gauche est un peu resserrée. */
+@media (max-height:500px) and (orientation:landscape){
+  .ecran{grid-template-rows:minmax(0,1fr)}
+  .gauche{overflow:hidden;gap:calc(var(--u)*0.5)}
+  .bascule-bloc{display:none}
+  .raccourcis{margin-top:calc(var(--u)*0.6)}
+  .raccourcis a{padding-top:calc(var(--u)*0.3);padding-bottom:calc(var(--u)*0.3)}
+  .dehors{gap:calc(var(--u)*0.5)}
+  .tendance{margin-top:calc(var(--u)*0.5)}
+  .tendance svg{height:calc(var(--u)*2.2)}
+  .tendance .axe{margin-top:calc(var(--u)*0.4)}
+  .jour{line-height:1.12}
+}
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 /* ===== Télés anciennes (Samsung 2018…) : navigateur sans grille CSS ni « gap » en flexbox.
    Même mise en page refaite en flexbox, avec des marges à la place des « gap ». Ignoré par les navigateurs récents. ===== */
