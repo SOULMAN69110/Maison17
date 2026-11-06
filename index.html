@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Maison en direct</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,8 +28,13 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
+/* iPhone à l'horizontale : pas d'agrandissement automatique du texte par Safari */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--nuit);color:var(--craie);font-family:var(--display);overflow:hidden}
 .ecran{height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.1fr);gap:calc(var(--u)*2.2);padding:calc(var(--u)*2.6) calc(var(--u)*3.4);transition:transform 2s ease}
+/* iPhone à l'horizontale : la page occupe tout l'écran (viewport-fit=cover), on garde le contenu à l'écart de l'encoche et de la barre du bas.
+   Ignoré par les télés dont le navigateur ne connaît pas max() : la marge ci-dessus reste. */
+@supports (padding:max(1px,2px)){.ecran{padding-left:max(calc(var(--u)*3.4),env(safe-area-inset-left,0px));padding-right:max(calc(var(--u)*3.4),env(safe-area-inset-right,0px));padding-bottom:max(calc(var(--u)*2.6),env(safe-area-inset-bottom,0px))}}
 .gauche{display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*0.7);min-width:0}
 .heure{font-size:calc(var(--u)*4.7);font-weight:600;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 /* Raccourcis vers les autres pages, à droite de l'heure (liste RACCOURCIS en tête du script) */
@@ -163,7 +168,8 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .ciel-tuile b{display:block;font-size:calc(var(--u)*2.4);font-weight:400}
 .ciel-tuile span{display:block;margin-top:calc(var(--u)*0.3);font-family:var(--mono);font-size:calc(var(--u)*0.8);color:var(--brume)}
 .pile{font-family:var(--mono);font-size:calc(var(--u)*0.85);color:var(--alerte)}
-@media (max-width:800px){
+/* Mise en page « téléphone » en portrait seulement : à l'horizontale, l'iPhone garde la mise en page de la télé, qui tient sur un écran */
+@media (max-width:800px) and (orientation:portrait){
   body{overflow:auto}
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
   .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
@@ -182,7 +188,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .piece.e-alerte{--c:var(--alerte);--fond:#43231a}
 .piece.vieux{opacity:.7}
 /* Téléphone : bordure d'épaisseur fixe, sinon trop fine */
-@media (max-width:800px),(max-height:500px) and (orientation:landscape){.piece{border-left-width:4px}}
+@media (max-width:800px) and (orientation:portrait),(max-height:500px) and (orientation:landscape){.piece{border-left-width:4px}}
 @media (prefers-reduced-motion:reduce){.ecran,.volet{transition:none!important}}
 /* ===== Télés anciennes (Samsung 2018…) : navigateur sans grille CSS ni « gap » en flexbox.
    Même mise en page refaite en flexbox, avec des marges à la place des « gap ». Ignoré par les navigateurs récents. ===== */
