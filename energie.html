@@ -490,10 +490,10 @@ function grilleSvg(g, unite){
 }
 function echelle(){ return ""; }
 /* Courbe de puissance ; un trou de plus d'une heure entre deux points coupe le trait */
-function dessinerPuissance(pts, pasMax){
-  var svg = el("graphe"), brut = 500;
+function dessinerPuissance(pts, pasMax, seuleConso){
+  var svg = el("graphe"), brut = 500, sv = seuleConso ? { c: true } : series;
   pts.forEach(function(q){ q.a = Math.max(0, q.c - q.p); q.v = Math.max(0, q.p - q.c); });   // achat : ce que le soleil ne couvre pas ; vente : le surplus solaire
-  pts.forEach(function(q){ SERIES.forEach(function(k){ if (series[k]) brut = Math.max(brut, q[k]); }); });
+  pts.forEach(function(q){ SERIES.forEach(function(k){ if (sv[k]) brut = Math.max(brut, q[k]); }); });
   var g = graduer(brut), max = g.max;
   function Y(v){ return (300 - v / max * 290).toFixed(1); }
   var morceaux = [], cur = [];
@@ -509,10 +509,10 @@ function dessinerPuissance(pts, pasMax){
     return morceaux.map(function(m){ return m.map(function(q, k){ return (k ? "L" : "M") + q.x.toFixed(1) + " " + Y(q[champ]); }).join(" "); }).join(" ");
   }
   var html = grilleSvg(g, "W");
-  if (series.p) html += '<path d="' + aire("p") + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
-  if (series.a) html += '<path d="' + aire("a") + '" fill="#f08a6a" fill-opacity=".3" stroke="#f08a6a" stroke-width="2" vector-effect="non-scaling-stroke"/>';
-  if (series.v) html += '<path d="' + aire("v") + '" fill="#7fd1a0" fill-opacity=".3" stroke="#7fd1a0" stroke-width="2" vector-effect="non-scaling-stroke"/>';
-  if (series.c) html += '<path d="' + trait("c") + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  if (sv.p) html += '<path d="' + aire("p") + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
+  if (sv.a) html += '<path d="' + aire("a") + '" fill="#f08a6a" fill-opacity=".3" stroke="#f08a6a" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  if (sv.v) html += '<path d="' + aire("v") + '" fill="#7fd1a0" fill-opacity=".3" stroke="#7fd1a0" stroke-width="2" vector-effect="non-scaling-stroke"/>';
+  if (sv.c) html += '<path d="' + trait("c") + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   svg.innerHTML = html;
   el("echelle").textContent = "";
 }
@@ -755,17 +755,28 @@ function courbe(){
   axeX(AXE_JOUR);
   var d = new Date(), auj = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   var estar = pointsCourbeEstar();
-  (estar && !estar.hier ? Promise.resolve(estar) : lirePoints(auj).then(function(pts){
-    if (pts.length >= 2) return { pts: pts, hier: false };
-    if (estar) return estar;
-    return lirePoints(veille()).then(function(p2){ return { pts: p2, hier: true }; });
+  var debJ = auj.getTime() / 1000, finJ = plus(auj, 1).getTime() / 1000;
+  /* Ordre : courbe eStar du jour → courbe du jour enregistrée (depuis minuit) → mesures de la tâche → hier */
+  function sinonMesures(){
+    return lirePoints(auj).then(function(pts){
+      if (pts.length >= 2) return { pts: pts, hier: false };
+      if (estar) return estar;
+      return lirePoints(veille()).then(function(p2){ return { pts: p2, hier: true }; });
+    });
+  }
+  (estar && !estar.hier ? Promise.resolve(estar) : lireCourbes(debJ, finJ).then(function(pc){
+    if (pc.length < 2) return sinonMesures();
+    pc.forEach(function(q){ q.x = (q.ts - debJ) / (finJ - debJ) * 1000; });
+    return { pts: pc, hier: false };
   })).then(function(r){
     if (choix || n !== tracage) return;
     var pts = r.pts, svg = el("graphe");
-    el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : "📈 La journée en puissance";
+    /* Tant que l'onduleur n'a rien produit aujourd'hui : seulement la conso depuis minuit */
+    var nuit = !r.hier && pts.length >= 2 && !pts.some(function(q){ return q.p > 0; });
+    el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : nuit ? "🌙 Conso depuis minuit" : "📈 La journée en puissance";
     if (pts.length < 2) { svg.innerHTML = ""; el("grad").innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
-    el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : "";
-    dessinerPuissance(pts, 3600 / 86400 * 1000);
+    el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : nuit ? "La production s'ajoutera au réveil de l'onduleur" : "";
+    dessinerPuissance(pts, 3600 / 86400 * 1000, nuit);
   }).catch(function(){
     if (choix || n !== tracage) return;
     el("graphe").innerHTML = ""; el("attente").textContent = "La courbe se remplit au fil de la journée";
