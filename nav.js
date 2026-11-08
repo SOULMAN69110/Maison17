@@ -10,6 +10,7 @@
     { lien: "historique.html", emo: "📈", texte: "Courbes" },
     { lien: "energie.html",    emo: "☀️", texte: "Énergie" },
     { lien: "bilans.html",     emo: "📊", texte: "Bilans" },
+    { lien: "https://photos.google.com/albums", emo: "🖼️", texte: "Photos", externe: true },   /* nouvel onglet ; albums récents en premier */
     { lien: "chauffage.html",  emo: "🔥", texte: "Chauffage", chauffage: true }
   ];
   /* Chauffage : seulement là où le jeton de réglage a été saisi, ou dans l'appli installée (comme sur le tableau de bord) */
@@ -39,7 +40,7 @@
     var p = PAGES[i];
     if ((p.fichier || p.lien) === ici) continue;
     if (p.chauffage && !chauffageOk) continue;
-    html += '<a href="' + p.lien + '"><i>' + p.emo + '</i>' + p.texte + '</a>';
+    html += '<a href="' + p.lien + '"' + (p.externe ? ' target="_blank" rel="noopener"' : '') + '><i>' + p.emo + '</i>' + p.texte + '</a>';
   }
   var zones = document.querySelectorAll(".nav-pages");
   for (var j = 0; j < zones.length; j++) { zones[j].innerHTML = html; zones[j].setAttribute("aria-label", "Autres pages"); }

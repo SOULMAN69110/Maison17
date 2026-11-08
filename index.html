@@ -309,7 +309,10 @@ if (VUE_METEO) { document.documentElement.classList.add("vue-meteo"); document.t
 var RACCOURCIS = [
   { lien: "historique.html", texte: "📈 Courbes" },
   { lien: "energie.html",    texte: "☀️ Énergie", id: "racc-energie" },
-  { lien: "bilans.html",     texte: "📊 Bilans" }
+  { lien: "bilans.html",     texte: "📊 Bilans" },
+  /* Google Photos s'ouvre dans un nouvel onglet (sur iPhone, dans l'appli si elle est installée) ;
+     la page Albums met par défaut les albums aux photos les plus récentes en premier */
+  { lien: "https://photos.google.com/albums", texte: "🖼️ Photos", externe: true }
 ];
 /* ===== Réglages : tu peux modifier les noms et l'ordre ici ===== */
 var CAPTEURS = [
@@ -868,7 +871,7 @@ setInterval(function(){
 
 /* Raccourcis, et production solaire en direct sur celui de la page Énergie */
 document.getElementById("raccourcis").innerHTML = RACCOURCIS.map(function(r){
-  return '<a href="' + r.lien + '"' + (r.id ? ' id="' + r.id + '"' : '') + '>' + libelleRaccourci(r.texte) + '</a>';
+  return '<a href="' + r.lien + '"' + (r.id ? ' id="' + r.id + '"' : '') + (r.externe ? ' target="_blank" rel="noopener"' : '') + '>' + libelleRaccourci(r.texte) + '</a>';
 }).join("");
 /* « 📈 Courbes » → emoji au-dessus, mot en dessous */
 function libelleRaccourci(t){ var i = t.indexOf(" "); return i < 0 ? t : '<i class="emo">' + t.slice(0, i) + '</i>' + t.slice(i + 1); }
