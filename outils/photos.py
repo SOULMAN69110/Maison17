@@ -15,7 +15,7 @@ Usage : python3 outils/photos.py photos/albums.txt photos/albums.json
 import hashlib, html, json, re, sys, time, urllib.parse, urllib.request
 
 RELIRE_H = 6
-VERSION = "2"     # à changer pour forcer une relecture complète après une modification de ce programme
+VERSION = "3"     # à changer pour forcer une relecture complète après une modification de ce programme
 NAVIGATEUR = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -94,6 +94,7 @@ def lire_album(lien, infos):
     try:
         d = donnees_ds1(page)
         ajouter(d[0]); jeton = d[1] if len(d) > 1 and isinstance(d[1], str) else None
+        infos.append("%s : ds:1 = %s" % (titre, [(type(x).__name__, (len(x) if isinstance(x, (list, str)) else x)) for x in d[:8]]))
     except Exception as e:
         infos.append("%s : données ds:1 illisibles (%s), lecture simple" % (titre, e))
     if not photos:                              # secours : recherche directe dans la page
