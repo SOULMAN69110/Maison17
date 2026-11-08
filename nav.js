@@ -10,7 +10,7 @@
     { lien: "historique.html", emo: "📈", texte: "Courbes" },
     { lien: "energie.html",    emo: "☀️", texte: "Énergie" },
     { lien: "bilans.html",     emo: "📊", texte: "Bilans" },
-    { lien: "https://photos.google.com/albums", emo: "🖼️", texte: "Photos", externe: true },   /* nouvel onglet ; albums récents en premier */
+    { lien: "photos.html",     emo: "🖼️", texte: "Photos" },
     { lien: "chauffage.html",  emo: "🔥", texte: "Chauffage", chauffage: true }
   ];
   /* Chauffage : seulement là où le jeton de réglage a été saisi, ou dans l'appli installée (comme sur le tableau de bord) */

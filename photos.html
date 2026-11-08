@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Photos</title>
+<meta name="referrer" content="no-referrer">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Page Photos : albums Google Photos partagés par lien (liste photos/albums.txt, lue par la tâche GitHub).
+   Albums du plus récent au plus ancien, diaporama plein écran.
+   Écrite pour les navigateurs anciens des télés Samsung (ES5, pas de gap en flexbox, pas de inset). */
+:root{
+  --nuit:#0f1418; --ardoise:#182027; --trait:#26313a; --craie:#e8eef2; --brume:#8a99a5; --givre:#7cc4e8; --alerte:#f08a6a;
+  --display:"Bricolage Grotesque",system-ui,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{background:var(--nuit);color:var(--craie);font-family:var(--display);padding:2.4vw 3.2vw}
+.haut{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+h1{font-size:2.6vw;font-weight:600;letter-spacing:-.02em;margin-right:2vw}
+h1 i{font-style:normal}
+.sous{font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume);margin-top:.4vw}
+.haut .nav-pages{font-size:1.1vw}
+.message{margin-top:3vw;font-size:1.5vw;line-height:1.5;color:var(--brume);max-width:60em}
+.message b{color:var(--craie)}
+.message.erreur{color:var(--alerte)}
+/* Grille des albums : 4 par rangée sur la télé */
+.grille{display:flex;flex-wrap:wrap;margin:1.6vw -.8vw 0}
+.album{display:block;width:25%;padding:.8vw;color:inherit;text-decoration:none;border:0;background:none;font:inherit;text-align:left;cursor:pointer;outline:none}
+.album .cadre{display:block;position:relative;width:100%;padding-top:66%;border-radius:1vw;overflow:hidden;background:var(--ardoise);border:.2vw solid var(--trait)}
+.album img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+.album .nb{position:absolute;right:.6vw;bottom:.6vw;background:rgba(15,20,24,.78);border-radius:99px;padding:.15vw .7vw;font-family:var(--mono);font-size:.9vw}
+.album .nom{display:block;margin-top:.6vw;font-size:1.35vw;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album .date{display:block;margin-top:.2vw;font-family:var(--mono);font-size:.9vw;color:var(--brume)}
+.album:focus .cadre,.album:hover .cadre{border-color:var(--givre);box-shadow:0 0 0 .25vw var(--givre)}
+.titre-section{width:100%;padding:1.2vw .8vw 0;font-family:var(--mono);font-size:1vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+/* Diaporama plein écran */
+#diapo{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:50;background:#000;overflow:hidden}
+#diapo.ouvert{display:block}
+#diapo .vue{position:absolute;top:0;left:0;width:100%;height:100%;background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0;-webkit-transition:opacity 1.2s ease;transition:opacity 1.2s ease}
+#diapo .vue.visible{opacity:1}
+#diapo .bandeau{position:absolute;left:0;right:0;bottom:0;padding:1.4vw 2.4vw;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(transparent,rgba(0,0,0,.75));-webkit-transition:opacity .5s;transition:opacity .5s}
+#diapo.calme .bandeau{opacity:0}
+#diapo.calme{cursor:none}
+#diapo .legende{font-size:1.4vw;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:2vw}
+#diapo .legende span{display:block;font-family:var(--mono);font-size:.9vw;font-weight:400;color:#bcc6cd;margin-top:.2vw}
+#diapo .boutons{display:flex;flex-shrink:0}
+#diapo button{font:inherit;font-size:1.5vw;min-width:4.2vw;padding:.5vw .9vw;margin-left:.6vw;color:var(--craie);background:rgba(24,32,39,.85);border:.18vw solid var(--trait);border-radius:.8vw;cursor:pointer;outline:none}
+#diapo button:focus,#diapo button:hover{border-color:var(--givre);box-shadow:0 0 0 .2vw var(--givre)}
+#diapo button.actif{background:var(--givre);color:var(--nuit)}
+@media (max-width:800px){
+  body{padding:4vw}
+  h1{font-size:7vw}.sous{font-size:2.6vw}
+  .haut .nav-pages{font-size:3.4vw}
+  .message{font-size:4vw}
+  .album{width:50%;padding:1.5vw}.album .nom{font-size:3.8vw}.album .date,.album .nb{font-size:2.8vw}
+  .titre-section{font-size:2.8vw}
+  #diapo .legende{font-size:4vw}#diapo .legende span{font-size:2.8vw}
+  #diapo button{font-size:4.5vw;min-width:11vw;border-radius:2vw;margin-left:1.5vw}
+}
+</style>
+</head>
+<body>
+<script src="verrou.js"></script>
+<script src="maj.js"></script>
+<div class="haut">
+  <div>
+    <h1><i>🖼️</i> Photos</h1>
+    <div class="sous" id="sous">Albums Google Photos</div>
+  </div>
+  <nav class="nav-pages droite"></nav><script src="nav.js"></script>
+</div>
+<div id="contenu"><div class="message">Chargement des albums…</div></div>
+
+<div id="diapo" aria-label="Diaporama">
+  <div class="vue"></div><div class="vue"></div>
+  <div class="bandeau">
+    <div class="legende" id="legende"></div>
+    <div class="boutons">
+      <button id="b-prec" title="Photo précédente">◀</button>
+      <button id="b-pause" title="Pause">⏸</button>
+      <button id="b-suiv" title="Photo suivante">▶</button>
+      <button id="b-hasard" title="Ordre au hasard">🔀</button>
+      <button id="b-fermer" title="Fermer">✕</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Réglages ===== */
+var SECONDES = 8;           // durée d'une photo dans le diaporama
+var CALME_S = 4;            // les boutons du diaporama se cachent au bout de 4 s sans action
+var RECENTS = 4;            // nombre d'albums dans « Derniers albums »
+var MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+
+var ALBUMS = [], album = null, ordre = [], pos = 0, minuteur = null, calme = null, enPause = false, auHasard = false;
+var vues = document.querySelectorAll("#diapo .vue"), vueActive = 0;
+var diapo = document.getElementById("diapo");
+
+function $(id){ return document.getElementById(id); }
+function echapper(t){ return String(t).replace(/[&<>"]/g, function(c){ return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]; }); }
+function jour(ms){ var d = new Date(ms); return d.getDate() + " " + MOIS[d.getMonth()] + " " + d.getFullYear(); }
+function periode(a){
+  if (!a.debut) return "";
+  var d = new Date(a.debut), f = new Date(a.fin);
+  if (d.getFullYear() === f.getFullYear() && d.getMonth() === f.getMonth()) {
+    return d.getDate() === f.getDate() ? jour(a.fin) : d.getDate() + "–" + jour(a.fin);
+  }
+  return jour(a.debut) + " – " + jour(a.fin);
+}
+/* Taille demandée à Google : celle de l'écran (×2 sur iPhone), sans dépasser l'original */
+function taille(p, l, h){ return p.u + "=w" + Math.round(l) + "-h" + Math.round(h); }
+function tailleEcran(p){
+  var r = Math.min(window.devicePixelRatio || 1, 2);
+  return taille(p, Math.min(p.l, screen.width * r || 1920), Math.min(p.h, screen.height * r || 1080));
+}
+
+/* ===== Liste des albums ===== */
+function tuile(a, i){
+  var c = a.photos[0];
+  return '<button class="album" data-i="' + i + '">' +
+    '<span class="cadre"><img alt="" referrerpolicy="no-referrer" src="' + echapper(taille(c, 640, 480)) + '-p">' +
+    '<span class="nb">' + a.nb + ' 📷</span></span>' +
+    '<span class="nom">' + echapper(a.titre) + '</span>' +
+    '<span class="date">' + periode(a) + '</span></button>';
+}
+function afficherAlbums(){
+  if (!ALBUMS.length) {
+    $("contenu").innerHTML = '<div class="message">Aucun album pour l\'instant. Dans Google Photos, ouvre un album, ' +
+      'touche <b>Partager</b> puis <b>Créer un lien</b>, et ajoute ce lien dans le fichier <b>photos/albums.txt</b> du dépôt Maison17.</div>';
+    return;
+  }
+  var h = '<div class="grille">';
+  h += '<div class="titre-section">Derniers albums</div>';
+  for (var i = 0; i < ALBUMS.length; i++) {
+    if (i === RECENTS) h += '<div class="titre-section">Tous les autres albums</div>';
+    h += tuile(ALBUMS[i], i);
+  }
+  $("contenu").innerHTML = h + '</div>';
+  var b = document.querySelectorAll(".album");
+  for (var j = 0; j < b.length; j++) b[j].addEventListener("click", function(){ ouvrir(+this.getAttribute("data-i")); });
+  if (b[0]) b[0].focus();
+}
+function charger(){
+  var x = new XMLHttpRequest();
+  x.open("GET", "photos/albums.json?t=" + Date.now());
+  x.onload = function(){
+    var d = null;
+    try { d = JSON.parse(x.responseText); } catch (e) {}
+    if (!d || x.status !== 200) { $("contenu").innerHTML = '<div class="message">Aucun album pour l\'instant.</div>'; return; }
+    ALBUMS = (d.albums || []).filter(function(a){ return a.photos && a.photos.length; });
+    if (d.maj) $("sous").textContent = "Albums Google Photos · " + ALBUMS.length + " album" + (ALBUMS.length > 1 ? "s" : "") + " · lus le " + jour(d.maj * 1000);
+    afficherAlbums();
+  };
+  x.onerror = function(){ $("contenu").innerHTML = '<div class="message erreur">Impossible de charger la liste des albums.</div>'; };
+  x.send();
+}
+
+/* ===== Diaporama ===== */
+function melanger(n){
+  var t = [], i, j, k;
+  for (i = 0; i < n; i++) t.push(i);
+  for (i = n - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); k = t[i]; t[i] = t[j]; t[j] = k; }
+  return t;
+}
+function preparerOrdre(){
+  var n = album.photos.length, i;
+  if (auHasard) ordre = melanger(n);
+  else { ordre = []; for (i = 0; i < n; i++) ordre.push(i); }
+}
+function montrer(){
+  var p = album.photos[ordre[pos]], url = tailleEcran(p), img = new Image(), suivante = vues[1 - vueActive];
+  img.onload = img.onerror = function(){
+    suivante.style.backgroundImage = 'url("' + url + '")';
+    suivante.className = "vue visible";
+    vues[vueActive].className = "vue";
+    vueActive = 1 - vueActive;
+    /* préchargement de la suivante */
+    var s = album.photos[ordre[(pos + 1) % ordre.length]];
+    if (s) new Image().src = tailleEcran(s);
+  };
+  img.referrerPolicy = "no-referrer";
+  img.src = url;
+  $("legende").innerHTML = echapper(album.titre) + '<span>' + (pos + 1) + ' / ' + ordre.length + (p.d ? ' · ' + jour(p.d) : '') + '</span>';
+  relancer();
+}
+function relancer(){
+  clearTimeout(minuteur);
+  if (!enPause) minuteur = setTimeout(function(){ aller(1); }, SECONDES * 1000);
+}
+function aller(sens){ pos = (pos + sens + ordre.length) % ordre.length; montrer(); }
+function reveiller(){
+  diapo.className = "ouvert";
+  clearTimeout(calme);
+  calme = setTimeout(function(){ if (diapo.className === "ouvert") diapo.className = "ouvert calme"; }, CALME_S * 1000);
+}
+function ouvrir(i){
+  album = ALBUMS[i]; pos = 0; enPause = false;
+  $("b-pause").textContent = "⏸";
+  preparerOrdre();
+  vues[0].className = vues[1].className = "vue";
+  vues[0].style.backgroundImage = vues[1].style.backgroundImage = "none";
+  reveiller();
+  $("b-pause").focus();
+  montrer();
+  /* vrai plein écran quand le navigateur le permet (la superposition suffit sinon) */
+  var e = document.documentElement, f = e.requestFullscreen || e.webkitRequestFullscreen;
+  try { if (f) { var r = f.call(e); if (r && r["catch"]) r["catch"](function(){}); } } catch (x) {}
+}
+function fermer(){
+  clearTimeout(minuteur); clearTimeout(calme);
+  diapo.className = "";
+  var s = document.exitFullscreen || document.webkitExitFullscreen;
+  try { if (s && (document.fullscreenElement || document.webkitFullscreenElement)) s.call(document); } catch (x) {}
+  var b = document.querySelector('.album[data-i="' + ALBUMS.indexOf(album) + '"]');
+  if (b) b.focus();
+  album = null;
+}
+function pause(){
+  enPause = !enPause;
+  $("b-pause").textContent = enPause ? "▶︎ Lire" : "⏸";
+  relancer();
+}
+$("b-prec").onclick = function(){ aller(-1); };
+$("b-suiv").onclick = function(){ aller(1); };
+$("b-pause").onclick = pause;
+$("b-fermer").onclick = fermer;
+$("b-hasard").onclick = function(){
+  auHasard = !auHasard;
+  this.className = auHasard ? "actif" : "";
+  var actuelle = ordre[pos]; preparerOrdre();
+  pos = Math.max(0, ordre.indexOf(actuelle));
+};
+diapo.addEventListener("mousemove", reveiller);
+diapo.addEventListener("touchstart", reveiller);
+/* Sur la photo (hors boutons) : un appui affiche les boutons, ou passe à la suivante s'ils sont déjà visibles */
+diapo.addEventListener("click", function(e){
+  if (e.target.tagName === "BUTTON") return;
+  if (diapo.className.indexOf("calme") >= 0) reveiller(); else aller(1);
+});
+/* Télécommande et clavier : ◀ ▶ changent de photo, OK met en pause, Retour (10009) ou Échap ferme */
+document.addEventListener("keydown", function(e){
+  if (!album) return;
+  var k = e.keyCode, boutons = diapo.className.indexOf("calme") < 0;
+  reveiller();
+  if (k === 10009 || k === 27 || k === 8) { e.preventDefault(); fermer(); return; }
+  if (boutons && (k === 13 || k === 37 || k === 39)) return;   // boutons visibles : la télécommande s'y déplace et les active
+  if (k === 37) { e.preventDefault(); aller(-1); }
+  else if (k === 39) { e.preventDefault(); aller(1); }
+  else if (k === 13 || k === 32 || k === 415 || k === 19 || k === 10252) { e.preventDefault(); pause(); }
+});
+/* Touche Retour de la télé : déclarer la touche pour qu'elle arrive à la page (navigateur Samsung) */
+try { if (window.tizen && tizen.tvinputdevice) tizen.tvinputdevice.registerKey("MediaPlayPause"); } catch (x) {}
+
+charger();
+</script>
+</body>
+</html>

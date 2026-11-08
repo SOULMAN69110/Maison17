@@ -65,12 +65,17 @@ jobs:
         run: |
           curl -sS -m 30 "https://api.open-meteo.com/v1/forecast?latitude=45.73&longitude=4.80&current=pressure_msl&timeformat=unixtime" -o meteo.json || echo '{}' > meteo.json
 
+      - name: Lire les albums Google Photos partagés (toutes les 6 h)
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python3 outils/photos.py photos/albums.txt photos/albums.json
+
       - name: Ajouter à l'historique et enregistrer dans le dépôt
         run: |
           python3 outils/historiser.py site/data.json meteo.json site/chauffage.json
           git config user.name "Tableau de bord maison"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add historique
+          git add historique photos
           if ! git diff --cached --quiet; then
             git commit -q -m "Historique : mesures du $(TZ=Europe/Paris date '+%d/%m/%Y %H:%M')"
             for essai in 1 2 3; do
@@ -81,9 +86,10 @@ jobs:
 
       - name: Préparer le site
         run: |
-          cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html verrou.js maj.js nav.js site/
+          cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html photos.html verrou.js maj.js nav.js site/
           cp -r historique site/
           cp -r app site/
+          cp -r photos site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
