@@ -15,7 +15,7 @@ Usage : python3 outils/photos.py photos/albums.txt photos/albums.json
 import hashlib, html, json, re, sys, time, urllib.parse, urllib.request
 
 RELIRE_H = 6
-VERSION = "3"     # à changer pour forcer une relecture complète après une modification de ce programme
+VERSION = "4"     # à changer pour forcer une relecture complète après une modification de ce programme
 NAVIGATEUR = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -49,6 +49,16 @@ def photo_depuis(it):
                        "d": int(it[2]) if isinstance(it[2], (int, float)) else None}
     except Exception:
         return None
+
+
+def extraire(d):
+    """Dans un bloc de Google : la liste des photos, puis le jeton (texte) de la page suivante juste après.
+    Aujourd'hui [None, [photos…], "jeton", [album…], …] ; on cherche plutôt que de compter les cases."""
+    for i, x in enumerate(d or []):
+        if isinstance(x, list) and x and photo_depuis(x[0]):
+            suite = d[i + 1] if i + 1 < len(d) else None
+            return x, (suite if isinstance(suite, str) and suite else None)
+    return [], None
 
 
 def donnees_ds1(page):
@@ -93,8 +103,8 @@ def lire_album(lien, infos):
     jeton = None
     try:
         d = donnees_ds1(page)
-        ajouter(d[0]); jeton = d[1] if len(d) > 1 and isinstance(d[1], str) else None
-        infos.append("%s : ds:1 = %s" % (titre, [(type(x).__name__, (len(x) if isinstance(x, (list, str)) else x)) for x in d[:8]]))
+        liste, jeton = extraire(d)
+        ajouter(liste)
     except Exception as e:
         infos.append("%s : données ds:1 illisibles (%s), lecture simple" % (titre, e))
     if not photos:                              # secours : recherche directe dans la page
@@ -117,9 +127,9 @@ def lire_album(lien, infos):
             infos.append("%s : arrêt après %d photos (%s)" % (titre, len(photos), str(e)[:150]))
             break
         pages += 1
-        if not ajouter(d[0]):
+        liste, jeton = extraire(d)
+        if not ajouter(liste):
             break
-        jeton = d[1] if len(d) > 1 and isinstance(d[1], str) else None
     photos.sort(key=lambda x: x["d"] or 0)
     dates = [x["d"] for x in photos if x["d"]]
     return {"titre": titre, "lien": lien, "adresse": adresse, "id": album_id, "nb": len(photos),
