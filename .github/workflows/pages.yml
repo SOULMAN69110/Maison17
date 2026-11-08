@@ -86,7 +86,7 @@ jobs:
 
       - name: Préparer le site
         run: |
-          cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html photos.html verrou.js maj.js nav.js site/
+          cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html photos.html verrou.js maj.js nav.js veille.js site/
           cp -r historique site/
           cp -r app site/
           cp -r photos site/

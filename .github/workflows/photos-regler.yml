@@ -1,0 +1,54 @@
+name: "Photos : réglages"
+
+# Lancée depuis le panneau ⚙️ Réglages de photos.html (ou à la main, onglet Actions → Run workflow).
+# Ajoute ou retire un album de photos/albums.txt, ou enregistre les réglages du diaporama
+# dans photos/reglages.json, puis relance la publication (qui relit les albums).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ajouter:
+        description: "Lien d'album Google Photos partagé à ajouter"
+        default: ""
+      retirer:
+        description: "Lien d'album à retirer"
+        default: ""
+      reglages:
+        description: 'Réglages en JSON, ex. {"secondes":8,"transition":"fondu","ordre":"chrono","legende":"non","recents":4}'
+        default: ""
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: photos-regler
+  cancel-in-progress: false
+
+jobs:
+  regler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Modifier la liste des albums ou les réglages
+        env:
+          AJOUTER: ${{ inputs.ajouter }}
+          RETIRER: ${{ inputs.retirer }}
+          REGLAGES: ${{ inputs.reglages }}
+        run: python3 outils/photos_regler.py
+      - name: Enregistrer dans le dépôt
+        run: |
+          git config user.name "Tableau de bord maison"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add photos
+          if git diff --cached --quiet; then echo "Rien à changer"; exit 0; fi
+          git commit -q -m "Photos : réglages modifiés depuis la page"
+          for essai in 1 2 3 4; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && break
+            sleep 5
+          done
+      - name: Relancer la publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main
