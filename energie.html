@@ -130,6 +130,10 @@ body.plein #c-plein{color:var(--nuit);background:var(--givre);border-color:var(-
 .totaux{font-family:var(--mono);font-size:.95rem;color:var(--brume);margin-top:.5rem}
 .totaux b{color:var(--craie);font-weight:500}
 .totaux:empty{display:none}
+.tarif{font-family:var(--mono);font-size:.95rem;color:var(--brume)}
+.tarif b{font-weight:500;color:var(--craie)}
+.tarif.hc b{color:var(--givre)}
+.hc-leg{color:var(--givre)}
 /* Période (jour, semaine, mois, année) et courbes affichées */
 .filtres{display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-top:.5rem}
 .periodes,.series{display:flex;flex-wrap:wrap;align-items:center}
@@ -265,6 +269,7 @@ body.plein .filtres button{font-size:1.15rem}
     <div class="carte courbe" id="carte-courbe">
       <div class="courbe-tete">
         <div class="etiquette" id="t-courbe">📈 La journée en puissance</div>
+        <span class="tarif" id="tarif"></span>
       </div>
       <div class="filtres">
         <div class="series" role="group" aria-label="Courbes affichées">
@@ -282,6 +287,7 @@ body.plein .filtres button{font-size:1.15rem}
 
 <script>
 /* ===== Réglages ===== */
+var HEURES_CREUSES = { debut: [22, 54], fin: [6, 54] };   // heures creuses : 22 h 54 → 6 h 54 (le reste : heures pleines)
 var RAFRAICHIR_MIN = 5;      // la tâche du dépôt récupère les données eStar toutes les 10 min environ
 /* ==================== */
 
@@ -302,6 +308,46 @@ function pourcent(a, b){ return (typeof a === "number" && b > 0) ? Math.max(0, M
 
 function horloge(){
   el("heure").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  tarif();
+}
+/* ===== Heures pleines / heures creuses ===== */
+function minutesHC(t){ return t[0] * 60 + t[1]; }
+function estHC(ts){   // ts en secondes, heure locale
+  var d = new Date(ts * 1000), m = d.getHours() * 60 + d.getMinutes(), a = minutesHC(HEURES_CREUSES.debut), b = minutesHC(HEURES_CREUSES.fin);
+  return a > b ? (m >= a || m < b) : (m >= a && m < b);
+}
+function hhmm(t){ return t[0] + " h " + ("0" + t[1]).slice(-2); }
+function tarif(){
+  var hc = estHC(Date.now() / 1000), z = el("tarif");
+  z.className = "tarif" + (hc ? " hc" : "");
+  z.innerHTML = hc ? "🌙 <b>Heures creuses</b> jusqu'à " + hhmm(HEURES_CREUSES.fin) : "☀️ <b>Heures pleines</b> jusqu'à " + hhmm(HEURES_CREUSES.debut);
+}
+/* Plages d'heures creuses comprises dans la fenêtre [debut, fin[ (secondes), en abscisses 0–1000 */
+function plagesHC(debut, fin){
+  var out = [], d0 = new Date(debut * 1000), a = HEURES_CREUSES.debut, b = HEURES_CREUSES.fin, nuit = minutesHC(a) > minutesHC(b);
+  for (var j = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - 1); j.getTime() / 1000 < fin; j = new Date(j.getFullYear(), j.getMonth(), j.getDate() + 1)) {
+    var x1 = new Date(j.getFullYear(), j.getMonth(), j.getDate(), a[0], a[1]).getTime() / 1000;
+    var x2 = new Date(j.getFullYear(), j.getMonth(), j.getDate() + (nuit ? 1 : 0), b[0], b[1]).getTime() / 1000;
+    x1 = Math.max(x1, debut); x2 = Math.min(x2, fin);
+    if (x2 > x1) out.push([(x1 - debut) / (fin - debut) * 1000, (x2 - debut) / (fin - debut) * 1000]);
+  }
+  return out;
+}
+/* Conso et achat répartis entre heures pleines et creuses, à partir de la courbe (estimation) */
+function repartitionHC(pts, debut, fin, pasMax){
+  var r = { c: [0, 0], a: [0, 0] }, n = 0, duree = fin - debut;
+  for (var k = 1; k < pts.length; k++) {
+    var q0 = pts[k - 1], q1 = pts[k];
+    if (q1.x - q0.x > pasMax || q1.x <= q0.x) continue;
+    var dtH = (q1.x - q0.x) / 1000 * duree / 3600, milieu = debut + (q0.x + q1.x) / 2000 * duree, i = estHC(milieu) ? 1 : 0;
+    r.c[i] += (q0.c + q1.c) / 2 * dtH; r.a[i] += (q0.a + q1.a) / 2 * dtH; n++;
+  }
+  return n ? r : null;
+}
+function texteHC(r){
+  if (!r) return "";
+  function f(wh){ return (wh / 1000).toFixed(1).replace(".", ","); }
+  return 'Heures pleines / <span class="hc-leg">creuses</span> ≈ 🏠 conso <b>' + f(r.c[0]) + "</b> / <b>" + f(r.c[1]) + "</b> kWh · ⚡ achat <b>" + f(r.a[0]) + "</b> / <b>" + f(r.a[1]) + "</b> kWh";
 }
 
 function afficher(s){
@@ -491,7 +537,7 @@ function grilleSvg(g, unite){
 }
 function echelle(){ return ""; }
 /* Courbe de puissance ; un trou de plus d'une heure entre deux points coupe le trait */
-function dessinerPuissance(pts, pasMax, seuleConso){
+function dessinerPuissance(pts, pasMax, seuleConso, debut, fin){
   var svg = el("graphe"), brut = 500, sv = seuleConso ? { c: true } : series;
   pts.forEach(function(q){ q.a = Math.max(0, q.c - q.p); q.v = Math.max(0, q.p - q.c); });   // achat : ce que le soleil ne couvre pas ; vente : le surplus solaire
   pts.forEach(function(q){ SERIES.forEach(function(k){ if (sv[k]) brut = Math.max(brut, q[k]); }); });
@@ -509,13 +555,18 @@ function dessinerPuissance(pts, pasMax, seuleConso){
   function trait(champ){
     return morceaux.map(function(m){ return m.map(function(q, k){ return (k ? "L" : "M") + q.x.toFixed(1) + " " + Y(q[champ]); }).join(" "); }).join(" ");
   }
-  var html = grilleSvg(g, "W");
+  var html = "";
+  /* Heures creuses : bandes bleutées derrière les courbes */
+  if (debut && fin) plagesHC(debut, fin).forEach(function(b){
+    html += '<rect x="' + b[0].toFixed(1) + '" y="0" width="' + (b[1] - b[0]).toFixed(1) + '" height="300" fill="#7cc4e8" fill-opacity=".09"/>';
+  });
+  html += grilleSvg(g, "W");
   if (sv.p) html += '<path d="' + aire("p") + '" fill="#f0c36a" fill-opacity=".35" stroke="#f0c36a" stroke-width="2.5" vector-effect="non-scaling-stroke"/>';
   if (sv.a) html += '<path d="' + aire("a") + '" fill="#f08a6a" fill-opacity=".3" stroke="#f08a6a" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   if (sv.v) html += '<path d="' + aire("v") + '" fill="#7fd1a0" fill-opacity=".3" stroke="#7fd1a0" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   if (sv.c) html += '<path d="' + trait("c") + '" fill="none" stroke="#e8eef2" stroke-width="2" vector-effect="non-scaling-stroke"/>';
   svg.innerHTML = html;
-  el("echelle").textContent = "";
+  el("echelle").innerHTML = debut && fin ? '<span class="hc-leg">▮</span> heures creuses ' + hhmm(HEURES_CREUSES.debut) + " → " + hhmm(HEURES_CREUSES.fin) : "";
 }
 /* Barres d'énergie (kWh) : production pleine, consommation en contour */
 function dessinerBarres(barres){
@@ -720,7 +771,9 @@ function courbePeriode(c, jeton){
         axeX(n === 1 ? AXE_JOUR : []); return;
       }
       pts.forEach(function(q){ q.x = (q.ts - debut) / (fin - debut) * 1000; });
-      dessinerPuissance(pts, 3600 / (fin - debut) * 1000);
+      dessinerPuissance(pts, 3600 / (fin - debut) * 1000, false, debut, fin);
+      var hcP = texteHC(repartitionHC(pts, debut, fin, 3600 / (fin - debut) * 1000));
+      if (hcP) el("totaux").innerHTML += (el("totaux").innerHTML ? "<br>" : "") + hcP;
       if (n === 1) axeX(AXE_JOUR);
       else { var l = []; for (var k = 0; k < n; k++) { var d = plus(c.du, k); l.push(n > 5 ? d.getDate() : JOURS_C[d.getDay()] + " " + d.getDate()); } axeX(l, true); }
     });
@@ -777,7 +830,9 @@ function courbe(){
     el("t-courbe").textContent = r.hier ? "📈 Hier en puissance" : nuit ? "🌙 Conso depuis minuit" : "📈 La journée en puissance";
     if (pts.length < 2) { svg.innerHTML = ""; el("grad").innerHTML = ""; el("echelle").textContent = ""; el("attente").textContent = "La courbe se remplit au fil de la journée"; return; }
     el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : nuit ? "La production s'ajoutera au réveil de l'onduleur" : "";
-    dessinerPuissance(pts, 3600 / 86400 * 1000, nuit);
+    var jour = r.hier ? veille() : auj, debP = jour.getTime() / 1000, finP = plus(jour, 1).getTime() / 1000;
+    dessinerPuissance(pts, 3600 / 86400 * 1000, nuit, debP, finP);
+    el("totaux").innerHTML = texteHC(repartitionHC(pts, debP, finP, 3600 / 86400 * 1000));
   }).catch(function(){
     if (choix || n !== tracage) return;
     el("graphe").innerHTML = ""; el("attente").textContent = "La courbe se remplit au fil de la journée";
