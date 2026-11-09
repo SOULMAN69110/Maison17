@@ -1,6 +1,6 @@
 {
- "secondes": 5,
- "transition": "glisse",
+ "secondes": 8,
+ "transition": "fondu",
  "ordre": "chrono",
  "legende": "non",
  "recents": 4,
