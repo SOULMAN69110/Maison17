@@ -288,6 +288,7 @@ body.plein .filtres button{font-size:1.15rem}
 <script>
 /* ===== Réglages ===== */
 var HEURES_CREUSES = { debut: [22, 54], fin: [6, 54] };   // heures creuses : 22 h 54 → 6 h 54 (le reste : heures pleines)
+var TARIFS = { hp: 0.1726, hc: 0.1337, abonnement_mois: 20.44, rachat: 0.13 };   // € TTC : Primeo (kWh heures pleines, heures creuses, abonnement par mois) ; rachat EDF OA (€/kWh)
 var RAFRAICHIR_MIN = 5;      // la tâche du dépôt récupère les données eStar toutes les 10 min environ
 /* ==================== */
 
@@ -340,10 +341,21 @@ function repartitionHC(pts, debut, fin, pasMax){
     var q0 = pts[k - 1], q1 = pts[k];
     if (q1.x - q0.x > pasMax || q1.x <= q0.x) continue;
     var dtH = (q1.x - q0.x) / 1000 * duree / 3600, milieu = debut + (q0.x + q1.x) / 2000 * duree, i = estHC(milieu) ? 1 : 0;
-    r.c[i] += (q0.c + q1.c) / 2 * dtH; r.a[i] += (q0.a + q1.a) / 2 * dtH; n++;
+    r.c[i] += (q0.c + q1.c) / 2 * dtH; r.a[i] += (Math.max(0, q0.c - q0.p) + Math.max(0, q1.c - q1.p)) / 2 * dtH; n++;
   }
   return n ? r : null;
 }
+/* Coût de la période : achat Primeo (réparti HP/HC selon la courbe), abonnement au prorata des jours, revente EDF OA */
+function texteEuros(t, r){
+  if (!t || !t.n) return "";
+  var ar = r ? r.a[0] + r.a[1] : 0, fracHC = ar > 0 ? r.a[1] / ar : null;
+  var achat = t.a / 1000 * (fracHC === null ? TARIFS.hp : (1 - fracHC) * TARIFS.hp + fracHC * TARIFS.hc);
+  var abo = TARIFS.abonnement_mois * 12 / 365.25 * t.n, revente = t.v / 1000 * TARIFS.rachat, net = achat + abo - revente;
+  function e(x){ return x.toFixed(2).replace(".", ",") + " €"; }
+  return "💶 achat <b>" + e(achat) + "</b>" + (fracHC === null ? " (au tarif HP)" : "") + " + abonnement <b>" + e(abo) + "</b> · revente <b>" + e(revente) +
+    "</b> → " + (net >= 0 ? "coût net <b>" + e(net) : "gain net <b>" + e(-net)) + "</b>";
+}
+function ajouterTotaux(html){ if (html) el("totaux").innerHTML += (el("totaux").innerHTML ? "<br>" : "") + html; }
 function texteHC(r){
   if (!r) return "";
   function f(wh){ return (wh / 1000).toFixed(1).replace(".", ","); }
@@ -772,8 +784,8 @@ function courbePeriode(c, jeton){
       }
       pts.forEach(function(q){ q.x = (q.ts - debut) / (fin - debut) * 1000; });
       dessinerPuissance(pts, 3600 / (fin - debut) * 1000, false, debut, fin);
-      var hcP = texteHC(repartitionHC(pts, debut, fin, 3600 / (fin - debut) * 1000));
-      if (hcP) el("totaux").innerHTML += (el("totaux").innerHTML ? "<br>" : "") + hcP;
+      var rP = repartitionHC(pts, debut, fin, 3600 / (fin - debut) * 1000);
+      ajouterTotaux(texteHC(rP)); ajouterTotaux(texteEuros(totauxBruts(c), rP));
       if (n === 1) axeX(AXE_JOUR);
       else { var l = []; for (var k = 0; k < n; k++) { var d = plus(c.du, k); l.push(n > 5 ? d.getDate() : JOURS_C[d.getDay()] + " " + d.getDate()); } axeX(l, true); }
     });
@@ -799,6 +811,14 @@ function courbePeriode(c, jeton){
   }
   dessinerBarres(barres);
   axeX(lib, parMois && lib.length === barres.length);   // un libellé par mois : centré sous ses barres
+  /* Coût : la courbe enregistrée sert à répartir l'achat entre heures pleines et creuses */
+  var debB = c.du.getTime() / 1000, finB = plus(c.au, 1).getTime() / 1000;
+  lireCourbes(debB, finB).then(function(pts){
+    if (choix !== c || jeton !== tracage) return;
+    pts.forEach(function(q){ q.x = (q.ts - debB) / (finB - debB) * 1000; });
+    var rB = repartitionHC(pts, debB, finB, 3600 / (finB - debB) * 1000);
+    ajouterTotaux(texteEuros(totauxBruts(c), rB));
+  });
 }
 
 var tracage = 0;   // seul le dernier tracé demandé s'affiche (les réponses peuvent arriver dans le désordre)
@@ -832,7 +852,8 @@ function courbe(){
     el("attente").textContent = r.hier ? "Aujourd'hui dès le réveil de l'onduleur" : nuit ? "La production s'ajoutera au réveil de l'onduleur" : "";
     var jour = r.hier ? veille() : auj, debP = jour.getTime() / 1000, finP = plus(jour, 1).getTime() / 1000;
     dessinerPuissance(pts, 3600 / 86400 * 1000, nuit, debP, finP);
-    el("totaux").innerHTML = texteHC(repartitionHC(pts, debP, finP, 3600 / 86400 * 1000));
+    var rJ = repartitionHC(pts, debP, finP, 3600 / 86400 * 1000);
+    el("totaux").innerHTML = texteHC(rJ); ajouterTotaux(texteEuros(totauxBruts(bornes("jour", jour)), rJ));
   }).catch(function(){
     if (choix || n !== tracage) return;
     el("graphe").innerHTML = ""; el("attente").textContent = "La courbe se remplit au fil de la journée";
