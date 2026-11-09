@@ -220,12 +220,12 @@ function periode(a){
   }
   return jour(a.debut) + " – " + jour(a.fin);
 }
+/* fetch() plutôt que XMLHttpRequest : verrou.js déchiffre au passage photos/albums.json (publié chiffré) */
 function obtenir(url, fini){
-  var x = new XMLHttpRequest();
-  x.open("GET", url + "?t=" + Date.now());
-  x.onload = function(){ var d = null; try { if (x.status === 200) d = JSON.parse(x.responseText); } catch (e) {} fini(d); };
-  x.onerror = function(){ fini(null, true); };
-  x.send();
+  fetch(url + "?t=" + Date.now(), { cache: "no-store" }).then(function(r){
+    if (r.status !== 200) return fini(null);
+    return r.text().then(function(t){ var d = null; try { d = JSON.parse(t); } catch (e) {} fini(d); });
+  })["catch"](function(){ fini(null, true); });
 }
 /* Taille demandée à Google : celle de l'écran (×2 sur iPhone), sans dépasser l'original */
 function taille(p, l, h){ return p.u + "=w" + Math.round(l) + "-h" + Math.round(h); }
@@ -246,7 +246,7 @@ function tuile(a, i){
 function afficherAlbums(){
   if (!ALBUMS.length) {
     $("contenu").innerHTML = '<div class="message">Aucun album pour l\'instant. Ajoute un lien d\'album partagé avec <b>⚙️ Réglages</b> ' +
-      '(depuis un appareil où le jeton GitHub est enregistré), ou dans le fichier <b>photos/albums.txt</b> du dépôt.</div>';
+      '(depuis un appareil où le jeton GitHub est enregistré), ou dans la liste chiffrée des albums (branche donnees du dépôt).</div>';
     return;
   }
   var h = '<div class="grille"><div class="titre-section">Derniers albums</div>', n = +R.recents || 4;
@@ -343,7 +343,10 @@ function dessinerListe(){
     var l = this.getAttribute("data-lien"), bouton = this;
     if (!confirm("Retirer cet album de la page Photos ? (il reste dans ton Google Photos)")) return;
     bouton.disabled = true;
-    envoyer({ retirer: l }, "Album retiré. La page sera à jour d'ici 2 à 3 min.", function(ok){ if (!ok) bouton.disabled = false; });
+    /* Le lien est chiffré avant l'envoi : les entrées d'une tâche GitHub sont visibles de tous sur un dépôt public */
+    M17.chiffrer(l).then(function(c){
+      envoyer({ retirer: c }, "Album retiré. La page sera à jour d'ici 2 à 3 min.", function(ok){ if (!ok) bouton.disabled = false; });
+    });
   });
 }
 function lireChamps(){
@@ -365,7 +368,9 @@ $("b-enregistrer").onclick = function(){
 $("b-ajouter").onclick = function(){
   var l = $("r-lien").value.trim();
   if (!/^https:\/\/(photos\.app\.goo\.gl|photos\.google\.com|goo\.gl)\//.test(l)) { retour("Ce n'est pas un lien d'album Google Photos partagé (https://photos.app.goo.gl/… ou https://photos.google.com/share/…).", "erreur"); return; }
-  envoyer({ ajouter: l }, "Album ajouté. Il apparaîtra d'ici 2 à 3 min (recharge la page).", function(ok){ if (ok) $("r-lien").value = ""; });
+  M17.chiffrer(l).then(function(c){   // chiffré avant l'envoi (entrées de la tâche publiques)
+    envoyer({ ajouter: c }, "Album ajouté. Il apparaîtra d'ici 2 à 3 min (recharge la page).", function(ok){ if (ok) $("r-lien").value = ""; });
+  });
 };
 $("b-annuler").onclick = fermerPanneau;
 $("b-reglages").onclick = ouvrirPanneau;

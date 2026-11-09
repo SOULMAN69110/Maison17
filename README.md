@@ -15,23 +15,25 @@ Mis en place le 3 novembre 2026.
 | Lieux météo (recherche, ma position, favoris) | https://soulman69110.github.io/Maison17/lieux.html |
 | Météo seule, sans code (à partager) | https://soulman69110.github.io/Maison17/meteo.html — avec `?lieu=meze` (ou une autre ville) pour régler le lieu à la première ouverture |
 | Appli Météo (à installer sur le téléphone) | ouvrir le lien Météo seule (avec `?lieu=…`), puis iPhone : Safari → Partager → *Sur l'écran d'accueil* ; Android : Chrome → menu ⋮ → *Installer l'application* (ou *Ajouter à l'écran d'accueil*). L'icône ouvre la météo en plein écran, sur le lieu du lien. |
-| Mesures brutes (CSV) | dossier [`historique/`](historique/) de ce dépôt |
+| Mesures brutes (CSV) | branche `donnees` de ce dépôt, **chiffrées** (voir « Protection des données ») |
 
 **Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.
 
-**Directement sur la télé Samsung** (application Internet) : ouvrir `soulman69110.github.io/Maison17`, saisir le code, puis Paramètres (roue dentée) → *Définir comme page d'accueil* → *Page actuelle* : lancer Internet ouvre alors le tableau de bord. On peut aussi l'ajouter aux favoris (étoile). Pour un affichage permanent, vérifier l'arrêt automatique de la télé (Paramètres → Général → Solution Éco → Arrêt automatique). Les intitulés peuvent varier selon la version du logiciel de la télé.
+**Directement sur la télé Samsung** (application Internet) : ouvrir `soulman69110.github.io/Maison17`, saisir la phrase d'accès, puis Paramètres (roue dentée) → *Définir comme page d'accueil* → *Page actuelle* : lancer Internet ouvre alors le tableau de bord. On peut aussi l'ajouter aux favoris (étoile). Pour un affichage permanent, vérifier l'arrêt automatique de la télé (Paramètres → Général → Solution Éco → Arrêt automatique). Les intitulés peuvent varier selon la version du logiciel de la télé.
 
 ## Capteurs Mobile Alerts
 
-| Pièce | Identifiant | Mesures |
+| Pièce | Nom dans les pages et l'historique | Mesures |
 |---|---|---|
-| Salon (station) | salon | température et humidité intérieures et extérieures |
-| Chambre C. | chambre-c | température, humidité |
-| Chambre parents | chambre-parents | température, humidité |
-| Chambre Y. | chambre-y | température, humidité |
-| Bureau | bureau | température, humidité |
-| SdB filles | sdb-filles | température |
-| SdB parents | sdb-parents | température |
+| Salon (station) | `salon` | température et humidité intérieures et extérieures |
+| Chambre C. | `chambre-c` | température, humidité |
+| Chambre parents | `chambre-parents` | température, humidité |
+| Chambre Y. | `chambre-y` | température, humidité |
+| Bureau | `bureau` | température, humidité |
+| SdB filles | `sdb-filles` | température |
+| SdB parents | `sdb-parents` | température |
+
+Les vrais identifiants Mobile Alerts ne sont plus dans le dépôt (depuis le 9 nov. 2026) : ils sont dans le secret GitHub `MOBILE_ALERTS`, sous la forme `salon=ID,bureau=ID,…`. La tâche (`outils/mobile_alerts.py`) remplace chaque identifiant par son nom avant d'écrire quoi que ce soit.
 
 La pression et le pictogramme de prévision de la station du salon ne sont pas transmis par Mobile Alerts : ils viennent d'Open-Meteo (gratuit, sans clé), pour la position de Sainte-Foy-lès-Lyon.
 
@@ -42,8 +44,18 @@ Installation de 4,25 kWc suivie sur monitor.estarpower.com (installation n° 705
 ## Fonctionnement
 
 1. Toutes les 10 minutes, la tâche GitHub Actions `Mesures et publication` interroge Mobile Alerts et Open-Meteo. GitHub ne lançant les tâches planifiées que toutes les quelques heures, c'est la tâche `Horloge` (`.github/workflows/horloge.yml`) qui la relance : elle reste active près de 6 h, relance la publication toutes les 10 min, puis la suivante, qu'elle a elle-même programmée dès son démarrage, prend le relais (le déclenchement horaire de GitHub ne suffisait pas).
-2. Elle ajoute les nouvelles mesures aux fichiers mensuels `historique/mesures-AAAA-MM.csv` et `historique/pression-AAAA-MM.csv`, et les enregistre dans le dépôt.
-3. Elle republie le site sur GitHub Pages avec une copie des dernières mesures (`data.json`).
+2. Elle ouvre le coffre (branche `donnees`, chiffrée), ajoute les nouvelles mesures aux fichiers mensuels `historique/mesures-AAAA-MM.csv`, `historique/pression-AAAA-MM.csv`…, rechiffre les fichiers modifiés et remplace le coffre (un seul commit, qui ne s'accumule pas).
+3. Elle republie le site sur GitHub Pages avec les dernières mesures (`data.json`, `solaire.json`, `chauffage.json`) et l'historique, **chiffrés**.
+
+### Protection des données (depuis le 9 nov. 2026)
+
+Le dépôt et le site sont publics (GitHub Pages gratuit), mais toutes les données personnelles n'y sont que **chiffrées** : mesures, historique, solaire, chauffage, liste et contenu des albums photos. Seule la météo (`meteo.html`, `?vue=meteo`, `?lieu=…`, et `lieux.html` qui en vient) est libre d'accès.
+
+- **Phrase d'accès** : demandée une fois par appareil par `verrou.js` (télé, Safari, appli installée sur l'iPhone, dont le stockage est séparé), puis retenue un an (c'est la clé qui en découle qui est gardée, pas la phrase). Elle est dans le secret GitHub `MAISON17_PHRASE` ; la noter aussi en lieu sûr : sans elle, les données sont illisibles.
+- **Chiffrement** : AES-256-GCM, clé = PBKDF2-SHA256 (phrase, sel `maison17-sel-v1`, 210 000 tours), mêmes valeurs dans `outils/coffre.js` (tâche) et `verrou.js` (pages). Un fichier chiffré commence par `M17v1:`. Les pages lisent leurs fichiers avec `fetch()` comme avant : `verrou.js` déchiffre au passage `data.json`, `solaire.json`, `chauffage.json`, `historique/*` et `photos/albums.json`. `controle.txt` sert à vérifier la phrase.
+- **Garde-fous** : sans le secret, la tâche s'arrête sans rien publier ; avant la publication, elle vérifie qu'aucun fichier de données n'est en clair. Les journaux des tâches (publics) n'affichent ni lien d'album ni identifiant ; les liens d'albums envoyés depuis la page Photos partent chiffrés.
+- **Changer la phrase** : modifier le secret `MAISON17_PHRASE`, puis déchiffrer la branche `donnees` avec l'ancienne phrase et la rechiffrer avec la nouvelle (`node outils/coffre.js ouvrir` puis `fermer`, voir l'en-tête du script). Chaque appareil redemande alors la phrase.
+- **Historique Git** : réécrit le 9 nov. 2026 pour effacer les anciennes données en clair (dossier `historique/`, liste des albums, identifiants des capteurs, coordonnées précises). Les coordonnées publiques de la maison sont arrondies au centième (environ 1 km).
 
 Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça que la page lit la copie publiée par la tâche, et non l'API elle-même. La météo (prévisions et pression affichées) est en revanche lue en direct par la page.
 
@@ -52,7 +64,9 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | Fichier | Rôle |
 |---|---|
 | `index.html` | tableau de bord ; noms et ordre des pièces en tête du script |
-| `verrou.js` | écran du code d'accès, commun aux deux pages |
+| `verrou.js` | phrase d'accès et déchiffrement des données, commun à toutes les pages sauf la météo seule |
+| `outils/coffre.js` | chiffrement : ouverture et fermeture du coffre (branche `donnees`), chiffrement des fichiers du site |
+| `outils/mobile_alerts.py` | dernières mesures Mobile Alerts, identifiants remplacés par les noms des pièces |
 | `energie.html` | page Énergie : production solaire, consommation, réseau, bilan du jour et courbe de la journée |
 | `bilans.html` | bilans solaires par semaine, mois, année et comparaison mois par mois avec l'année précédente |
 | `outils/estar.py` | récupère les données eStar Power (connexion avec les secrets GitHub) |
@@ -63,21 +77,21 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | `.github/workflows/chauffage-regler.yml` | tâche « Régler le chauffage », lancée par la page Chauffage ou à la main (champ vide = inchangé) |
 | `app/` | appli Météo installable : manifeste (`meteo.webmanifest`) et icônes, chargés par `index.html` en vue météo seule |
 | `outils/historiser.py` | ajoute les mesures aux CSV sans doublons |
-| `.github/workflows/pages.yml` | la tâche automatique ; liste des identifiants à mettre à jour si on ajoute un capteur |
+| `.github/workflows/pages.yml` | la tâche automatique (mesures, coffre, publication) |
 | `.github/workflows/horloge.yml` | relance la tâche automatique toutes les 10 min |
 
 ### Format des CSV
 
-- `mesures-AAAA-MM.csv` : `horodatage` (secondes Unix), `capteur`, `temp`, `hum`, `temp_ext`, `hum_ext` (les deux dernières pour la station du salon)
+- `mesures-AAAA-MM.csv` : `horodatage` (secondes Unix), `capteur` (nom : `salon`, `bureau`…), `temp`, `hum`, `temp_ext`, `hum_ext` (les deux dernières pour la station du salon)
 - `pression-AAAA-MM.csv` : `horodatage`, `pression_hpa`
 
 ## Entretien
 
-- **Code d'accès** : les deux pages demandent un code, retenu un an sur chaque appareil (iPhone, navigateur de la télé). Le code n'est pas écrit dans le dépôt, seulement son empreinte dans `verrou.js`, avec la marche à suivre pour le changer. C'est un écran d'accès dissuasif, pas une vraie protection : le dépôt et les mesures restent publics. Les chambres des enfants sont nommées par leur initiale (Chambre C., Chambre Y.).
+- **Phrase d'accès** : voir « Protection des données ». Les chambres des enfants sont nommées par leur initiale (Chambre C., Chambre Y.).
 
-- **Si les chiffres se figent** : vérifier dans l'onglet Actions qu'une tâche `Horloge` est en cours ; sinon la lancer (*Run workflow*). GitHub met aussi en pause les tâches planifiées d'un dépôt public après 60 jours sans activité. Les enregistrements d'historique comptent normalement comme activité ; sinon, relancer la tâche depuis l'onglet Actions (*Run workflow*).
+- **Si les chiffres se figent** : vérifier dans l'onglet Actions qu'une tâche `Horloge` est en cours ; sinon la lancer (*Run workflow*). GitHub met aussi en pause les tâches planifiées d'un dépôt public après 60 jours sans activité (l'historique n'est plus enregistré sur `main` mais sur la branche `donnees` ; la chaîne `Horloge` se relance elle-même) ; si besoin, relancer la tâche depuis l'onglet Actions (*Run workflow*).
 - **Ajouter une page** : la créer à la racine, l'ajouter à la commande `cp` de `pages.yml` et à la liste `RACCOURCIS` d'`index.html`.
-- **Ajouter un capteur** : l'ajouter dans `CAPTEURS` dans `index.html` et `historique.html`, et dans `IDS` dans `pages.yml`.
+- **Ajouter un capteur** : choisir un nom (ex. `cuisine`), l'ajouter au secret `MOBILE_ALERTS` (`cuisine=IDENTIFIANT`) et dans `CAPTEURS` dans `index.html` et `historique.html` (avec ce nom).
 - **Piles faibles** au 3 novembre 2026 : Chambre parents, Chambre Y., SdB parents.
 
 ## Historique du projet
@@ -98,5 +112,6 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 - **6 nov. 2026 (plein écran)** : bouton « ⛶ Plein écran » sur la carte du graphique de la page Énergie : la carte occupe tout l'écran (superposition CSS, qui marche aussi sur iPhone ; vrai plein écran du navigateur en plus quand il le permet). « ✕ Fermer », la touche Échap ou la touche Retour de la télécommande Samsung ramènent à la page. Textes agrandis pour l'iPhone à l'horizontale.
 - **8 nov. 2026 (page Photos)** : page `photos.html` (bouton « 🖼️ Photos » sur le tableau de bord et les autres pages, derrière le code d'accès). Google ne laisse plus un site lire la liste des albums d'un compte (avril 2025) : on passe par les albums **partagés par lien**, listés dans `photos/albums.txt`. La tâche les lit avec `outils/photos.py` (titre, toutes les photos, dates ; Google les envoie par 300, les pages suivantes sont demandées avec l'appel `snAcKc`), au plus toutes les 6 h ou dès que la liste ou `VERSION` change, et écrit `photos/albums.json` (deux liens vers le même album n'en font qu'un). La page montre les « Derniers albums » puis tous les autres, et lance un diaporama plein écran (◀ ⏸ ▶, 🔀, ✕ ; télécommande : flèches, OK, Retour).
 - **8 nov. 2026 (réglages Photos et écran de veille)** : panneau « ⚙️ Réglages » sur la page Photos : durée de chaque photo, transition (fondu enchaîné, fondu au noir, glissement, zoom lent Ken Burns, aucune), ordre (chronologique ou au hasard), titre et date toujours affichés ou non, nombre de « Derniers albums », écran de veille (désactivé, album le plus récent, tous les albums au hasard, ou un album précis) et son délai. Sur un appareil où le jeton GitHub est enregistré (le même que pour le Chauffage, permission Actions en écriture), l'enregistrement lance la tâche « Photos : réglages » (`photos-regler.yml`, `outils/photos_regler.py`) qui écrit `photos/reglages.json` pour tous les appareils, et permet d'ajouter (coller un lien) ou de retirer des albums ; sans jeton, les réglages restent sur l'appareil. Écran de veille : `veille.js` sur l'accueil, Courbes, Énergie, Bilans et Chauffage ; après le délai choisi sans aucune manipulation, ouverture de `photos.html?veille=1&retour=…` (diaporama sans boutons) ; la moindre action ramène à la page de départ. Pas sur la météo partagée. Attention : le dépôt et le site étant publics, les adresses des photos des albums se retrouvent dans `albums.json`, comme pour tout album partagé par lien.
+- **9 nov. 2026 (données chiffrées)** : le dépôt reste public (GitHub Pages gratuit, tâches illimitées), mais toutes les données personnelles sont désormais chiffrées (AES-256-GCM, clé tirée d'une phrase d'accès) : l'historique passe sur la branche `donnees` chiffrée, le site ne publie que des fichiers chiffrés, `verrou.js` devient une vraie protection (phrase d'accès au lieu d'un simple code) qui déchiffre dans le navigateur. Identifiants Mobile Alerts déplacés dans le secret `MOBILE_ALERTS` (noms des pièces dans les pages et l'historique), coordonnées arrondies, journaux des tâches sans liens d'albums, liens envoyés chiffrés par la page Photos. Historique Git réécrit pour effacer les anciennes données en clair. Seule la météo reste libre d'accès.
 - **À reprendre** : alertes automatiques (pile faible, box du chauffage hors ligne, capteur muet) envoyées par la tâche, par notification ntfy, e-mail, WhatsApp (CallMeBot) ou SMS (Free Mobile) ; pour les mesures figées, veilleur extérieur gratuit (healthchecks.io) prévenu à chaque passage.
 - Idées écartées pour l'instant : appli Apple TV native (nécessite un Mac), intégration de SmartThings.

@@ -1,1 +1,5 @@
 __pycache__/
+historique/
+photos/albums.txt
+photos/albums.json
+.coffre-empreintes.json

@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       ajouter:
-        description: "Lien d'album Google Photos partagé à ajouter"
+        description: "Lien d'album à ajouter (chiffré par la page Photos ; un lien en clair marche aussi mais reste visible ici)"
         default: ""
       retirer:
-        description: "Lien d'album à retirer"
+        description: "Lien d'album à retirer (chiffré par la page Photos)"
         default: ""
       reglages:
         description: 'Réglages en JSON, ex. {"secondes":8,"transition":"fondu","ordre":"chrono","legende":"non","recents":4}'
@@ -29,20 +29,51 @@ jobs:
   regler:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      MAISON17_PHRASE: ${{ secrets.MAISON17_PHRASE }}
     steps:
       - uses: actions/checkout@v4
+      - name: Récupérer le coffre (branche donnees, chiffrée)
+        uses: actions/checkout@v4
+        with:
+          ref: donnees
+          path: coffre
+          fetch-depth: 1
       - name: Modifier la liste des albums ou les réglages
         env:
           AJOUTER: ${{ inputs.ajouter }}
           RETIRER: ${{ inputs.retirer }}
           REGLAGES: ${{ inputs.reglages }}
-        run: python3 outils/photos_regler.py
-      - name: Enregistrer dans le dépôt
+        run: |
+          # Les liens arrivent chiffrés par la page : on les déchiffre dans un fichier, jamais dans le journal
+          export ENTREES="$RUNNER_TEMP/entrees.json"
+          node outils/coffre.js entrees > "$ENTREES"
+          for essai in 1 2 3 4; do
+            rm -rf historique photos/albums.txt photos/albums.json
+            node outils/coffre.js ouvrir coffre .
+            python3 outils/photos_regler.py
+            node outils/coffre.js fermer . coffre
+            git -C coffre config user.name "Tableau de bord maison"
+            git -C coffre config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C coffre add -A
+            if git -C coffre diff --cached --quiet; then break; fi
+            BASE=$(git -C coffre rev-parse HEAD)
+            git -C coffre checkout -q --orphan nouveau-$essai
+            git -C coffre add -A
+            git -C coffre commit -q -m "Photos : liste des albums modifiée depuis la page"
+            git -C coffre push -q --force-with-lease=donnees:"$BASE" origin HEAD:donnees && break
+            # La publication a remplacé le coffre entre-temps : on repart du nouveau
+            sleep 5
+            git -C coffre fetch -q --depth 1 origin donnees
+            git -C coffre checkout -q -f FETCH_HEAD
+            git checkout -q -- photos/reglages.json
+          done
+      - name: Enregistrer les réglages du diaporama dans le dépôt
         run: |
           git config user.name "Tableau de bord maison"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add photos
-          if git diff --cached --quiet; then echo "Rien à changer"; exit 0; fi
+          git add photos/reglages.json
+          if git diff --cached --quiet; then echo "Réglages inchangés"; exit 0; fi
           git commit -q -m "Photos : réglages modifiés depuis la page"
           for essai in 1 2 3 4; do
             git pull -q --rebase origin main && git push -q origin HEAD:main && break

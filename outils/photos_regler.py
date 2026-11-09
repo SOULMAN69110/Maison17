@@ -16,8 +16,13 @@ PERMIS = {
     "veille_min": lambda v: isinstance(v, int) and 1 <= v <= 120,
 }
 
-ajouter = os.environ.get("AJOUTER", "").strip()
-retirer = os.environ.get("RETIRER", "").strip()
+# Les liens d'albums arrivent chiffrés depuis photos.html (les entrées d'une tâche sont publiques) :
+# la tâche les déchiffre avec outils/coffre.js dans le fichier désigné par ENTREES.
+entrees = {}
+if os.environ.get("ENTREES"):
+    entrees = json.load(open(os.environ["ENTREES"], encoding="utf-8"))
+ajouter = (entrees.get("AJOUTER") or os.environ.get("AJOUTER", "")).strip()
+retirer = (entrees.get("RETIRER") or os.environ.get("RETIRER", "")).strip()
 reglages = os.environ.get("REGLAGES", "").strip()
 
 lignes = open(LISTE, encoding="utf-8").read().splitlines()
@@ -25,15 +30,15 @@ liens = [l.split("#", 1)[0].strip() for l in lignes]
 
 if ajouter:
     if not LIEN.match(ajouter):
-        sys.exit("Lien refusé : %r" % ajouter)
+        sys.exit("Lien refusé (ce n'est pas un lien d'album Google Photos partagé)")
     if ajouter in liens:
         print("Album déjà présent")
     else:
-        lignes.append(ajouter); print("Album ajouté :", ajouter)
+        lignes.append(ajouter); print("Album ajouté")
 if retirer:
     avant = len(lignes)
     lignes = [l for l in lignes if l.split("#", 1)[0].strip() != retirer]
-    print("Album retiré" if len(lignes) < avant else "Album introuvable dans la liste : %s" % retirer)
+    print("Album retiré" if len(lignes) < avant else "Album introuvable dans la liste")
 if ajouter or retirer:
     open(LISTE, "w", encoding="utf-8").write("\n".join(lignes) + "\n")
 

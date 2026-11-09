@@ -8,13 +8,14 @@ Utilisateur : Hervé, francophone. **Toujours répondre en français, y compris 
 
 ## Fonctionnement en bref
 
-- Pas de serveur : pages HTML/JS à la racine (`index.html`, `historique.html`, `energie.html`, `bilans.html`, `chauffage.html`, `lieux.html`, `photos.html`, `meteo.html`), scripts communs `nav.js` (rangée de boutons), `verrou.js` (code d'accès dissuasif), `veille.js` (écran de veille photos), `maj.js` (rechargement à chaque nouvelle version).
+- Pas de serveur : pages HTML/JS à la racine (`index.html`, `historique.html`, `energie.html`, `bilans.html`, `chauffage.html`, `lieux.html`, `photos.html`, `meteo.html`), scripts communs `nav.js` (rangée de boutons), `verrou.js` (phrase d'accès et déchiffrement des données), `veille.js` (écran de veille photos), `maj.js` (rechargement à chaque nouvelle version).
 - **GitHub Actions** (`.github/workflows/`) : `pages.yml` (« Mesures et publication » : interroge les sources, ajoute aux CSV de `historique/`, publie `data.json`, `solaire.json`, `chauffage.json`, `photos/albums.json`), `horloge.yml` (relance toutes les 10 min), `chauffage-regler.yml` et `photos-regler.yml` (lancées depuis les pages avec un jeton GitHub à granularité fine gardé sur l'appareil). Scripts Python dans `outils/`.
-- Secrets dans GitHub (Settings → Secrets → Actions) : `ESTAR_*`, `HSL_*`… Jamais de secret, jeton ni identifiant personnel dans le dépôt : **il est public**, comme le site.
+- Secrets dans GitHub (Settings → Secrets → Actions) : `ESTAR_*`, `HSL_*`, `MAISON17_PHRASE` (phrase d'accès, clé du chiffrement), `MOBILE_ALERTS` (`nom=ID` des capteurs)… Jamais de secret, jeton ni identifiant personnel dans le dépôt : **il est public**, comme le site.
+- **Données chiffrées** (depuis le 9/11/2026, voir README « Protection des données ») : l'historique est sur la branche `donnees`, chiffré (`outils/coffre.js`), jamais en clair sur `main` ni sur le site ; les pages déchiffrent via `verrou.js` (leurs `fetch()` sont interceptés). Seule la météo (`?vue=meteo`, `lieux.html?retour=meteo`) est libre. Ne jamais remettre de données, d'ID de capteur ni de lien d'album en clair dans le dépôt, dans le site ou dans les journaux des tâches (publics).
 
 ## Façon de travailler
 
-- **Le robot enregistre l'historique toutes les 10 minutes** (commits « Historique : mesures du … ») : toujours `git pull --rebase` avant de commencer et avant de pousser, sinon le push est refusé.
+- **Le robot enregistre l'historique toutes les 10 minutes** sur la branche `donnees` (un seul commit remplacé à chaque fois), et non plus sur `main` : faire quand même `git pull --rebase` avant de commencer et avant de pousser (la page Photos peut modifier `photos/reglages.json`).
 - Publier = pousser sur `main` (la tâche republie le site ; pour une page nouvelle, l'ajouter à la copie de `pages.yml`, à `PAGES` de `nav.js` et à `RACCOURCIS` d'`index.html`). Vérifier ensuite que la tâche est passée (onglet Actions) et que la page en ligne a changé.
 - Git : si `git` n'est pas reconnu, `& "$env:ProgramFiles\Git\cmd\git.exe"` ; messages de commit en français, écrits dans un fichier et passés par `-F`.
 - **Télé Samsung QLED Q9FN (2018)** : son navigateur ne connaît ni la grille CSS, ni `inset`, ni `min()` → garder les mises en page de secours en flexbox (`@supports not (display:grid)`) et tester toute modification de mise en page en pensant à elle ; télécommande : flèches, OK, Retour.

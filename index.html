@@ -324,7 +324,6 @@ var CAPTEURS = [
   { id: "sdb-filles", nom: "SdB filles", emo: "🛁", sdb: true },
   { id: "sdb-parents", nom: "SdB parents", emo: "🛁", sdb: true }
 ];
-var API = "https://www.data199.com/api/pv1/device/lastmeasurement";
 var RAFRAICHIR_MIN = 7;     // Mobile Alerts met à jour environ toutes les 7 min
 var VIEUX_MIN = 45;
 var HEURES_JOUR = [7, 10, 13, 16, 19];   // créneaux affichés en emoji pour chaque jour des prévisions
@@ -455,12 +454,7 @@ function afficher(appareils){
 
 function lireJson(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }
 function valider(j){ if (!j || !j.devices) throw new Error("réponse inattendue"); return j; }
-function direct(){
-  var corps = "deviceids=" + encodeURIComponent(CAPTEURS.map(function(c){ return c.id; }).join(","));
-  return fetch(API, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: corps })
-    .then(lireJson).then(valider);
-}
-/* Secours : copie des mesures déposée par la tâche automatique du dépôt */
+/* Mesures déposées (chiffrées) par la tâche automatique du dépôt, déchiffrées par verrou.js */
 function relais(){
   return fetch("data.json?t=" + Date.now(), { cache: "no-store" }).then(lireJson).then(valider);
 }

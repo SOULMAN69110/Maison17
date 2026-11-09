@@ -160,10 +160,10 @@ def main(liste, sortie):
                 continue
             deja.add(a["id"])
             albums.append(a)
-            print("Photos : %s — %d photos" % (a["titre"], a["nb"]))
+            print("Photos : album lu, %d photos" % a["nb"])
         except Exception as e:
             erreurs.append({"lien": lien, "erreur": str(e)[:200]})
-            print("Photos : échec pour %s : %s" % (lien, e))
+            print("Photos : échec pour un album (%s)" % type(e).__name__)
             if lien in precedents:             # on garde la version d'avant plutôt que rien
                 albums.append(precedents[lien])
     albums.sort(key=lambda a: a.get("fin") or 0, reverse=True)

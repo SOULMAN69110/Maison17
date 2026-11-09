@@ -1,5 +1,10 @@
 name: Mesures et publication
 
+# Le dépôt et le site sont publics : les données personnelles n'y sont publiées que chiffrées
+# (outils/coffre.js, phrase de passe dans le secret MAISON17_PHRASE). L'historique est rangé chiffré
+# sur la branche « donnees » : la tâche l'ouvre, y ajoute les mesures, le rechiffre et le remplace
+# (un seul commit, pas d'historique qui grossit). Si le secret manque, la tâche s'arrête sans rien publier.
+
 on:
   push:
     branches: [main]
@@ -22,18 +27,29 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deploiement.outputs.page_url }}
+    env:
+      MAISON17_PHRASE: ${{ secrets.MAISON17_PHRASE }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Récupérer le coffre (branche donnees, chiffrée)
+        uses: actions/checkout@v4
+        with:
+          ref: donnees
+          path: coffre
+          fetch-depth: 1
+
+      - name: Ouvrir le coffre (historique et albums en clair, seulement dans la tâche)
+        run: |
+          echo "BASE_COFFRE=$(git -C coffre rev-parse HEAD)" >> "$GITHUB_ENV"
+          node outils/coffre.js ouvrir coffre .
+
       - name: Récupérer les dernières mesures Mobile Alerts
+        env:
+          MOBILE_ALERTS: ${{ secrets.MOBILE_ALERTS }}
         run: |
           mkdir -p site
-          IDS="salon,chambre-c,chambre-parents,chambre-y,bureau,sdb-filles,sdb-parents"
-          curl -sS -m 30 -X POST \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data "deviceids=$IDS" \
-            https://www.data199.com/api/pv1/device/lastmeasurement -o site/data.json || true
-          python3 -c "import json;d=json.load(open('site/data.json'));assert d.get('devices')" || echo '{"devices":[]}' > site/data.json
+          python3 outils/mobile_alerts.py site/data.json
 
       - name: Récupérer la pluie dans l'heure (Météo-France)
         run: |
@@ -70,26 +86,46 @@ jobs:
         timeout-minutes: 5
         run: python3 outils/photos.py photos/albums.txt photos/albums.json
 
-      - name: Ajouter à l'historique et enregistrer dans le dépôt
+      - name: Ajouter à l'historique, rechiffrer et ranger dans le coffre
         run: |
           python3 outils/historiser.py site/data.json meteo.json site/chauffage.json
+          node outils/coffre.js fermer . coffre
+          cd coffre
           git config user.name "Tableau de bord maison"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add historique photos
-          if ! git diff --cached --quiet; then
-            git commit -q -m "Historique : mesures du $(TZ=Europe/Paris date '+%d/%m/%Y %H:%M')"
-            for essai in 1 2 3; do
-              git pull -q --rebase origin main && git push -q origin HEAD:main && break
-              sleep 5
-            done
-          fi
+          git add -A
+          if git diff --cached --quiet; then echo "Coffre inchangé"; exit 0; fi
+          # Un seul commit, remplacé à chaque passage
+          git checkout -q --orphan nouveau
+          git add -A
+          git commit -q -m "Données chiffrées du $(TZ=Europe/Paris date '+%d/%m/%Y %H:%M')"
+          for essai in 1 2 3; do
+            git push -q --force-with-lease=donnees:"$BASE_COFFRE" origin HEAD:donnees && exit 0
+            # La page Photos a modifié la liste des albums entre-temps : on garde la sienne
+            sleep 3
+            git fetch -q --depth 1 origin donnees
+            BASE_COFFRE=$(git rev-parse FETCH_HEAD)
+            git checkout -q FETCH_HEAD -- photos/albums.txt 2>/dev/null || true
+            git add -A
+            git commit -q --amend --no-edit
+          done
+          echo "Coffre non enregistré (sera repris au prochain passage)"
 
-      - name: Préparer le site
+      - name: Préparer le site (données chiffrées seulement)
         run: |
           cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html photos.html verrou.js maj.js nav.js veille.js site/
-          cp -r historique site/
           cp -r app site/
-          cp -r photos site/
+          node outils/coffre.js chiffrer site/data.json site/solaire.json site/chauffage.json
+          node outils/coffre.js controle site/controle.txt
+          mkdir -p site/historique site/photos
+          cp coffre/historique/* site/historique/
+          cp coffre/photos/albums.json site/photos/ 2>/dev/null || true
+          cp photos/reglages.json site/photos/
+          # Garde-fou : aucun fichier de données en clair ne part sur le site
+          for f in site/data.json site/solaire.json site/chauffage.json site/historique/* site/photos/albums.json; do
+            [ -e "$f" ] || continue
+            head -c 6 "$f" | grep -q '^M17v1:' || { echo "Fichier non chiffré : $f"; exit 1; }
+          done
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
