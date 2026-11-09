@@ -145,6 +145,7 @@ a{color:var(--givre)}
   </section>
 
   <p class="pied" id="pied" hidden><a href="#" id="oublier">Oublier le jeton sur cet appareil</a></p>
+  <p class="pied" id="pied-regler" hidden><a href="#" id="regler-ici">Régler le radiateur depuis cet appareil…</a></p>
 </main>
 
 <script>
@@ -329,7 +330,9 @@ function envoyer(entrees, fini){
 function retour(t, c){ var r = el("retour"); r.textContent = t; r.className = "retour " + c; }
 
 /* ===== Jeton (sur cet appareil seulement) ===== */
-function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; }
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = true; el("pied-regler").hidden = a; }
+/* Sans jeton (ex. la télé) : page en consultation ; le lien du bas ouvre la saisie du jeton */
+el("regler-ici").addEventListener("click", function(e){ e.preventDefault(); el("jeton").hidden = false; el("pied-regler").hidden = true; el("jeton").scrollIntoView(); });
 el("jeton-ok").addEventListener("click", function(){
   var v = el("jeton-saisie").value.trim(); if (!v) return;
   try { localStorage.setItem(CLE_JETON, v); } catch (e) {}

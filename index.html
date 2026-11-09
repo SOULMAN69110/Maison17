@@ -335,12 +335,9 @@ var LIEU = (function(){
   try { var e = JSON.parse(localStorage.getItem("maison17-meteo")); if (e && e.accueil && typeof e.accueil.lat === "number") return e.accueil; } catch (x) {}
   return MAISON;
 })();
-/* Page Chauffage : raccourci seulement sur les appareils où le jeton de réglage a été saisi (pas sur la télé),
-   et aussi dans l'appli installée sur l'écran d'accueil : sur iPhone elle a son propre stockage, séparé de Safari,
-   et pas de barre d'adresse, donc il faut ce raccourci pour y coller le jeton une première fois */
-var APPLI_INSTALLEE = window.navigator.standalone === true ||
-  (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
-try { if (APPLI_INSTALLEE || localStorage.getItem("maison17-jeton-chauffage")) RACCOURCIS.push({ lien: "chauffage.html", texte: "🔥 Chauffage" }); } catch (x) {}
+/* Page Chauffage : raccourci sur tous les appareils, télé comprise (consultation : état, courbe, programmation).
+   Les réglages restent réservés aux appareils où le jeton GitHub a été saisi (voir chauffage.html). */
+RACCOURCIS.push({ lien: "chauffage.html", texte: "🔥 Chauffage" });
 if (VUE_METEO) RACCOURCIS = [{ lien: "lieux.html?retour=meteo", texte: "📍 Lieu" }];
 /* Lien partagé avec un lieu, ex. meteo.html?lieu=meze : la première ouverture règle ce lieu sur l'appareil,
    ensuite le choix fait sur place (📍 Lieu) reste prioritaire même si le lien garde ?lieu= */

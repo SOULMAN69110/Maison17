@@ -11,15 +11,8 @@
     { lien: "energie.html",    emo: "☀️", texte: "Énergie" },
     { lien: "bilans.html",     emo: "📊", texte: "Bilans" },
     { lien: "photos.html",     emo: "🖼️", texte: "Photos" },
-    { lien: "chauffage.html",  emo: "🔥", texte: "Chauffage", chauffage: true }
+    { lien: "chauffage.html",  emo: "🔥", texte: "Chauffage" }
   ];
-  /* Chauffage : seulement là où le jeton de réglage a été saisi, ou dans l'appli installée (comme sur le tableau de bord) */
-  var chauffageOk = false;
-  try {
-    chauffageOk = window.navigator.standalone === true ||
-      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
-      !!localStorage.getItem("maison17-jeton-chauffage");
-  } catch (x) {}
   var ici = location.pathname.split("/").pop() || "index.html";
 
   var style = document.createElement("style");
@@ -39,7 +32,6 @@
   for (var i = 0; i < PAGES.length; i++) {
     var p = PAGES[i];
     if ((p.fichier || p.lien) === ici) continue;
-    if (p.chauffage && !chauffageOk) continue;
     html += '<a href="' + p.lien + '"' + (p.externe ? ' target="_blank" rel="noopener"' : '') + '><i>' + p.emo + '</i>' + p.texte + '</a>';
   }
   var zones = document.querySelectorAll(".nav-pages");
