@@ -422,7 +422,7 @@ function construire(){
 
 function afficher(appareils){
   var parId = {};
-  appareils.forEach(function(a){ parId[String(a.deviceid).toUpperCase()] = a; });
+  appareils.forEach(function(a){ parId[String(a.deviceid)] = a; });
   var maintenant = Date.now() / 1000;
 
   CAPTEURS.forEach(function(c){
