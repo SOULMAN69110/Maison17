@@ -4,6 +4,6 @@
  "ordre": "chrono",
  "legende": "non",
  "recents": 4,
- "veille": "dernier",
- "veille_min": 2
+ "veille": "tous",
+ "veille_min": 5
 }
