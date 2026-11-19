@@ -175,7 +175,9 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
       <select id="r-veille"><option value="non">Désactivé</option><option value="dernier">Le plus récent</option><option value="tous">Tous les albums, au hasard</option></select></div>
     <div class="ligne"><label for="r-veille_min">Après combien de temps sans manipulation</label>
       <select id="r-veille_min"><option value="1">1 min</option><option value="2">2 min</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></div>
-    <p class="note">Sur l'accueil, Courbes, Énergie, Bilans et Chauffage. La moindre action (télécommande, toucher, souris) ramène à la page.</p>
+    <div class="ligne"><label for="r-veille-ici">Écran de veille sur cet appareil</label>
+      <select id="r-veille-ici"><option value="oui">Activé</option><option value="non">Désactivé</option></select></div>
+    <p class="note">Sur l'accueil, Courbes, Énergie, Bilans et Chauffage. La moindre action (télécommande, toucher, souris) ramène à la page. « Sur cet appareil » s'applique tout de suite, sans Enregistrer, et seulement à cet appareil : par exemple coupé sur l'iPhone, gardé sur la télé.</p>
     <div class="actions"><button id="b-annuler" type="button">Fermer</button><button class="principal" id="b-enregistrer" type="button">Enregistrer</button></div>
 
     <div id="gestion">
@@ -331,12 +333,20 @@ function ouvrirPanneau(){
   $("portee").innerHTML = a
     ? "Les réglages s'appliquent à <b>tous les appareils</b>, télé comprise, 2 à 3 min après l'enregistrement."
     : "Ces réglages ne valent que pour <b>cet appareil</b>. Pour les appliquer partout et gérer les albums, ouvre cette page sur un appareil où le jeton GitHub est enregistré (iPhone ou PC, comme pour la page Chauffage).";
+  $("r-veille-ici").value = veilleIci() ? "oui" : "non";
   $("gestion").style.display = a ? "" : "none";
   if (a) dessinerListe();
   retour("", "");
   $("panneau").className = "ouvert";
   $("r-secondes").focus();
 }
+/* Écran de veille coupé sur cet appareil seulement (lu par veille.js) */
+var CLE_VEILLE_ICI = "maison17-veille-appareil";
+function veilleIci(){ try { return localStorage.getItem(CLE_VEILLE_ICI) !== "non"; } catch (e) { return true; } }
+$("r-veille-ici").addEventListener("change", function(){
+  try { if (this.value === "non") localStorage.setItem(CLE_VEILLE_ICI, "non"); else localStorage.removeItem(CLE_VEILLE_ICI); } catch (e) {}
+  retour(this.value === "non" ? "Écran de veille désactivé sur cet appareil." : "Écran de veille réactivé sur cet appareil.", "ok");
+});
 function fermerPanneau(){ $("panneau").className = ""; $("b-reglages").focus(); }
 function dessinerListe(){
   var h = "", i, liens = {};

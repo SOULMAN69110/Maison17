@@ -5,6 +5,7 @@
    Mettre <script src="veille.js"></script> dans la page. Écrit pour les navigateurs anciens des télés (ES5). */
 (function(){
   if (/[?&](vue|retour)=meteo\b/.test(location.search)) return;   // pas sur la météo partagée
+  try { if (localStorage.getItem("maison17-veille-appareil") === "non") return; } catch (e) {}   // coupé sur cet appareil (⚙️ Réglages de Photos)
   var minuteur = null, delai = 0;
 
   function lireLocal(){
