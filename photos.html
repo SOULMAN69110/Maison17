@@ -31,7 +31,7 @@ h1 i{font-style:normal}
 /* Boutons de largeur fixe : dans ce bloc qui prend la largeur de son contenu, le navigateur de la télé (2018)
    calcule mal les boutons à largeur souple (flex:1 1 0) et le premier (Accueil) disparaissait */
 .droite-haut .nav-pages{flex-shrink:0}
-.droite-haut .nav-pages a{flex:0 0 auto;width:5em;max-width:none}
+.droite-haut .nav-pages a{flex:0 0 auto;width:5.6em;max-width:none}
 #b-reglages{flex-shrink:0}
 #b-reglages{font:inherit;font-size:1.1vw;font-weight:500;line-height:1.15;display:flex;flex-direction:column;align-items:center;margin:.8em .6vw 0 0;padding:.47em .9em;color:var(--craie);background:var(--ardoise);border:2px solid var(--trait);border-radius:.8em;cursor:pointer;outline:none}
 #b-reglages i{font-style:normal;font-size:1.2em;line-height:1;margin-bottom:.2em}
@@ -113,6 +113,12 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
   h1{font-size:7vw}.sous{font-size:2.6vw}
   .haut .nav-pages,#b-reglages{font-size:3.4vw}
   #b-reglages{padding:1.8vw 2vw;border-radius:2.5vw;margin-right:2vw}
+  /* Téléphone : les 5 boutons des pages sur toute la largeur (comme les autres pages), Réglages en dessous */
+  .droite-haut{width:100%;flex-wrap:wrap;margin-top:2vw}
+  .droite-haut .nav-pages{order:1;width:100%;flex-shrink:1;font-size:3.1vw}
+  .droite-haut .nav-pages a{flex:1 1 0;width:auto;min-width:0}
+  #b-reglages{order:2;flex-direction:row;margin:2.5vw 0 0}
+  #b-reglages i{margin:0 .4em 0 0}
   .message{font-size:4vw}
   .album{width:50%;padding:1.5vw}.album .nom{font-size:3.8vw}.album .date,.album .nb{font-size:2.8vw}
   .titre-section{font-size:2.8vw}
