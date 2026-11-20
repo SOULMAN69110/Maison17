@@ -121,6 +121,12 @@ jobs:
           cp coffre/historique/* site/historique/
           cp coffre/photos/albums.json site/photos/ 2>/dev/null || true
           cp photos/reglages.json site/photos/
+          # Numéro de version (empreinte du code des pages) inscrit dans chaque page et dans version.txt :
+          # maj.js recharge une page dont le numéro n'est plus celui du site
+          VERSION_SITE=$(cat site/*.html site/*.js | sha256sum | cut -c1-12)
+          sed -i "s|<meta charset=\"utf-8\">|<meta charset=\"utf-8\">\n<meta name=\"m17-version\" content=\"$VERSION_SITE\">|" site/*.html
+          echo "$VERSION_SITE" > site/version.txt
+          echo "Version du site : $VERSION_SITE"
           # Garde-fou : aucun fichier de données en clair ne part sur le site
           for f in site/data.json site/solaire.json site/chauffage.json site/historique/* site/photos/albums.json; do
             [ -e "$f" ] || continue
