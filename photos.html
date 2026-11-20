@@ -136,6 +136,18 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
 #lieu{display:none;position:absolute;top:1.6vw;right:1.6vw;margin-right:env(safe-area-inset-right);width:26vw;background:rgba(15,20,24,.9);border:.18vw solid var(--trait);border-radius:1vw;overflow:hidden;z-index:2}
 #diapo.avec-lieu #lieu{display:block}
 #lieu.sans-carte .carte{display:none}
+/* Musique (bouton 🎵) : lecteur Spotify en bas à gauche, au-dessus des boutons. Caché, il continue de jouer. */
+#musique{position:absolute;left:2vw;bottom:6vw;width:30vw;z-index:3;background:rgba(15,20,24,.92);border:.18vw solid var(--trait);border-radius:1vw;padding:.6vw;
+  opacity:0;visibility:hidden;-webkit-transition:opacity .4s,visibility .4s;transition:opacity .4s,visibility .4s}
+#diapo.avec-musique #musique{opacity:1;visibility:visible}
+#diapo.avec-musique.calme #musique{opacity:0;visibility:hidden}
+#musique iframe{display:block;width:100%;height:80px;border:0;border-radius:12px}
+#musique .ligne-musique{display:flex;align-items:center;margin-top:.5vw}
+#musique .ligne-musique input{flex:1 1 auto;min-width:0;font:inherit;font-size:1vw;color:var(--craie);background:var(--nuit);border:2px solid var(--trait);border-radius:.6vw;padding:.4vw .6vw;outline:none;margin-right:.5vw}
+#musique .ligne-musique input:focus{border-color:var(--givre)}
+#diapo #musique button{font-size:1vw;min-width:0;margin:0 0 0 .4vw;padding:.4vw .8vw}
+#musique .aide{font-size:.95vw;line-height:1.35;color:#bcc6cd}
+#musique .aide b{color:var(--craie)}
 #lieu .carte{position:relative;width:100%;height:16vw;overflow:hidden;background:#1b2228}
 #lieu .carte img{position:absolute;width:256px;height:256px;max-width:none}
 #lieu .epingle{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--alerte);border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.8)}
@@ -170,6 +182,10 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
   #diapo .legende,#diapo .fixe{font-size:4vw}#diapo .legende span,#diapo .fixe span{font-size:2.8vw}
   #diapo button{font-size:4.5vw;min-width:11vw;border-radius:2vw;margin-left:1.5vw}
   #lieu{width:70vw;top:3vw;right:3vw;border-radius:2.5vw}
+  #musique{width:94vw;left:3vw;bottom:auto;top:3vw;padding:2vw;border-radius:2.5vw}
+  #musique .ligne-musique{margin-top:2vw}
+  #musique .ligne-musique input,#diapo #musique button,#musique .aide{font-size:3.6vw}
+  #musique .ligne-musique input{padding:1.5vw 2vw;border-radius:2vw}#diapo #musique button{padding:1.5vw 3vw;margin-left:1.5vw}
   #lieu .carte{height:42vw}
   #lieu .texte{font-size:3.8vw;padding:2.5vw 3vw}#lieu .texte span{font-size:2.8vw}
   #diapo #lieu .zoom button{font-size:4vw;min-width:8vw;margin-bottom:1.5vw}
@@ -199,6 +215,8 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
   #lieu .texte{font-size:1.7vw}#lieu .texte span{font-size:1.2vw}
   #diapo #lieu .zoom button{font-size:1.6vw;min-width:3.4vw}
   #lieu .credit{font-size:.9vw}
+  #musique{width:40vw;bottom:9vw}
+  #musique .ligne-musique input,#diapo #musique button,#musique .aide{font-size:1.4vw}
   #grille{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
   #grille .tete b{font-size:2.2vw}#grille .tete b span{font-size:1.3vw}
   #grille .mois{font-size:1.3vw}
@@ -236,6 +254,9 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
     <p class="note">Sur la télé, le zoom lent et le glissement sont remplacés par le fondu enchaîné, plus fluide.</p>
     <div class="ligne"><label for="r-ordre">Ordre des photos</label>
       <select id="r-ordre"><option value="chrono">Chronologique</option><option value="hasard">Au hasard</option></select></div>
+    <div class="ligne"><label for="r-cadrage">Cadrage sur cet appareil</label>
+      <select id="r-cadrage"><option value="entiere">Photo entière (bandes noires)</option><option value="auto">Plein écran si même sens que l'écran</option><option value="remplir">Toujours plein écran (rogne)</option></select></div>
+    <p class="note">« Plein écran » remplit tout l'écran en rognant un peu les bords : idéal pour la recopie de l'iPhone sur la télé. En automatique, une photo en hauteur reste entière sur un écran en largeur (sinon elle serait trop rognée). S'applique tout de suite, à cet appareil seulement.</p>
     <div class="ligne"><label for="r-legende">Titre et date sur les photos</label>
       <select id="r-legende"><option value="oui">Toujours affichés</option><option value="non">Seulement avec les boutons</option></select></div>
 
@@ -252,6 +273,7 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
       <select id="r-veille-ici"><option value="oui">Activé</option><option value="non">Désactivé</option></select></div>
     <div class="ligne"><label for="r-nuit">Mode nuit sur cet appareil</label>
       <select id="r-nuit"><option value="non">Désactivé</option><option value="22-7">De 22 h à 7 h</option><option value="23-7">De 23 h à 7 h</option><option value="0-7">De 0 h à 7 h</option><option value="23-6">De 23 h à 6 h</option><option value="0-6">De 0 h à 6 h</option><option value="22-6">De 22 h à 6 h</option></select></div>
+    <p class="note">🎵 Musique : bouton 🎵 du diaporama, lien d'une playlist Spotify gardé sur chaque appareil.</p>
     <p class="note">La nuit, à la place des photos : écran noir avec seulement l'heure et la température dehors, en gris très sombre. Sur cet appareil seulement, tout de suite.</p>
     <p class="note">Sur l'accueil, Courbes, Énergie, Bilans et Chauffage. La moindre action (télécommande, toucher, souris) ramène à la page. « Sur cet appareil » s'applique tout de suite, sans Enregistrer, et seulement à cet appareil : par exemple coupé sur l'iPhone, gardé sur la télé.</p>
     <div class="actions"><button id="b-annuler" type="button">Fermer</button><button class="principal" id="b-enregistrer" type="button">Enregistrer</button></div>
@@ -269,6 +291,10 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
 <div id="diapo" aria-label="Diaporama">
   <div class="vue"></div><div class="vue"></div>
   <div class="fixe" id="fixe"></div>
+  <div id="musique" role="region" aria-label="Musique">
+    <div id="musique-lecteur"></div>
+    <div class="ligne-musique" id="musique-reglage"><input type="text" id="musique-lien" placeholder="Lien Spotify : playlist, album, titre…" autocomplete="off"><button id="b-musique-ok" type="button">OK</button></div>
+  </div>
   <div id="lieu">
     <div class="carte" id="lieu-carte"></div>
     <div class="texte" id="lieu-texte"></div>
@@ -287,6 +313,7 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
       <button id="b-suiv" title="Photo suivante">▶</button>
       <button id="b-hasard" title="Ordre au hasard">🔀</button>
       <button id="b-lieu" title="Lieu et date de la photo (touche Info)">📍</button>
+      <button id="b-musique" title="Musique (Spotify)">🎵</button>
       <button id="b-fermer" title="Fermer">✕</button>
     </div>
   </div>
@@ -445,6 +472,7 @@ function ouvrirPanneau(){
     : "Ces réglages ne valent que pour <b>cet appareil</b>. Pour les appliquer partout et gérer les albums, ouvre cette page sur un appareil où le jeton GitHub est enregistré (iPhone ou PC, comme pour la page Chauffage).";
   $("r-veille-ici").value = veilleIci() ? "oui" : "non";
   $("r-nuit").value = nuitIci();
+  $("r-cadrage").value = cadrage();
   if (!$("r-nuit").value) $("r-nuit").value = "non";
   $("gestion").style.display = a ? "" : "none";
   if (a) dessinerListe();
@@ -469,6 +497,10 @@ function estLaNuit(){
   var m = v.split("-"), d = +m[0], f = +m[1], h = new Date().getHours();
   return d < f ? (h >= d && h < f) : (h >= d || h < f);
 }
+$("r-cadrage").addEventListener("change", function(){
+  try { localStorage.setItem(CLE_CADRAGE, this.value); } catch (e) {}
+  retour("Cadrage réglé sur cet appareil : " + this.options[this.selectedIndex].text.toLowerCase() + ".", "ok");
+});
 $("r-nuit").addEventListener("change", function(){
   var v = this.value, m = v.split("-");
   try { localStorage.setItem(CLE_NUIT, v === "non" ? "non" : JSON.stringify({ debut: +m[0], fin: +m[1] })); } catch (e) {}
@@ -560,6 +592,7 @@ function classeDiapo(){
   if (R.legende === "oui") c += " avec-legende";
   var p = photoActuelle();
   if (lieuVisible && p) c += " avec-lieu";
+  if (musiqueVisible) c += " avec-musique";
   return c;
 }
 function montrer(){
@@ -568,6 +601,7 @@ function montrer(){
     /* la nouvelle photo part de sa position de départ, sans animation, puis entre */
     entrante.className = "vue prep";
     entrante.style.backgroundImage = 'url("' + url + '")';
+    entrante.style.backgroundSize = tailleFond(p);
     entrante.style.webkitAnimationDuration = entrante.style.animationDuration = (+R.secondes + 3) + "s";
     void entrante.offsetWidth;
     entrante.className = "vue visible";
@@ -583,6 +617,19 @@ function montrer(){
   $("fixe").innerHTML = echapper(t) + '<span>' + (p.d ? jour(p.d) : '') + '</span>';
   if (lieuVisible) montrerLieu();
   relancer();
+}
+/* Cadrage (réglage par appareil, clé « maison17-cadrage ») : photo entière (contain) ou plein écran (cover).
+   « auto » : plein écran quand la photo et l'écran ont le même sens (paysage/paysage ou portrait/portrait)
+   et que le rognage reste modéré (au plus 40 % de la photo perdu : une photo 4:3 sur l'iPhone en largeur passe). */
+var CLE_CADRAGE = "maison17-cadrage";
+function cadrage(){ try { return localStorage.getItem(CLE_CADRAGE) || "entiere"; } catch (e) { return "entiere"; } }
+function tailleFond(p){
+  var c = cadrage();
+  if (c === "remplir") return "cover";
+  if (c !== "auto" || !p.l || !p.h) return "contain";
+  var re = window.innerWidth / Math.max(1, window.innerHeight), rp = p.l / p.h;
+  if ((re >= 1) !== (rp >= 1)) return "contain";
+  return Math.min(re, rp) / Math.max(re, rp) > 0.6 ? "cover" : "contain";   // 4:3 sur iPhone en largeur : 0,61
 }
 /* Les 3 photos suivantes sont téléchargées à l'avance et gardées (objets Image conservés),
    pour que chaque fondu parte d'une photo déjà prête, même avec le Wi-Fi lent de la télé */
@@ -729,6 +776,46 @@ function dessinerCarte(lat, lon){
   $("b-zmoins").onclick = function(){ lieuZoom = Math.max(3, lieuZoom - 2); dessinerCarte(lat, lon); $("b-zmoins").focus(); };
 }
 $("b-lieu").onclick = basculerLieu;
+
+/* ===== Musique (🎵) =====
+   Lecteur officiel de Spotify (open.spotify.com/embed) pour une playlist, un album, un titre…, choisi sur
+   chaque appareil (clé « maison17-musique », jamais envoyé ailleurs : le dépôt est public). Morceaux entiers si
+   le navigateur est connecté à Spotify, sinon extraits de 30 s (règle de Spotify). Le bouton montre ou cache
+   le lecteur ; caché, il continue de jouer, même après la fermeture du diaporama (pas après un changement de page). */
+var CLE_MUSIQUE = "maison17-musique", musiqueVisible = false;
+function lienMusique(){ try { return localStorage.getItem(CLE_MUSIQUE) || ""; } catch (e) { return ""; } }
+/* « https://open.spotify.com/intl-fr/playlist/ID?si=… » ou « spotify:playlist:ID » → adresse du lecteur */
+function lecteurSpotify(l){
+  var m = String(l).match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(?:embed\/)?(playlist|album|track|artist|show|episode)\/([A-Za-z0-9]+)/) ||
+          String(l).match(/^spotify:(playlist|album|track|artist|show|episode):([A-Za-z0-9]+)$/);
+  return m ? "https://open.spotify.com/embed/" + m[1] + "/" + m[2] + "?utm_source=generator&theme=0" : "";
+}
+function preparerMusique(){
+  var l = lienMusique(), u = lecteurSpotify(l), z = $("musique-lecteur");
+  if (u) {
+    if (!z.firstChild || z.firstChild.getAttribute("src") !== u)
+      z.innerHTML = '<iframe src="' + echapper(u) + '" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Lecteur Spotify"></iframe>';
+    $("musique-lien").value = l;
+  } else {
+    z.innerHTML = '<p class="aide">Colle le lien d\'une <b>playlist</b> (ou d\'un album) Spotify : dans Spotify, <b>⋯</b> → <b>Partager</b> → <b>Copier le lien</b>. Il reste sur cet appareil.</p>';
+  }
+}
+function basculerMusique(){
+  musiqueVisible = !musiqueVisible;
+  $("b-musique").className = musiqueVisible ? "actif" : "";
+  if (musiqueVisible) {
+    preparerMusique();
+    if (diapo.className.indexOf("avec-musique") < 0) diapo.className += " avec-musique";
+    if (!lienMusique()) $("musique-lien").focus();
+  } else diapo.className = diapo.className.replace(/ ?avec-musique/g, "");
+}
+$("b-musique").onclick = basculerMusique;
+$("b-musique-ok").onclick = function(){
+  var l = $("musique-lien").value.trim();
+  if (l && !lecteurSpotify(l)) { $("musique-lecteur").innerHTML = '<p class="aide">Ce lien n\'est pas un lien Spotify (open.spotify.com/playlist/…).</p>'; return; }
+  try { if (l) localStorage.setItem(CLE_MUSIQUE, l); else localStorage.removeItem(CLE_MUSIQUE); } catch (e) {}
+  preparerMusique();
+};
 
 /* ===== Grille de toutes les photos (▦) =====
    Vignettes carrées demandées à Google (=w…-h…-c), chargées au fur et à mesure du défilement
@@ -887,12 +974,17 @@ diapo.addEventListener("touchstart", reveiller);
 /* Sur la photo (hors boutons) : un appui affiche les boutons, ou passe à la suivante s'ils sont déjà visibles */
 diapo.addEventListener("click", function(e){
   if (e.target.tagName === "BUTTON" || e.target.tagName === "A") return;
-  for (var n = e.target; n; n = n.parentNode) if (n.id === "lieu" || n.id === "grille") return;   // appui sur la carte du lieu ou la grille
+  for (var n = e.target; n; n = n.parentNode) if (n.id === "lieu" || n.id === "grille" || n.id === "musique") return;   // appui sur la carte du lieu, la grille ou la musique
   if (diapo.className.indexOf("calme") >= 0) reveiller(); else aller(1);
 });
 /* Télécommande et clavier : ◀ ▶ changent de photo, OK met en pause, Retour (10009) ou Échap ferme */
 document.addEventListener("keydown", function(e){
   var k = e.keyCode;
+  if (album && e.target && e.target.id === "musique-lien") {       // saisie du lien Spotify
+    if (k === 13) { e.preventDefault(); $("b-musique-ok").click(); }
+    else if (k === 27 || k === 10009) { e.preventDefault(); basculerMusique(); $("b-musique").focus(); }
+    return;
+  }
   if (!album) {
     if ($("panneau").className && (k === 10009 || k === 27)) { e.preventDefault(); fermerPanneau(); }
     return;
