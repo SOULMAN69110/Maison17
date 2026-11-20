@@ -538,7 +538,8 @@ $("b-hasard").onclick = function(){
 
 /* ===== Lieu de la photo (📍) =====
    Position relevée par la tâche dans le fichier original (EXIF GPS, voir outils/photos.py).
-   Nom du lieu (Nominatim) et fond de carte demandés à OpenStreetMap au moment de l'affichage. */
+   Nom du lieu (Nominatim) et fond de carte demandés à OpenStreetMap au moment de l'affichage ;
+   fond « OpenStreetMap France » pour avoir les noms en français (Marrakech plutôt que مراكش). */
 var lieuVisible = false, lieuZoom = 12, NOMS = {}, demandeNom = null;
 function photoActuelle(){ return album && ordre.length ? album.photos[ordre[pos]] : null; }
 function sansLieu(){ diapo.className = diapo.className.replace(/ ?avec-lieu/g, ""); }
@@ -592,11 +593,11 @@ function dessinerCarte(lat, lon){
     for (j = Math.floor(y0 / 256); j <= Math.floor((y0 + h) / 256); j++) {
       if (j < 0 || j >= n) continue;
       var tx = ((i % n) + n) % n;
-      html += '<img alt="" referrerpolicy="origin" src="https://tile.openstreetmap.org/' + z + '/' + tx + '/' + j + '.png" style="left:' +
+      html += '<img alt="" referrerpolicy="origin" src="https://' + "abc".charAt((tx + j) % 3) + '.tile.openstreetmap.fr/osmfr/' + z + '/' + tx + '/' + j + '.png" style="left:' +
         Math.round(i * 256 - x0) + 'px;top:' + Math.round(j * 256 - y0) + 'px">';
     }
   c.innerHTML = html + '<div class="epingle"></div><div class="zoom"><button id="b-zplus" title="Rapprocher">＋</button><button id="b-zmoins" title="Éloigner">－</button></div>' +
-    '<div class="credit">© OpenStreetMap</div>';
+    '<div class="credit">© OpenStreetMap France</div>';
   $("b-zplus").onclick = function(){ lieuZoom = Math.min(17, lieuZoom + 2); dessinerCarte(lat, lon); $("b-zplus").focus(); };
   $("b-zmoins").onclick = function(){ lieuZoom = Math.max(3, lieuZoom - 2); dessinerCarte(lat, lon); $("b-zmoins").focus(); };
 }
