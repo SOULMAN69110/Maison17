@@ -108,6 +108,19 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
 #diapo button{font:inherit;font-size:1.5vw;min-width:4.2vw;padding:.5vw .9vw;margin-left:.6vw;color:var(--craie);background:rgba(24,32,39,.85);border:.18vw solid var(--trait);border-radius:.8vw;cursor:pointer;outline:none}
 #diapo button:focus,#diapo button:hover{border-color:var(--givre);box-shadow:0 0 0 .2vw var(--givre)}
 #diapo button.actif{background:var(--givre);color:var(--nuit)}
+#diapo button:disabled{opacity:.35;cursor:default;box-shadow:none;border-color:var(--trait)}
+/* Lieu de la photo (bouton 📍) : carte en haut à droite, reste affichée d'une photo à l'autre jusqu'au prochain appui */
+#lieu{display:none;position:absolute;top:1.6vw;right:1.6vw;margin-right:env(safe-area-inset-right);width:26vw;background:rgba(15,20,24,.9);border:.18vw solid var(--trait);border-radius:1vw;overflow:hidden;z-index:2}
+#diapo.avec-lieu #lieu{display:block}
+#lieu .carte{position:relative;width:100%;height:16vw;overflow:hidden;background:#1b2228}
+#lieu .carte img{position:absolute;width:256px;height:256px;max-width:none}
+#lieu .epingle{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--alerte);border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.8)}
+#lieu .zoom{position:absolute;right:.5vw;top:.5vw;display:flex;flex-direction:column}
+#diapo #lieu .zoom button{font-size:1.2vw;min-width:2.6vw;padding:.1vw .4vw;margin:0 0 .4vw 0}
+#lieu .texte{padding:.8vw 1vw;font-size:1.2vw;font-weight:600;line-height:1.3}
+#lieu .texte span{display:block;font-family:var(--mono);font-size:.85vw;font-weight:400;color:#bcc6cd;margin-top:.2vw}
+#lieu .texte a{color:var(--givre)}
+#lieu .credit{position:absolute;left:0;bottom:0;padding:0 .3vw;font-size:.6vw;color:#333;background:rgba(255,255,255,.7)}
 @media (max-width:800px){
   body{padding:4vw}
   h1{font-size:7vw}.sous{font-size:2.6vw}
@@ -132,6 +145,19 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
   #panneau button{font-size:4vw;padding:1.5vw 4vw}
   #diapo .legende,#diapo .fixe{font-size:4vw}#diapo .legende span,#diapo .fixe span{font-size:2.8vw}
   #diapo button{font-size:4.5vw;min-width:11vw;border-radius:2vw;margin-left:1.5vw}
+  #lieu{width:70vw;top:3vw;right:3vw;border-radius:2.5vw}
+  #lieu .carte{height:42vw}
+  #lieu .texte{font-size:3.8vw;padding:2.5vw 3vw}#lieu .texte span{font-size:2.8vw}
+  #diapo #lieu .zoom button{font-size:4vw;min-width:8vw;margin-bottom:1.5vw}
+  #lieu .credit{font-size:2vw}
+}
+/* iPhone à l'horizontale : carte moins haute pour laisser voir la photo */
+@media (max-height:500px) and (orientation:landscape){
+  #lieu{width:34vw;top:2vw}
+  #lieu .carte{height:18vw}
+  #lieu .texte{font-size:1.7vw}#lieu .texte span{font-size:1.2vw}
+  #diapo #lieu .zoom button{font-size:1.6vw;min-width:3.4vw}
+  #lieu .credit{font-size:.9vw}
 }
 @media (max-width:800px) and (orientation:landscape){ #panneau .boite{max-width:80vw;margin:0 auto} }
 </style>
@@ -193,6 +219,10 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
 <div id="diapo" aria-label="Diaporama">
   <div class="vue"></div><div class="vue"></div>
   <div class="fixe" id="fixe"></div>
+  <div id="lieu">
+    <div class="carte" id="lieu-carte"></div>
+    <div class="texte" id="lieu-texte"></div>
+  </div>
   <div class="bandeau">
     <div class="legende" id="legende"></div>
     <div class="boutons">
@@ -200,6 +230,7 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
       <button id="b-pause" title="Pause">⏸</button>
       <button id="b-suiv" title="Photo suivante">▶</button>
       <button id="b-hasard" title="Ordre au hasard">🔀</button>
+      <button id="b-lieu" title="Lieu de la photo">📍</button>
       <button id="b-fermer" title="Fermer">✕</button>
     </div>
   </div>
@@ -425,6 +456,8 @@ function preparerOrdre(){
 function classeDiapo(){
   var c = "ouvert t-" + (R.transition || "fondu");
   if (R.legende === "oui") c += " avec-legende";
+  var p = photoActuelle();
+  if (lieuVisible && p && p.g) c += " avec-lieu";
   return c;
 }
 function montrer(){
@@ -447,6 +480,9 @@ function montrer(){
   var t = p.t || album.titre;
   $("legende").innerHTML = echapper(t) + '<span>' + info + '</span>';
   $("fixe").innerHTML = echapper(t) + '<span>' + (p.d ? jour(p.d) : '') + '</span>';
+  $("b-lieu").disabled = !p.g;
+  $("b-lieu").title = p.g ? "Lieu de la photo" : "Lieu inconnu pour cette photo";
+  if (lieuVisible) montrerLieu();
   relancer();
 }
 function relancer(){
@@ -499,11 +535,79 @@ $("b-hasard").onclick = function(){
   var actuelle = ordre[pos]; preparerOrdre();
   pos = Math.max(0, ordre.indexOf(actuelle));
 };
+
+/* ===== Lieu de la photo (📍) =====
+   Position relevée par la tâche dans le fichier original (EXIF GPS, voir outils/photos.py).
+   Nom du lieu (Nominatim) et fond de carte demandés à OpenStreetMap au moment de l'affichage. */
+var lieuVisible = false, lieuZoom = 12, NOMS = {}, demandeNom = null;
+function photoActuelle(){ return album && ordre.length ? album.photos[ordre[pos]] : null; }
+function sansLieu(){ diapo.className = diapo.className.replace(/ ?avec-lieu/g, ""); }
+function basculerLieu(){
+  lieuVisible = !lieuVisible;
+  $("b-lieu").className = lieuVisible ? "actif" : "";
+  if (lieuVisible) montrerLieu(); else sansLieu();
+}
+function montrerLieu(){
+  var p = photoActuelle();
+  if (!p || !p.g) { sansLieu(); return; }
+  if (diapo.className.indexOf("avec-lieu") < 0) diapo.className += " avec-lieu";
+  dessinerCarte(p.g[0], p.g[1]);
+  var cle = p.g[0].toFixed(3) + "," + p.g[1].toFixed(3);
+  ecrireLieu(p, NOMS[cle] || "…");
+  if (NOMS[cle]) return;
+  clearTimeout(demandeNom);
+  demandeNom = setTimeout(function(){          // au plus une demande par seconde (règle de Nominatim)
+    fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&accept-language=fr&lat=" + p.g[0] + "&lon=" + p.g[1], { referrerPolicy: "origin" })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ NOMS[cle] = nomLieu(d) || "Lieu sans nom"; if (photoActuelle() === p) ecrireLieu(p, NOMS[cle]); })
+      ["catch"](function(){ if (photoActuelle() === p) ecrireLieu(p, "Nom du lieu indisponible"); });
+  }, 1000);
+}
+function nomLieu(d){
+  var a = (d && d.address) || {}, t = [];
+  var ville = a.city || a.town || a.village || a.municipality || a.hamlet || a.suburb;
+  var coin = a.tourism || a.attraction || a.leisure || a.natural || a.historic || a.neighbourhood || a.quarter;
+  if (coin && coin !== ville) t.push(coin);
+  if (ville) t.push(ville);
+  if (a.country_code !== "fr" && a.state && a.state !== ville) t.push(a.state);
+  if (a.country) t.push(a.country);
+  return t.join(", ");
+}
+function ecrireLieu(p, nom){
+  var ll = p.g[0] + "," + p.g[1];
+  var apple = /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+  var lien = apple ? "https://maps.apple.com/?ll=" + ll + "&q=" + encodeURIComponent(nom === "…" ? "Photo" : nom)
+                   : "https://www.google.com/maps/search/?api=1&query=" + ll;
+  $("lieu-texte").innerHTML = echapper(nom) + '<span>' + p.g[0].toFixed(4) + ", " + p.g[1].toFixed(4) +
+    ' · <a href="' + echapper(lien) + '" target="_blank" rel="noopener">Ouvrir dans ' + (apple ? "Plans" : "Maps") + '</a></span>';
+}
+/* Petite carte : les tuiles de 256 px autour du point, placées à la main (pas de bibliothèque : navigateur de la télé) */
+function dessinerCarte(lat, lon){
+  var c = $("lieu-carte"), w = c.offsetWidth || 300, h = c.offsetHeight || 180, z = lieuZoom, n = Math.pow(2, z);
+  var x = (lon + 180) / 360 * n * 256;
+  var s = Math.sin(lat * Math.PI / 180);
+  var y = (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * n * 256;
+  var x0 = x - w / 2, y0 = y - h / 2, html = "", i, j;
+  for (i = Math.floor(x0 / 256); i <= Math.floor((x0 + w) / 256); i++)
+    for (j = Math.floor(y0 / 256); j <= Math.floor((y0 + h) / 256); j++) {
+      if (j < 0 || j >= n) continue;
+      var tx = ((i % n) + n) % n;
+      html += '<img alt="" referrerpolicy="origin" src="https://tile.openstreetmap.org/' + z + '/' + tx + '/' + j + '.png" style="left:' +
+        Math.round(i * 256 - x0) + 'px;top:' + Math.round(j * 256 - y0) + 'px">';
+    }
+  c.innerHTML = html + '<div class="epingle"></div><div class="zoom"><button id="b-zplus" title="Rapprocher">＋</button><button id="b-zmoins" title="Éloigner">－</button></div>' +
+    '<div class="credit">© OpenStreetMap</div>';
+  $("b-zplus").onclick = function(){ lieuZoom = Math.min(17, lieuZoom + 2); dessinerCarte(lat, lon); $("b-zplus").focus(); };
+  $("b-zmoins").onclick = function(){ lieuZoom = Math.max(3, lieuZoom - 2); dessinerCarte(lat, lon); $("b-zmoins").focus(); };
+}
+$("b-lieu").onclick = basculerLieu;
+
 diapo.addEventListener("mousemove", reveiller);
 diapo.addEventListener("touchstart", reveiller);
 /* Sur la photo (hors boutons) : un appui affiche les boutons, ou passe à la suivante s'ils sont déjà visibles */
 diapo.addEventListener("click", function(e){
-  if (e.target.tagName === "BUTTON") return;
+  if (e.target.tagName === "BUTTON" || e.target.tagName === "A") return;
+  for (var n = e.target; n; n = n.parentNode) if (n.id === "lieu") return;   // appui sur la carte du lieu
   if (diapo.className.indexOf("calme") >= 0) reveiller(); else aller(1);
 });
 /* Télécommande et clavier : ◀ ▶ changent de photo, OK met en pause, Retour (10009) ou Échap ferme */
