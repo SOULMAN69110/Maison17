@@ -81,6 +81,8 @@ h1 i{font-style:normal}
 html.en-veille body>*:not(#diapo){visibility:hidden}
 #diapo .vue{position:absolute;top:0;left:0;width:100%;height:100%;background-repeat:no-repeat;background-position:center;background-size:contain;opacity:0}
 /* Transitions (classe t-… sur #diapo). « prep » : position de départ, posée sans animation */
+/* Télé : chaque photo sur son propre calque graphique, pour un fondu sans à-coups */
+html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-webkit-backface-visibility:hidden;backface-visibility:hidden}
 #diapo .vue.prep{-webkit-transition:none!important;transition:none!important}
 #diapo.t-fondu .vue{-webkit-transition:opacity 1.2s ease;transition:opacity 1.2s ease}
 #diapo.t-fondu .vue.visible{opacity:1}
@@ -117,7 +119,8 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
 #grille .vignettes{display:flex;flex-wrap:wrap}
 #diapo #grille .vignette{display:block;position:relative;width:12.5%;min-width:0;margin:0;padding:0 0 12.5% 0;height:0;border:.25vw solid transparent;border-radius:.4vw;background:#1b2228 no-repeat center;background-size:cover;overflow:hidden}
 #diapo #grille .vignette:focus,#diapo #grille .vignette:hover{border-color:var(--givre);box-shadow:none;outline:none}
-#diapo #grille .vignette.actuelle{border-color:var(--ok)}
+#diapo #grille .vignette.actuelle{border-color:var(--ok);border-width:.45vw}
+#grille .vignette.actuelle:after{content:"▶ à l'écran";position:absolute;left:0;right:0;bottom:0;padding:.2vw 0;background:rgba(127,209,160,.9);color:var(--nuit);font:600 .8vw/1.2 var(--mono);text-align:center}
 #grille .mois{width:100%;padding:1vw .3vw .5vw;font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
 #diapo button:disabled{opacity:.35;cursor:default;box-shadow:none;border-color:var(--trait)}
 /* Lieu de la photo (bouton 📍) : carte en haut à droite, reste affichée d'une photo à l'autre jusqu'au prochain appui */
@@ -164,6 +167,7 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
   #grille{padding:3vw 2vw 8vw}
   #grille .tete b{font-size:4.5vw}#grille .tete b span{display:block;font-size:3vw;margin:.5vw 0 0}
   #diapo #grille .vignette{width:25%;padding-bottom:25%}
+  #diapo #grille .vignette.actuelle{border-width:1vw}#grille .vignette.actuelle:after{font-size:2.6vw;padding:.6vw 0}
   #grille .mois{font-size:3vw;padding:3vw 1vw 1.5vw}
 }
 /* iPhone en portrait : titre et date sur toute la largeur, les 7 boutons en dessous, répartis sur la largeur */
@@ -191,6 +195,7 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
 <body>
 <script src="verrou.js"></script>
 <script src="maj.js"></script>
+<script src="tele.js"></script>
 <div class="haut">
   <div>
     <h1><i>🖼️</i> Photos</h1>
@@ -213,6 +218,7 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
       <select id="r-secondes"><option value="3">3 s</option><option value="5">5 s</option><option value="8">8 s</option><option value="10">10 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="60">1 min</option></select></div>
     <div class="ligne"><label for="r-transition">Transition</label>
       <select id="r-transition"><option value="fondu">Fondu enchaîné</option><option value="noir">Fondu au noir</option><option value="glisse">Glissement</option><option value="zoom">Zoom lent (Ken Burns)</option><option value="aucune">Aucune (coupe nette)</option></select></div>
+    <p class="note">Sur la télé, le zoom lent et le glissement sont remplacés par le fondu enchaîné, plus fluide.</p>
     <div class="ligne"><label for="r-ordre">Ordre des photos</label>
       <select id="r-ordre"><option value="chrono">Chronologique</option><option value="hasard">Au hasard</option></select></div>
     <div class="ligne"><label for="r-legende">Titre et date sur les photos</label>
@@ -229,6 +235,9 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
       <select id="r-veille_min"><option value="1">1 min</option><option value="2">2 min</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></div>
     <div class="ligne"><label for="r-veille-ici">Écran de veille sur cet appareil</label>
       <select id="r-veille-ici"><option value="oui">Activé</option><option value="non">Désactivé</option></select></div>
+    <div class="ligne"><label for="r-nuit">Mode nuit sur cet appareil</label>
+      <select id="r-nuit"><option value="non">Désactivé</option><option value="22-7">De 22 h à 7 h</option><option value="23-7">De 23 h à 7 h</option><option value="0-7">De 0 h à 7 h</option><option value="23-6">De 23 h à 6 h</option><option value="0-6">De 0 h à 6 h</option><option value="22-6">De 22 h à 6 h</option></select></div>
+    <p class="note">La nuit, à la place des photos : écran noir avec seulement l'heure et la température dehors, en gris très sombre. Sur cet appareil seulement, tout de suite.</p>
     <p class="note">Sur l'accueil, Courbes, Énergie, Bilans et Chauffage. La moindre action (télécommande, toucher, souris) ramène à la page. « Sur cet appareil » s'applique tout de suite, sans Enregistrer, et seulement à cet appareil : par exemple coupé sur l'iPhone, gardé sur la télé.</p>
     <div class="actions"><button id="b-annuler" type="button">Fermer</button><button class="principal" id="b-enregistrer" type="button">Enregistrer</button></div>
 
@@ -304,9 +313,14 @@ function obtenir(url, fini){
 }
 /* Taille demandée à Google : celle de l'écran (×2 sur iPhone), sans dépasser l'original */
 function taille(p, l, h){ return p.u + "=w" + Math.round(l) + "-h" + Math.round(h); }
+/* Télé Samsung (navigateur Tizen) : processeur modeste, on la ménage (photos 1920×1080 au plus, transitions légères) */
+var TELE = /Tizen|SMART-TV|SmartTV/i.test(navigator.userAgent);
+if (TELE) document.documentElement.className += " tele";
 function tailleEcran(p){
-  var r = Math.min(window.devicePixelRatio || 1, 2);
-  return taille(p, Math.min(p.l, screen.width * r || 1920), Math.min(p.h, screen.height * r || 1080));
+  var r = TELE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+  var l = screen.width * r || 1920, h = screen.height * r || 1080;
+  if (TELE) { l = Math.min(l, 1920); h = Math.min(h, 1080); }
+  return taille(p, Math.min(p.l, l), Math.min(p.h, h));
 }
 
 /* ===== Liste des albums ===== */
@@ -372,6 +386,13 @@ function lancerVeille(){
   }
   ALBUMS.unshift(a || ALBUMS[0]);
   ouvrir(0);
+  /* Mode nuit : à l'heure dite, on rend la main à la page de départ, qui affiche aussitôt l'écran de nuit */
+  setInterval(function(){
+    if (estLaNuit()) {
+      try { sessionStorage.setItem("maison17-nuit-direct", "1"); } catch (e) {}
+      quitterVeille();
+    }
+  }, 30000);
   var debut = Date.now(), x0 = null, y0 = null;
   function action(e){
     if (Date.now() - debut < 1500) return;                    // ignore ce qui arrive pendant l'ouverture
@@ -396,6 +417,8 @@ function ouvrirPanneau(){
     ? "Les réglages s'appliquent à <b>tous les appareils</b>, télé comprise, 2 à 3 min après l'enregistrement."
     : "Ces réglages ne valent que pour <b>cet appareil</b>. Pour les appliquer partout et gérer les albums, ouvre cette page sur un appareil où le jeton GitHub est enregistré (iPhone ou PC, comme pour la page Chauffage).";
   $("r-veille-ici").value = veilleIci() ? "oui" : "non";
+  $("r-nuit").value = nuitIci();
+  if (!$("r-nuit").value) $("r-nuit").value = "non";
   $("gestion").style.display = a ? "" : "none";
   if (a) dessinerListe();
   retour("", "");
@@ -405,6 +428,25 @@ function ouvrirPanneau(){
 /* Écran de veille coupé sur cet appareil seulement (lu par veille.js) */
 var CLE_VEILLE_ICI = "maison17-veille-appareil";
 function veilleIci(){ try { return localStorage.getItem(CLE_VEILLE_ICI) !== "non"; } catch (e) { return true; } }
+/* Mode nuit (lu par veille.js) : { debut, fin } en heures, ou « non » ; par défaut 23 h – 7 h sur la télé, désactivé ailleurs */
+var CLE_NUIT = "maison17-nuit";
+function nuitIci(){
+  var v = null;
+  try { v = localStorage.getItem(CLE_NUIT); } catch (e) {}
+  if (v === null) return TELE ? "23-7" : "non";
+  if (v === "non") return "non";
+  try { var n = JSON.parse(v); return n.debut + "-" + n.fin; } catch (e) { return "non"; }
+}
+function estLaNuit(){
+  var v = nuitIci(); if (v === "non") return false;
+  var m = v.split("-"), d = +m[0], f = +m[1], h = new Date().getHours();
+  return d < f ? (h >= d && h < f) : (h >= d || h < f);
+}
+$("r-nuit").addEventListener("change", function(){
+  var v = this.value, m = v.split("-");
+  try { localStorage.setItem(CLE_NUIT, v === "non" ? "non" : JSON.stringify({ debut: +m[0], fin: +m[1] })); } catch (e) {}
+  retour(v === "non" ? "Mode nuit désactivé sur cet appareil." : "Mode nuit réglé sur cet appareil : " + this.options[this.selectedIndex].text.toLowerCase() + ".", "ok");
+});
 $("r-veille-ici").addEventListener("change", function(){
   try { if (this.value === "non") localStorage.setItem(CLE_VEILLE_ICI, "non"); else localStorage.removeItem(CLE_VEILLE_ICI); } catch (e) {}
   retour(this.value === "non" ? "Écran de veille désactivé sur cet appareil." : "Écran de veille réactivé sur cet appareil.", "ok");
@@ -485,7 +527,9 @@ function preparerOrdre(){
   else { ordre = []; for (i = 0; i < n; i++) ordre.push(i); }
 }
 function classeDiapo(){
-  var c = "ouvert t-" + (R.transition || "fondu");
+  var t = R.transition || "fondu";
+  if (TELE && (t === "zoom" || t === "glisse")) t = "fondu";      // trop lourds pour la télé : saccades
+  var c = "ouvert t-" + t;
   if (R.legende === "oui") c += " avec-legende";
   var p = photoActuelle();
   if (lieuVisible && p && p.g) c += " avec-lieu";
@@ -502,8 +546,7 @@ function montrer(){
     entrante.className = "vue visible";
     sortante.className = "vue sortie";
     vueActive = 1 - vueActive;
-    var s = album.photos[ordre[(pos + 1) % ordre.length]];   // préchargement de la suivante
-    if (s) new Image().src = tailleEcran(s);
+    precharger();
   };
   img.referrerPolicy = "no-referrer";
   img.src = url;
@@ -515,6 +558,19 @@ function montrer(){
   $("b-lieu").title = p.g ? "Lieu de la photo" : "Lieu inconnu pour cette photo";
   if (lieuVisible) montrerLieu();
   relancer();
+}
+/* Les 3 photos suivantes sont téléchargées à l'avance et gardées (objets Image conservés),
+   pour que chaque fondu parte d'une photo déjà prête, même avec le Wi-Fi lent de la télé */
+var PRETES = {};
+function precharger(){
+  var garder = {}, k, u, q;
+  for (k = 0; k <= 3; k++) {
+    q = album.photos[ordre[(pos + k) % ordre.length]];
+    if (!q) continue;
+    u = tailleEcran(q);
+    garder[u] = PRETES[u] || (function(u){ var i = new Image(); i.referrerPolicy = "no-referrer"; i.src = u; return i; })(u);
+  }
+  PRETES = garder;
 }
 function relancer(){
   clearTimeout(minuteur);
@@ -666,9 +722,19 @@ function ouvrirGrille(){
   $("grille").className = "ouverte";
   var b = $("vignettes").querySelectorAll(".vignette");
   for (i = 0; i < b.length; i++) b[i].onclick = function(){ choisirPhoto(+this.getAttribute("data-i")); };
+  /* Placement sur la photo affichée : refait après le dessin de la grille (Safari iPhone et la télé
+     ignorent un défilement demandé avant), photo centrée à l'écran et sélectionnée pour la télécommande */
   var cible = b[actuelle] || b[0];
-  if (cible) { $("grille").scrollTop = Math.max(0, cible.offsetTop - $("grille").clientHeight / 3); cible.focus(); }
-  chargerVignettes();
+  function placer(){
+    if (!grilleOuverte || !cible) return;
+    var g = $("grille");
+    g.scrollTop = Math.max(0, cible.offsetTop + cible.offsetHeight / 2 - g.clientHeight / 2);
+    try { cible.focus({ preventScroll: true }); } catch (x) { cible.focus(); }
+    chargerVignettes();
+  }
+  placer();
+  setTimeout(placer, 50);
+  setTimeout(placer, 300);
 }
 /* Charge les vignettes visibles et celles d'un écran au-dessus et au-dessous */
 function chargerVignettes(){

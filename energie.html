@@ -200,6 +200,7 @@ body.plein .filtres button{font-size:1.15rem}
 <script src="verrou.js"></script>
 <script src="veille.js"></script>
 <script src="maj.js"></script>
+<script src="tele.js"></script>
 </head>
 <body>
 <main class="ecran" id="ecran">
@@ -705,7 +706,7 @@ function pleinEcran(oui){
   courbe();
 }
 el("c-plein").onclick = function(){ pleinEcran(!/plein/.test(document.body.className)); };
-document.addEventListener("keydown", function(e){ if ((e.key === "Escape" || e.keyCode === 27 || e.keyCode === 10009) && /plein/.test(document.body.className)) pleinEcran(false); });
+document.addEventListener("keydown", function(e){ if ((e.key === "Escape" || e.keyCode === 27 || e.keyCode === 10009) && /plein/.test(document.body.className)) { e.preventDefault(); pleinEcran(false); } });
 function surSortiePlein(){ if (!(document.fullscreenElement || document.webkitFullscreenElement) && /plein/.test(document.body.className)) pleinEcran(false); }
 document.addEventListener("fullscreenchange", surSortiePlein);
 document.addEventListener("webkitfullscreenchange", surSortiePlein);
