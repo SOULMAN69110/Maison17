@@ -5,7 +5,7 @@
      jeton GitHub) ; la moindre action y ramène ici ;
    - la nuit (mode nuit réglé sur l'appareil, dans les mêmes Réglages : clé « maison17-nuit », par défaut
      de 23 h à 7 h sur la télé, désactivé ailleurs) : écran noir avec seulement l'heure, la date et la
-     température dehors, en gris très sombre, qui se décale un peu toutes les 10 min ; la moindre action
+     température dehors (sonde Mobile Alerts), en gris très sombre, qui se promène lentement sur l'écran ; la moindre action
      le fait disparaître (sans déclencher le bouton sous le doigt).
    Mettre <script src="veille.js"></script> dans la page. Écrit pour les navigateurs anciens des télés (ES5). */
 (function(){
@@ -34,25 +34,43 @@
 
   /* ----- Écran de nuit ----- */
   function deux(n){ return (n < 10 ? "0" : "") + n; }
-  function dessinerNuit(){
-    if (!ecran) return;
-    var d = new Date(), q = Math.floor(d.getTime() / 600000) % 4;   // décalage toutes les 10 min
-    var pos = [[42, 40], [58, 44], [46, 60], [56, 56]][q];
-    var b = ecran.firstChild;
-    b.style.left = pos[0] + "%"; b.style.top = pos[1] + "%";
-    b.innerHTML = '<div class="nuit-h">' + d.getHours() + ":" + deux(d.getMinutes()) + '</div>' +
+  /* L'heure se promène : toutes les 20 s, elle glisse lentement (20 s, mouvement continu) vers un autre point
+     de l'écran pris au hasard. Glissement par transform : léger pour la télé. */
+  var PAS_S = 20;
+  function texteNuit(){
+    var d = new Date();
+    ecran.firstChild.innerHTML = '<div class="nuit-h">' + d.getHours() + ":" + deux(d.getMinutes()) + '</div>' +
       '<div class="nuit-d">' + JOURS[d.getDay()] + " " + d.getDate() + " " + MOIS[d.getMonth()] + '</div>' +
       (derniereTemp !== null ? '<div class="nuit-t">dehors ' + String(derniereTemp.toFixed(1)).replace(".", ",") + ' °C</div>' : '');
-    if (!cestLaNuit()) cacherNuit();                                  // le jour est levé
   }
-  /* Température de la sonde extérieure (station du salon) dans data.json, déchiffré au passage par verrou.js */
+  function deplacer(x, y, anime){
+    var b = ecran.firstChild, t = "translate(" + Math.round(x) + "px," + Math.round(y) + "px)";
+    var tr = anime ? "transform " + PAS_S + "s linear" : "none";
+    b.style.webkitTransition = anime ? "-webkit-transform " + PAS_S + "s linear" : "none";
+    b.style.transition = tr;
+    b.style.webkitTransform = t; b.style.transform = t;
+  }
+  function auHasard(){
+    var b = ecran.firstChild;
+    if (ecran.clientWidth <= b.offsetWidth) { setTimeout(function(){ if (ecran) auHasard(); }, 500); return; }   // page pas encore dessinée
+    var l = Math.max(0, ecran.clientWidth - b.offsetWidth), h = Math.max(0, ecran.clientHeight - b.offsetHeight);
+    deplacer(Math.random() * l, Math.random() * h, true);
+  }
+  function dessinerNuit(){
+    if (!ecran) return;
+    if (!cestLaNuit()) { cacherNuit(); return; }                     // le jour est levé
+    texteNuit();
+    auHasard();
+  }
+  /* Température dehors : sonde extérieure Mobile Alerts de la station du salon (data.json, déchiffré au passage
+     par verrou.js), comme la tuile « Dehors » de l'accueil. Rien d'affiché si la mesure a plus de 3 h. */
   function lireTemperature(){
     if (!window.fetch) return;
     fetch("data.json?t=" + Date.now(), { cache: "no-store" }).then(function(r){ return r.json(); }).then(function(j){
       var a = (j.devices || []).filter(function(x){ return String(x.deviceid) === "salon"; })[0];
       var m = a && a.measurement;
-      if (m && typeof m.t2 === "number" && Date.now() / 1000 - m.ts < 3 * 3600) derniereTemp = m.t2;
-      dessinerNuit();
+      derniereTemp = m && typeof m.t2 === "number" && (!m.ts || Date.now() / 1000 - m.ts < 3 * 3600) ? m.t2 : null;
+      if (ecran) texteNuit();
     })["catch"](function(){});
   }
   function montrerNuit(){
@@ -61,13 +79,13 @@
       var st = document.createElement("style");
       st.id = "nuit-style";
       st.textContent =
-        "#nuit{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483000;background:#000;cursor:none}" +
-        "#nuit>div{position:absolute;-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);text-align:center;color:#3c444a;" +
-          "font-family:'Bricolage Grotesque',system-ui,'Segoe UI',Roboto,sans-serif;white-space:nowrap}" +
-        "#nuit .nuit-h{font-size:12vw;font-weight:600;line-height:1;letter-spacing:-.02em}" +
-        "#nuit .nuit-d{font-size:2.2vw;margin-top:1vw;color:#30373c}" +
-        "#nuit .nuit-t{font-size:3.4vw;margin-top:1.6vw;color:#34505e}" +
-        "@media (max-width:800px) and (orientation:portrait){#nuit .nuit-h{font-size:26vw}#nuit .nuit-d{font-size:5vw}#nuit .nuit-t{font-size:7vw}}";
+        "#nuit{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483000;background:#000;cursor:none;overflow:hidden}" +
+        "#nuit>div{position:absolute;left:0;top:0;padding:2vw 3vw;text-align:center;color:#3c444a;" +
+          "font-family:'Bricolage Grotesque',system-ui,'Segoe UI',Roboto,sans-serif;white-space:nowrap;-webkit-backface-visibility:hidden;backface-visibility:hidden}" +
+        "#nuit .nuit-h{font-size:10vw;font-weight:600;line-height:1;letter-spacing:-.02em}" +
+        "#nuit .nuit-d{font-size:2vw;margin-top:1vw;color:#30373c}" +
+        "#nuit .nuit-t{font-size:3vw;margin-top:1.4vw;color:#34505e}" +
+        "@media (max-width:800px) and (orientation:portrait){#nuit .nuit-h{font-size:22vw}#nuit .nuit-d{font-size:4.5vw}#nuit .nuit-t{font-size:6.5vw}}";
       document.head.appendChild(st);
     }
     ecran = document.createElement("div");
@@ -76,12 +94,17 @@
     ecran.appendChild(document.createElement("div"));
     document.body.appendChild(ecran);
     try { sessionStorage.setItem("maison17-nuit-direct", "1"); } catch (e) {}   // rechargement de la page (nouvelle version) : l'écran de nuit revient aussitôt
-    dessinerNuit();
     lireTemperature();
+    texteNuit();
+    var b = ecran.firstChild;                                        // départ au centre, sans glissement
+    deplacer((ecran.clientWidth - b.offsetWidth) / 2, (ecran.clientHeight - b.offsetHeight) / 2, false);
+    void b.offsetWidth;
+    setTimeout(function(){ if (ecran) auHasard(); }, 50);
+    var tours = 0;
     horloge = setInterval(function(){
       dessinerNuit();
-      if (new Date().getMinutes() % 10 === 0) lireTemperature();
-    }, 20000);
+      if (++tours % 30 === 0) lireTemperature();                     // toutes les 10 min
+    }, PAS_S * 1000);
   }
   var avalerJusqua = 0;                 // après le réveil, le clic qui suit l'appui ne doit rien déclencher
   function cacherNuit(){
