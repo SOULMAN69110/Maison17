@@ -579,8 +579,15 @@ function ecrireLieu(p, nom){
   var apple = /iPhone|iPad|Macintosh/.test(navigator.userAgent);
   var lien = apple ? "https://maps.apple.com/?ll=" + ll + "&q=" + encodeURIComponent(nom === "…" ? "Photo" : nom)
                    : "https://www.google.com/maps/search/?api=1&query=" + ll;
-  $("lieu-texte").innerHTML = echapper(nom) + '<span>' + p.g[0].toFixed(4) + ", " + p.g[1].toFixed(4) +
+  $("lieu-texte").innerHTML = echapper(nom) + (p.d ? '<span>📷 ' + priseDeVue(p) + '</span>' : '') + '<span>' + p.g[0].toFixed(4) + ", " + p.g[1].toFixed(4) +
     ' · <a href="' + echapper(lien) + '" target="_blank" rel="noopener">Ouvrir dans ' + (apple ? "Plans" : "Maps") + '</a></span>';
+}
+/* Date et heure de prise de vue, à l'heure du lieu (décalage « o » noté par la tâche ; sinon heure de l'appareil) */
+function priseDeVue(p){
+  var d = p.o !== undefined ? new Date(p.d + p.o) : new Date(p.d), u = p.o !== undefined;
+  var j = u ? d.getUTCDate() : d.getDate(), m = u ? d.getUTCMonth() : d.getMonth(), a = u ? d.getUTCFullYear() : d.getFullYear();
+  var h = u ? d.getUTCHours() : d.getHours(), mn = u ? d.getUTCMinutes() : d.getMinutes();
+  return j + " " + MOIS[m] + " " + a + " à " + h + " h " + (mn < 10 ? "0" : "") + mn;
 }
 /* Petite carte : les tuiles de 256 px autour du point, placées à la main (pas de bibliothèque : navigateur de la télé) */
 function dessinerCarte(lat, lon){

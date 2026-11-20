@@ -23,7 +23,7 @@ import hashlib, html, json, re, struct, sys, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 RELIRE_H = 6
-VERSION = "5"     # à changer pour forcer une relecture complète après une modification de ce programme
+VERSION = "6"     # à changer pour forcer une relecture complète après une modification de ce programme
 GEO_MAX, GEO_S = 1500, 150
 NAVIGATEUR = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -55,7 +55,8 @@ def photo_depuis(it):
         if not (isinstance(u, str) and u.startswith("https://lh3.googleusercontent.com/")):
             return None
         return it[0], {"i": it[0], "u": u.split("=")[0], "l": int(it[1][1]), "h": int(it[1][2]),
-                       "d": int(it[2]) if isinstance(it[2], (int, float)) else None}
+                       "d": int(it[2]) if isinstance(it[2], (int, float)) else None,
+                       "o": int(it[4]) if len(it) > 4 and isinstance(it[4], (int, float)) else 0}   # décalage horaire du lieu (ms)
     except Exception:
         return None
 
