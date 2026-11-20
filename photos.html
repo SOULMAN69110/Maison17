@@ -271,6 +271,11 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
       <select id="r-veille_min"><option value="1">1 min</option><option value="2">2 min</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option></select></div>
     <div class="ligne"><label for="r-veille-ici">Écran de veille sur cet appareil</label>
       <select id="r-veille-ici"><option value="oui">Activé</option><option value="non">Désactivé</option></select></div>
+    <div class="ligne"><label for="r-kiosque">Mode kiosque sur cet appareil</label>
+      <select id="r-kiosque"><option value="non">Désactivé</option><option value="ae">Accueil ↔ Énergie</option><option value="aep">Accueil → Énergie → Photos</option><option value="aebp">Accueil → Énergie → Bilans → Photos</option></select></div>
+    <div class="ligne"><label for="r-kiosque-duree">Temps sur chaque page</label>
+      <select id="r-kiosque-duree"><option value="30">30 s</option><option value="60">1 min</option><option value="120">2 min</option><option value="300">5 min</option><option value="600">10 min</option></select></div>
+    <p class="note">Sans action, les pages défilent toutes seules (les photos 3 fois plus longtemps), à la place de l'écran de veille. La moindre action arrête le défilement sur la page affichée ; il reprend après le délai sans manipulation. Sur cet appareil seulement, tout de suite.</p>
     <div class="ligne"><label for="r-nuit">Mode nuit sur cet appareil</label>
       <select id="r-nuit"><option value="non">Désactivé</option><option value="22-7">De 22 h à 7 h</option><option value="23-7">De 23 h à 7 h</option><option value="0-7">De 0 h à 7 h</option><option value="23-6">De 23 h à 6 h</option><option value="0-6">De 0 h à 6 h</option><option value="22-6">De 22 h à 6 h</option></select></div>
     <p class="note">🎵 Musique : bouton 🎵 du diaporama, lien d'une playlist Spotify gardé sur chaque appareil.</p>
@@ -432,6 +437,16 @@ function quitterVeille(){ if (VEILLE) { VEILLE = false; location.replace(RETOUR)
 function lancerVeille(){
   if (!ALBUMS.length) { quitterVeille(); return; }
   var v = R.veille, i, a = null;
+  /* Étape du mode kiosque (veille.js) : au bout du temps prévu, on passe à la page suivante du cycle (RETOUR) ;
+     sans album choisi pour la veille, toutes les photos au hasard */
+  var km = location.search.match(/[?&]kiosque=(\d+)/);
+  if (km) {
+    if (!v || v === "non") v = "tous";
+    setTimeout(function(){
+      try { sessionStorage.setItem("maison17-kiosque-actif", "1"); } catch (e) {}
+      quitterVeille();
+    }, Math.max(15, +km[1]) * 1000);
+  }
   if (v === "tous") {
     a = albumTous();
     R.ordre = "hasard";
@@ -454,6 +469,7 @@ function lancerVeille(){
       if (x0 === null) { x0 = e.clientX; y0 = e.clientY; return; }
       if (Math.abs(e.clientX - x0) + Math.abs(e.clientY - y0) < 30) return;
     }
+    try { sessionStorage.removeItem("maison17-kiosque-actif"); } catch (x) {}   // une action arrête aussi le mode kiosque
     e.preventDefault(); e.stopPropagation(); quitterVeille();
   }
   var evts = ["keydown", "mousedown", "touchstart", "mousemove", "wheel"];
@@ -473,6 +489,11 @@ function ouvrirPanneau(){
   $("r-veille-ici").value = veilleIci() ? "oui" : "non";
   $("r-nuit").value = nuitIci();
   $("r-cadrage").value = cadrage();
+  var kq = null;
+  try { kq = JSON.parse(localStorage.getItem(CLE_KIOSQUE)); } catch (e) {}
+  $("r-kiosque").value = kq && kq.cycle ? kq.cycle : "non";
+  $("r-kiosque-duree").value = String(kq && kq.duree || 60);
+  if (!$("r-kiosque-duree").value) $("r-kiosque-duree").value = "60";
   if (!$("r-nuit").value) $("r-nuit").value = "non";
   $("gestion").style.display = a ? "" : "none";
   if (a) dessinerListe();
@@ -497,6 +518,16 @@ function estLaNuit(){
   var m = v.split("-"), d = +m[0], f = +m[1], h = new Date().getHours();
   return d < f ? (h >= d && h < f) : (h >= d || h < f);
 }
+/* Mode kiosque (lu par veille.js) */
+var CLE_KIOSQUE = "maison17-kiosque";
+function enregistrerKiosque(){
+  var c = $("r-kiosque").value, d = +$("r-kiosque-duree").value || 60;
+  try { if (c === "non") localStorage.removeItem(CLE_KIOSQUE); else localStorage.setItem(CLE_KIOSQUE, JSON.stringify({ cycle: c, duree: d })); } catch (e) {}
+  var tc = $("r-kiosque").options[$("r-kiosque").selectedIndex], td = $("r-kiosque-duree").options[$("r-kiosque-duree").selectedIndex];
+  retour(c === "non" ? "Mode kiosque désactivé sur cet appareil." : "Mode kiosque réglé sur cet appareil : " + (tc ? tc.text : c) + ", " + (td ? td.text : d + " s") + " par page.", "ok");
+}
+$("r-kiosque").addEventListener("change", enregistrerKiosque);
+$("r-kiosque-duree").addEventListener("change", enregistrerKiosque);
 $("r-cadrage").addEventListener("change", function(){
   try { localStorage.setItem(CLE_CADRAGE, this.value); } catch (e) {}
   retour("Cadrage réglé sur cet appareil : " + this.options[this.selectedIndex].text.toLowerCase() + ".", "ok");

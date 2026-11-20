@@ -7,6 +7,7 @@
      de 23 h à 7 h sur la télé, désactivé ailleurs) : écran noir avec seulement l'heure, la date et la
      température dehors (sonde Mobile Alerts), en gris très sombre, qui se promène lentement sur l'écran ; la moindre action
      le fait disparaître (sans déclencher le bouton sous le doigt).
+   - mode kiosque (réglage par appareil, voir plus bas) : défilement automatique des pages, à la place du diaporama.
    Mettre <script src="veille.js"></script> dans la page. Écrit pour les navigateurs anciens des télés (ES5). */
 (function(){
   if (/[?&](vue|retour)=meteo\b/.test(location.search)) return;   // pas sur la météo partagée
@@ -117,14 +118,45 @@
     relancer();
   }
 
+  /* ----- Mode kiosque (réglage par appareil « maison17-kiosque » : { cycle, duree } en secondes, ou absent) -----
+     Sans action, la télé fait défiler toute seule les pages du cycle (accueil, Énergie, Bilans, puis le diaporama
+     de veille 3 fois plus longtemps), et recommence. La moindre action arrête le défilement sur la page affichée ;
+     il reprend après le délai habituel sans action. La nuit, l'écran de nuit passe avant. */
+  var CYCLES = { ae: ["index.html", "energie.html"], aep: ["index.html", "energie.html", "photos"], aebp: ["index.html", "energie.html", "bilans.html", "photos"] };
+  var CLE_KIOSQUE_ACTIF = "maison17-kiosque-actif";
+  function kiosque(){
+    var k = null;
+    try { k = JSON.parse(localStorage.getItem("maison17-kiosque")); } catch (e) {}
+    return k && CYCLES[k.cycle] ? { pages: CYCLES[k.cycle], duree: Math.max(15, +k.duree || 60) * 1000 } : null;
+  }
+  var ICI = location.pathname.split("/").pop() || "index.html";
+  var enKiosque = false;
+  try { enKiosque = sessionStorage.getItem(CLE_KIOSQUE_ACTIF) === "1"; } catch (e) {}
+  function suivante(pages, page){
+    var i = pages.indexOf(page);
+    return pages[(i + 1) % pages.length];                             // page hors du cycle : i = -1 → la première
+  }
+  function adresse(page){ return page === "index.html" ? "./" : page; }
+  function tourDeKiosque(k){
+    var p = suivante(k.pages, ICI);
+    try { sessionStorage.setItem(CLE_KIOSQUE_ACTIF, "1"); } catch (e) {}
+    if (p === "photos") {                                             // diaporama de veille, puis page d'après
+      location.href = "photos.html?veille=1&kiosque=" + Math.round(k.duree * 3 / 1000) + "&retour=" + encodeURIComponent(adresse(suivante(k.pages, "photos")));
+    } else location.href = adresse(p);
+  }
+
   /* ----- Minuteur d'inactivité ----- */
   function delai(){
     if (cestLaNuit()) return delaiPhotos ? Math.min(delaiPhotos, DELAI_NUIT) : DELAI_NUIT;
+    var k = kiosque();
+    if (k) return enKiosque ? k.duree : (delaiPhotos || 3 * 60000);
     return delaiPhotos;
   }
   function partir(){
     if (/verrouille/.test(document.documentElement.className)) { relancer(); return; }   // écran du code d'accès : on attend
     if (cestLaNuit()) { montrerNuit(); return; }
+    var k = kiosque();
+    if (k) { tourDeKiosque(k); return; }
     if (!delaiPhotos) { relancer(); return; }
     var ici = (location.pathname.split("/").pop() || "") + location.search + location.hash;
     location.href = "photos.html?veille=1&retour=" + encodeURIComponent(ici);
@@ -142,6 +174,10 @@
       if (e.type === "keydown" || e.type === "mousedown" || e.type === "touchstart") { e.preventDefault(); e.stopPropagation(); }
       cacherNuit();
       return;
+    }
+    if (enKiosque && e.type !== "mousemove" && e.type !== "scroll") {   // une vraie action : fin du défilement
+      enKiosque = false;
+      try { sessionStorage.removeItem(CLE_KIOSQUE_ACTIF); } catch (x) {}
     }
     relancer();
   }

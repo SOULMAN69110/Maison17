@@ -111,6 +111,10 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 .jour.heures .tps .pl{font-size:1.3em}
 .etat{font-family:var(--mono);font-size:calc(var(--u)*0.9);color:var(--brume)}
 .etat.erreur{color:var(--alerte)}
+/* Voyant « mesures figées » sous la date : visible de loin quand plus rien ne remonte depuis 30 min */
+.voyant{display:none;margin-top:calc(var(--u)*0.7);padding:calc(var(--u)*0.25) calc(var(--u)*0.9);border:2px solid var(--alerte);border-radius:99px;
+  background:rgba(240,138,106,.16);color:#ffb59c;font-size:calc(var(--u)*1.05);font-weight:600;line-height:1.3;white-space:nowrap}
+.voyant.allume{display:inline-block}
 .pieces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;gap:calc(var(--u)*1.2);min-width:0}
 .piece{background:var(--ardoise);border-radius:calc(var(--u)*1);padding:calc(var(--u)*1.4) calc(var(--u)*1.6);display:flex;flex-direction:column;justify-content:space-between;gap:calc(var(--u)*0.6);position:relative;min-width:0}
 .piece.principale{grid-column:span 2}
@@ -172,7 +176,7 @@ body{background:var(--nuit);color:var(--craie);font-family:var(--display);overfl
 @media (max-width:800px) and (orientation:portrait){
   body{overflow:auto}
   .ecran{grid-template-columns:1fr;height:auto;padding:16px}
-  .heure{font-size:18vw}.date{font-size:5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
+  .heure{font-size:18vw}.date{font-size:5vw}.voyant{font-size:3.6vw;padding:.6vw 2.5vw}.dehors .valeur{font-size:14vw}.dehors .hum{font-size:5vw}
   .pieces{grid-template-columns:1fr 1fr}.piece{padding:14px}.piece h2{font-size:4.5vw}.temp,.principale .temp{font-size:11vw}
   .raccourcis{margin-top:3vw}.raccourcis a{max-width:none;font-size:3.4vw;padding:1.8vw 1vw;border-radius:2.5vw}.raccourcis a+a{margin-left:2vw}
   .etiquette,.pastille,.maj,.etat,.pile,.bascule{font-size:3vw}.pression{font-size:3.6vw}.pluie .resume{font-size:4vw}.pluie .mf{width:52vw}.pluie .mf .bornes{font-size:2.6vw}.pluie .mf .cases{height:5vw;border-radius:2.5vw}.pluie .mf .reperes{height:4.5vw;font-size:2.2vw}.pluie .b{width:8vw;height:10vw}.pluie .h{font-size:2.6vw}.p15 .grille{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.p15 .jc .d,.p15 .jc .c{font-size:3.2vw}.p15 .jc .t4 b{font-size:4vw}.p15 .jc .t4 .bar{height:8vw}.p15 .jc .t4 span{font-size:2.4vw}.p15 .jc .e b{font-size:6vw}.p15 .jc .e span{font-size:2.2vw}.p15 .entete b{font-size:5vw}.p15 .entete span{font-size:2.6vw}.tendance svg{height:14vw}.tendance .echelle{font-size:2.6vw}.tendance .axe{font-size:2.6vw}.jour{font-size:4vw;grid-template-columns:11vw minmax(0,1fr)}.jour .tps .mn{width:7vw}.jour .tps .mx{width:8vw}.jour .tps .pl{width:11vw}.jour.heures{font-size:2.6vw}.dehors .ciel-act b{font-size:8vw}.dehors .ciel-act span{font-size:2.4vw}.humid{font-size:4vw}.chauffe{font-size:3.2vw}.ciel-tuile{top:12px;right:12px}.ciel-tuile b{font-size:6vw}.ciel-tuile span{font-size:2.4vw}
@@ -270,6 +274,7 @@ if (/[?&]vue=meteo\b/.test(location.search)) (function(){
       <div>
         <div class="heure" id="heure">--:--</div>
         <div class="date" id="date"></div>
+        <div class="voyant" id="voyant" role="status"></div>
       </div>
       <nav class="raccourcis" id="raccourcis" aria-label="Autres pages"></nav>
     </div>
@@ -460,8 +465,29 @@ function valider(j){ if (!j || !j.devices) throw new Error("réponse inattendue"
 function relais(){
   return fetch("data.json?t=" + Date.now(), { cache: "no-store" }).then(lireJson).then(valider);
 }
+/* Voyant : mesures Mobile Alerts plus vieilles que VOYANT_MIN (capteurs muets, ou tâche de publication arrêtée),
+   ou data.json illisible. Recalculé à chaque relecture (toutes les RAFRAICHIR_MIN) et chaque minute. */
+var VOYANT_MIN = 30, derniereMesure = null, mesuresEnPanne = false;
+function duree(min){
+  if (min < 60) return min + " min";
+  var h = Math.floor(min / 60), m = min % 60;
+  if (h >= 48) return Math.floor(h / 24) + " jours";
+  return h + " h" + (m ? " " + (m < 10 ? "0" : "") + m : "");
+}
+function voyant(){
+  var v = el("voyant");
+  if (!v) return;
+  var age = derniereMesure ? Math.floor((Date.now() / 1000 - derniereMesure) / 60) : null;
+  if (mesuresEnPanne && age === null) { v.textContent = "⚠️ Mesures indisponibles"; v.className = "voyant allume"; return; }
+  if (age !== null && age >= VOYANT_MIN) { v.textContent = "⚠️ Mesures figées depuis " + duree(age); v.className = "voyant allume"; return; }
+  v.className = "voyant"; v.textContent = "";
+}
+setInterval(voyant, 60 * 1000);
 function ok(j, source){
   afficher(j.devices);
+  derniereMesure = null; mesuresEnPanne = false;
+  (j.devices || []).forEach(function(a){ var t = a.measurement && a.measurement.ts; if (typeof t === "number" && (!derniereMesure || t > derniereMesure)) derniereMesure = t; });
+  voyant();
   var etat = el("etat"); etat.className = "etat";
   etat.textContent = "Mobile Alerts" + source + " · vérifié à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
@@ -487,6 +513,7 @@ function charger(){
     .catch(function(e){
       var etat = el("etat"); etat.className = "etat erreur";
       etat.textContent = "Mesures indisponibles (" + e.message + "). Nouvel essai dans " + RAFRAICHIR_MIN + " min.";
+      mesuresEnPanne = true; voyant();
     });
 }
 
