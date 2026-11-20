@@ -166,6 +166,14 @@ html.en-veille body>*:not(#diapo){visibility:hidden}
   #diapo #grille .vignette{width:25%;padding-bottom:25%}
   #grille .mois{font-size:3vw;padding:3vw 1vw 1.5vw}
 }
+/* iPhone en portrait : titre et date sur toute la largeur, les 7 boutons en dessous, répartis sur la largeur */
+@media (max-width:800px) and (orientation:portrait){
+  #diapo .bandeau{flex-direction:column;align-items:stretch;padding:4vw 3vw;padding-bottom:calc(3vw + env(safe-area-inset-bottom))}
+  #diapo .legende{margin:0 0 3vw;white-space:normal}
+  #diapo .boutons{justify-content:space-between}
+  #diapo .boutons button{flex:1 1 0;min-width:0;margin:0 .8vw;padding:2vw 0}
+  #diapo .boutons .mot{display:none}
+}
 /* iPhone à l'horizontale : carte moins haute pour laisser voir la photo */
 @media (max-height:500px) and (orientation:landscape){
   #lieu{width:34vw;top:2vw}
@@ -546,7 +554,7 @@ function fermer(){
 }
 function pause(){
   enPause = !enPause;
-  $("b-pause").textContent = enPause ? "▶︎ Lire" : "⏸";
+  $("b-pause").innerHTML = enPause ? '▶︎<span class="mot"> Lire</span>' : "⏸";
   relancer();
 }
 $("b-prec").onclick = function(){ aller(-1); };
