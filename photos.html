@@ -122,10 +122,20 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
 #diapo #grille .vignette.actuelle{border-color:var(--ok);border-width:.45vw}
 #grille .vignette.actuelle:after{content:"▶ à l'écran";position:absolute;left:0;right:0;bottom:0;padding:.2vw 0;background:rgba(127,209,160,.9);color:var(--nuit);font:600 .8vw/1.2 var(--mono);text-align:center}
 #grille .mois{width:100%;padding:1vw .3vw .5vw;font-family:var(--mono);font-size:.95vw;letter-spacing:.14em;text-transform:uppercase;color:var(--brume)}
+/* Navigation d'une semaine à l'autre dans la grille */
+#grille .semaines{display:flex;align-items:center;justify-content:center;padding:0 0 .6vw}
+#grille .semaines span{font-size:1.3vw;font-weight:600;text-align:center;min-width:24vw;margin:0 1vw}
+#grille .semaines span small{display:block;font-family:var(--mono);font-size:.85vw;font-weight:400;color:var(--brume);margin-top:.2vw}
+#diapo #grille .semaines button{margin:0;min-width:5vw}
+/* Liste des albums : bouton « Tous les albums au hasard » */
+#b-tous{display:block;width:100%;margin:0 .8vw .4vw;padding:1vw 1.4vw;font:inherit;font-size:1.35vw;font-weight:600;text-align:left;color:var(--craie);background:var(--ardoise);border:.2vw solid var(--trait);border-radius:1vw;cursor:pointer;outline:none}
+#b-tous span{font-family:var(--mono);font-size:.9vw;font-weight:400;color:var(--brume);margin-left:1vw}
+#b-tous:focus,#b-tous:hover{border-color:var(--givre);box-shadow:0 0 0 .25vw var(--givre)}
 #diapo button:disabled{opacity:.35;cursor:default;box-shadow:none;border-color:var(--trait)}
 /* Lieu de la photo (bouton 📍) : carte en haut à droite, reste affichée d'une photo à l'autre jusqu'au prochain appui */
 #lieu{display:none;position:absolute;top:1.6vw;right:1.6vw;margin-right:env(safe-area-inset-right);width:26vw;background:rgba(15,20,24,.9);border:.18vw solid var(--trait);border-radius:1vw;overflow:hidden;z-index:2}
 #diapo.avec-lieu #lieu{display:block}
+#lieu.sans-carte .carte{display:none}
 #lieu .carte{position:relative;width:100%;height:16vw;overflow:hidden;background:#1b2228}
 #lieu .carte img{position:absolute;width:256px;height:256px;max-width:none}
 #lieu .epingle{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--alerte);border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.8)}
@@ -169,6 +179,10 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
   #diapo #grille .vignette{width:25%;padding-bottom:25%}
   #diapo #grille .vignette.actuelle{border-width:1vw}#grille .vignette.actuelle:after{font-size:2.6vw;padding:.6vw 0}
   #grille .mois{font-size:3vw;padding:3vw 1vw 1.5vw}
+  #grille .semaines{padding-bottom:2vw}
+  #grille .semaines span{font-size:3.8vw;min-width:0;flex:1 1 auto;margin:0 2vw}#grille .semaines span small{font-size:2.8vw}
+  #diapo #grille .semaines button{min-width:12vw}
+  #b-tous{font-size:4vw;padding:3vw 4vw;border-radius:2.5vw;margin:0 1.5vw 1vw}#b-tous span{display:block;font-size:2.8vw;margin:.5vw 0 0}
 }
 /* iPhone en portrait : titre et date sur toute la largeur, les 7 boutons en dessous, répartis sur la largeur */
 @media (max-width:800px) and (orientation:portrait){
@@ -188,6 +202,7 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
   #grille{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
   #grille .tete b{font-size:2.2vw}#grille .tete b span{font-size:1.3vw}
   #grille .mois{font-size:1.3vw}
+  #grille .semaines span{font-size:1.8vw}#grille .semaines span small{font-size:1.2vw}
 }
 @media (max-width:800px) and (orientation:landscape){ #panneau .boite{max-width:80vw;margin:0 auto} }
 </style>
@@ -260,6 +275,7 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
   </div>
   <div id="grille" role="dialog" aria-label="Toutes les photos de l'album">
     <div class="tete"><b id="grille-titre"></b><button id="b-grille-fermer" title="Revenir au diaporama">✕</button></div>
+    <div class="semaines"><button id="b-sem-prec" title="Semaine précédente (CH −)">◀</button><span id="sem-titre"></span><button id="b-sem-suiv" title="Semaine suivante (CH +)">▶</button></div>
     <div class="vignettes" id="vignettes"></div>
   </div>
   <div class="bandeau">
@@ -270,7 +286,7 @@ html.tele #diapo .vue{-webkit-transform:translateZ(0);transform:translateZ(0);-w
       <button id="b-pause" title="Pause">⏸</button>
       <button id="b-suiv" title="Photo suivante">▶</button>
       <button id="b-hasard" title="Ordre au hasard">🔀</button>
-      <button id="b-lieu" title="Lieu de la photo">📍</button>
+      <button id="b-lieu" title="Lieu et date de la photo (touche Info)">📍</button>
       <button id="b-fermer" title="Fermer">✕</button>
     </div>
   </div>
@@ -332,13 +348,27 @@ function tuile(a, i){
     '<span class="nom">' + echapper(a.titre) + '</span>' +
     '<span class="date">' + periode(a) + '</span></button>';
 }
+/* Toutes les photos de tous les albums (chaque photo garde le titre de son album, affiché dans la légende) */
+var TOUS = null;
+function albumTous(){
+  if (TOUS) return TOUS;
+  var tout = [], i, j, p;
+  for (i = 0; i < ALBUMS.length; i++) for (j = 0; j < ALBUMS[i].photos.length; j++) {
+    p = copie(ALBUMS[i].photos[j]); p.t = ALBUMS[i].titre; tout.push(p);
+  }
+  TOUS = { titre: "Tous les albums", photos: tout, nb: tout.length, tous: true };
+  return TOUS;
+}
 function afficherAlbums(){
   if (!ALBUMS.length) {
     $("contenu").innerHTML = '<div class="message">Aucun album pour l\'instant. Ajoute un lien d\'album partagé avec <b>⚙️ Réglages</b> ' +
       '(depuis un appareil où le jeton GitHub est enregistré), ou dans la liste chiffrée des albums (branche donnees du dépôt).</div>';
     return;
   }
-  var h = '<div class="grille"><div class="titre-section">Derniers albums</div>', n = +R.recents || 4;
+  var total = 0;
+  for (var t = 0; t < ALBUMS.length; t++) total += ALBUMS[t].photos.length;
+  var h = '<div class="grille">' + (ALBUMS.length > 1 ? '<button id="b-tous" type="button">🔀 Tous les albums au hasard<span>' + total + ' photos · ' + ALBUMS.length + ' albums</span></button>' : '') +
+    '<div class="titre-section">Derniers albums</div>', n = +R.recents || 4;
   for (var i = 0; i < ALBUMS.length; i++) {
     if (i === n) h += '<div class="titre-section">Tous les autres albums</div>';
     h += tuile(ALBUMS[i], i);
@@ -346,6 +376,7 @@ function afficherAlbums(){
   $("contenu").innerHTML = h + '</div>';
   var b = document.querySelectorAll(".album");
   for (var j = 0; j < b.length; j++) b[j].addEventListener("click", function(){ ouvrir(+this.getAttribute("data-i")); });
+  if ($("b-tous")) $("b-tous").onclick = function(){ ouvrirAlbum(albumTous(), true); };
   if (b[0] && !$("panneau").className) b[0].focus();
 }
 function charger(){
@@ -375,11 +406,7 @@ function lancerVeille(){
   if (!ALBUMS.length) { quitterVeille(); return; }
   var v = R.veille, i, a = null;
   if (v === "tous") {
-    var tout = [];
-    for (i = 0; i < ALBUMS.length; i++) for (var j = 0; j < ALBUMS[i].photos.length; j++) {
-      var p = copie(ALBUMS[i].photos[j]); p.t = ALBUMS[i].titre; tout.push(p);
-    }
-    a = { titre: "Tous les albums", photos: tout, nb: tout.length };
+    a = albumTous();
     R.ordre = "hasard";
   } else {
     for (i = 0; i < ALBUMS.length; i++) if ((ALBUMS[i].id || ALBUMS[i].lien) === v) a = ALBUMS[i];
@@ -532,7 +559,7 @@ function classeDiapo(){
   var c = "ouvert t-" + t;
   if (R.legende === "oui") c += " avec-legende";
   var p = photoActuelle();
-  if (lieuVisible && p && p.g) c += " avec-lieu";
+  if (lieuVisible && p) c += " avec-lieu";
   return c;
 }
 function montrer(){
@@ -554,8 +581,6 @@ function montrer(){
   var t = p.t || album.titre;
   $("legende").innerHTML = echapper(t) + '<span>' + info + '</span>';
   $("fixe").innerHTML = echapper(t) + '<span>' + (p.d ? jour(p.d) : '') + '</span>';
-  $("b-lieu").disabled = !p.g;
-  $("b-lieu").title = p.g ? "Lieu de la photo" : "Lieu inconnu pour cette photo";
   if (lieuVisible) montrerLieu();
   relancer();
 }
@@ -583,9 +608,10 @@ function reveiller(){
   clearTimeout(calme);
   calme = setTimeout(function(){ if (album) diapo.className = classeDiapo() + " calme"; }, CALME_S * 1000);
 }
-function ouvrir(i){
-  album = ALBUMS[i]; pos = 0; enPause = false;
-  auHasard = R.ordre === "hasard";
+function ouvrir(i){ ouvrirAlbum(ALBUMS[i]); }
+function ouvrirAlbum(a, hasard){
+  album = a; pos = 0; enPause = false;
+  auHasard = hasard || R.ordre === "hasard";
   $("b-hasard").className = auHasard ? "actif" : "";
   $("b-pause").textContent = "⏸";
   preparerOrdre();
@@ -604,7 +630,7 @@ function fermer(){
   diapo.className = "";
   var s = document.exitFullscreen || document.webkitExitFullscreen;
   try { if (s && (document.fullscreenElement || document.webkitFullscreenElement)) s.call(document); } catch (x) {}
-  var b = document.querySelector('.album[data-i="' + ALBUMS.indexOf(album) + '"]');
+  var b = album && album.tous ? $("b-tous") : document.querySelector('.album[data-i="' + ALBUMS.indexOf(album) + '"]');
   if (b) b.focus();
   album = null;
 }
@@ -638,8 +664,14 @@ function basculerLieu(){
 }
 function montrerLieu(){
   var p = photoActuelle();
-  if (!p || !p.g) { sansLieu(); return; }
+  if (!p) { sansLieu(); return; }
   if (diapo.className.indexOf("avec-lieu") < 0) diapo.className += " avec-lieu";
+  if (!p.g) {                                   // sans position : la date seule
+    $("lieu").className = "sans-carte";
+    $("lieu-texte").innerHTML = (p.d ? "📷 " + priseDeVue(p) : "Date inconnue") + '<span>Lieu inconnu pour cette photo</span>';
+    return;
+  }
+  $("lieu").className = "";
   dessinerCarte(p.g[0], p.g[1]);
   var cle = p.g[0].toFixed(3) + "," + p.g[1].toFixed(3);
   ecrireLieu(p, NOMS[cle] || "…");
@@ -701,41 +733,89 @@ $("b-lieu").onclick = basculerLieu;
 /* ===== Grille de toutes les photos (▦) =====
    Vignettes carrées demandées à Google (=w…-h…-c), chargées au fur et à mesure du défilement
    (le navigateur de la télé ne connaît pas loading="lazy"). Un appui sur une vignette reprend le diaporama à cette photo. */
-var grilleOuverte = false, enPauseAvantGrille = false, chargeTempo = null;
+var grilleOuverte = false, enPauseAvantGrille = false, chargeTempo = null, semaineAff = 0;
+var JOURS_SEM = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+/* Photos de l'album rangées par semaine (du lundi au dimanche, à l'heure du lieu de la photo), de la plus ancienne
+   à la plus récente ; les photos sans date à la fin. Calculé une fois par album. */
+function semaines(){
+  if (album._semaines) return album._semaines;
+  var idx = [], i, liste = [], cle = {}, sans = [];
+  for (i = 0; i < album.photos.length; i++) idx.push(i);
+  idx.sort(function(x, y){ return (album.photos[x].d || 9e15) - (album.photos[y].d || 9e15) || x - y; });
+  for (i = 0; i < idx.length; i++) {
+    var p = album.photos[idx[i]];
+    if (!p.d) { sans.push(idx[i]); continue; }
+    var d = new Date(p.d + (p.o || 0));
+    var lundi = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+    if (cle[lundi] === undefined) { cle[lundi] = liste.length; liste.push({ lundi: lundi, photos: [] }); }
+    liste[cle[lundi]].photos.push(idx[i]);
+  }
+  if (sans.length) liste.push({ lundi: null, photos: sans });
+  album._semaines = liste;
+  return liste;
+}
+function nomSemaine(w){
+  if (w.lundi === null) return "Photos sans date";
+  var a = new Date(w.lundi), b = new Date(w.lundi + 6 * 86400000);
+  var fin = b.getUTCDate() + " " + MOIS[b.getUTCMonth()] + " " + b.getUTCFullYear();
+  var debut = a.getUTCDate() + (a.getUTCMonth() !== b.getUTCMonth() ? " " + MOIS[a.getUTCMonth()] : "") +
+    (a.getUTCFullYear() !== b.getUTCFullYear() ? " " + a.getUTCFullYear() : "");
+  return "Semaine du " + debut + " au " + fin;
+}
 function ouvrirGrille(){
   if (!album) return;
   grilleOuverte = true;
   enPauseAvantGrille = enPause;
   clearTimeout(minuteur);
-  var actuelle = ordre[pos], h = "", mois = "", i, p, cote = Math.round(Math.min(window.devicePixelRatio || 1, 3) * 140);
-  for (i = 0; i < album.photos.length; i++) {
-    p = album.photos[i];
+  var liste = semaines(), actuelle = ordre[pos], k;
+  semaineAff = 0;
+  for (k = 0; k < liste.length; k++) if (liste[k].photos.indexOf(actuelle) >= 0) { semaineAff = k; break; }
+  $("grille-titre").innerHTML = echapper(album.titre) + '<span>' + album.photos.length + ' photos · choisis celle où reprendre</span>';
+  $("grille").className = "ouverte";
+  afficherSemaine(semaineAff, actuelle);
+}
+/* Affiche une semaine ; « cible » = numéro de la photo à sélectionner, ou "debut" / "fin" */
+function afficherSemaine(n, cible){
+  var liste = semaines(), w = liste[n], actuelle = ordre[pos], h = "", jourAff = "", i, p;
+  var cote = Math.round(Math.min(window.devicePixelRatio || 1, 3) * 140);
+  semaineAff = n;
+  for (i = 0; i < w.photos.length; i++) {
+    p = album.photos[w.photos[i]];
     if (p.d) {
-      var d = new Date(p.d + (p.o || 0)), m = MOIS[d.getUTCMonth()] + " " + d.getUTCFullYear();
-      if (m !== mois) { mois = m; h += '<div class="mois">' + m + '</div>'; }
+      var d = new Date(p.d + (p.o || 0)), j = JOURS_SEM[d.getUTCDay()] + " " + d.getUTCDate() + " " + MOIS[d.getUTCMonth()];
+      if (j !== jourAff) { jourAff = j; h += '<div class="mois">' + j + '</div>'; }
     }
-    h += '<button class="vignette' + (i === actuelle ? ' actuelle' : '') + '" data-i="' + i + '" data-src="' + echapper(p.u + "=w" + cote + "-h" + cote + "-c") + '"' +
+    h += '<button class="vignette' + (w.photos[i] === actuelle ? ' actuelle' : '') + '" data-i="' + w.photos[i] + '" data-src="' + echapper(p.u + "=w" + cote + "-h" + cote + "-c") + '"' +
       (p.d ? ' title="' + jour(p.d) + '"' : '') + '></button>';
   }
   $("vignettes").innerHTML = h;
-  $("grille-titre").innerHTML = echapper(album.titre) + '<span>' + album.photos.length + ' photos · choisis celle où reprendre</span>';
-  $("grille").className = "ouverte";
+  $("sem-titre").innerHTML = nomSemaine(w) + '<small>' + w.photos.length + ' photo' + (w.photos.length > 1 ? 's' : '') + ' · semaine ' + (n + 1) + ' / ' + liste.length + '</small>';
+  $("b-sem-prec").disabled = n === 0;
+  $("b-sem-suiv").disabled = n === liste.length - 1;
   var b = $("vignettes").querySelectorAll(".vignette");
   for (i = 0; i < b.length; i++) b[i].onclick = function(){ choisirPhoto(+this.getAttribute("data-i")); };
-  /* Placement sur la photo affichée : refait après le dessin de la grille (Safari iPhone et la télé
+  /* Placement sur la photo voulue : refait après le dessin de la grille (Safari iPhone et la télé
      ignorent un défilement demandé avant), photo centrée à l'écran et sélectionnée pour la télécommande */
-  var cible = b[actuelle] || b[0];
+  var c = cible === "fin" ? b[b.length - 1] : cible === "debut" ? b[0] : $("vignettes").querySelector('.vignette[data-i="' + cible + '"]') || b[0];
   function placer(){
-    if (!grilleOuverte || !cible) return;
+    if (!grilleOuverte || !c) return;
     var g = $("grille");
-    g.scrollTop = Math.max(0, cible.offsetTop + cible.offsetHeight / 2 - g.clientHeight / 2);
-    try { cible.focus({ preventScroll: true }); } catch (x) { cible.focus(); }
+    g.scrollTop = cible === "debut" ? 0 : Math.max(0, c.offsetTop + c.offsetHeight / 2 - g.clientHeight / 2);
+    try { c.focus({ preventScroll: true }); } catch (x) { c.focus(); }
     chargerVignettes();
   }
   placer();
   setTimeout(placer, 50);
   setTimeout(placer, 300);
 }
+function changerSemaine(sens, cible){
+  var n = semaineAff + sens;
+  if (n < 0 || n >= semaines().length) return false;
+  afficherSemaine(n, cible || (sens > 0 ? "debut" : "debut"));
+  return true;
+}
+$("b-sem-prec").onclick = function(){ changerSemaine(-1); if (!this.disabled) this.focus(); else $("b-sem-suiv").focus(); };
+$("b-sem-suiv").onclick = function(){ changerSemaine(1); if (!this.disabled) this.focus(); else $("b-sem-prec").focus(); };
 /* Charge les vignettes visibles et celles d'un écran au-dessus et au-dessous */
 function chargerVignettes(){
   var g = $("grille"), haut = g.scrollTop - g.clientHeight, bas = g.scrollTop + 2 * g.clientHeight;
@@ -771,13 +851,26 @@ function choisirPhoto(i){
   reveiller();
   $("b-grille").focus();
 }
-/* Flèches dans la grille (télécommande) : gauche/droite d'une vignette, haut/bas d'une rangée */
+/* Flèches dans la grille (télécommande) : gauche/droite d'une vignette (et d'une semaine à l'autre aux bouts),
+   haut/bas d'une rangée ; depuis la première rangée, ↑ monte aux boutons ◀ ▶ ✕ du haut, ↓ en redescend */
 function deplacerGrille(k){
-  var b = $("vignettes").querySelectorAll(".vignette"), n = b.length, i = 0, j;
-  if (!n) return;
+  var b = $("vignettes").querySelectorAll(".vignette"), n = b.length, i = -1, j;
+  var haut = [$("b-sem-prec"), $("b-sem-suiv"), $("b-grille-fermer")].filter(function(x){ return !x.disabled; });
+  var h = haut.indexOf(document.activeElement);
+  if (h >= 0) {                                              // dans les boutons du haut
+    if (k === 37) haut[Math.max(0, h - 1)].focus();
+    else if (k === 39) haut[Math.min(haut.length - 1, h + 1)].focus();
+    else if (k === 40 && n) { b[0].focus(); $("grille").scrollTop = 0; chargerVignettes(); }
+    return;
+  }
+  if (!n) { if (haut[0]) haut[0].focus(); return; }
   for (j = 0; j < n; j++) if (b[j] === document.activeElement) { i = j; break; }
+  if (i < 0) { b[0].focus(); return; }
   var col = 1;
   while (col < n && b[col].offsetTop === b[0].offsetTop) col++;
+  if (k === 37 && i === 0) { changerSemaine(-1, "fin"); return; }
+  if (k === 39 && i === n - 1) { changerSemaine(1, "debut"); return; }
+  if (k === 38 && i < col) { if (haut[0]) { haut[0].focus(); $("grille").scrollTop = 0; } return; }
   if (k === 37) j = i - 1; else if (k === 39) j = i + 1; else if (k === 38) j = i - col; else j = i + col;
   j = Math.max(0, Math.min(n - 1, j));
   b[j].focus();
@@ -807,17 +900,20 @@ document.addEventListener("keydown", function(e){
   if (grilleOuverte) {
     if (k === 10009 || k === 27 || k === 8) { e.preventDefault(); fermerGrille(); }
     else if (k >= 37 && k <= 40) { e.preventDefault(); deplacerGrille(k); }
+    else if (k === 427 || k === 33) { e.preventDefault(); changerSemaine(1); }     // CH + ou Page précédente : semaine suivante
+    else if (k === 428 || k === 34) { e.preventDefault(); changerSemaine(-1); }    // CH − ou Page suivante : semaine précédente
     return;                                                    // OK : la vignette choisie est activée par le navigateur
   }
   var boutons = diapo.className.indexOf("calme") < 0;
   reveiller();
   if (k === 10009 || k === 27 || k === 8) { e.preventDefault(); fermer(); return; }
+  if (k === 457 || k === 73) { e.preventDefault(); basculerLieu(); return; }   // touche Info (ou « i ») : lieu et date
   if (boutons && (k === 13 || k === 37 || k === 39)) return;   // boutons visibles : la télécommande s'y déplace et les active
   if (k === 37) { e.preventDefault(); aller(-1); }
   else if (k === 39) { e.preventDefault(); aller(1); }
   else if (k === 13 || k === 32 || k === 415 || k === 19 || k === 10252) { e.preventDefault(); pause(); }
 });
-try { if (window.tizen && tizen.tvinputdevice) tizen.tvinputdevice.registerKey("MediaPlayPause"); } catch (x) {}
+try { if (window.tizen && tizen.tvinputdevice) { tizen.tvinputdevice.registerKey("MediaPlayPause"); tizen.tvinputdevice.registerKey("Info"); tizen.tvinputdevice.registerKey("ChannelUp"); tizen.tvinputdevice.registerKey("ChannelDown"); } } catch (x) {}
 
 charger();
 </script>
