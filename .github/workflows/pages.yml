@@ -114,7 +114,7 @@ jobs:
       - name: Préparer le site (données chiffrées seulement)
         run: |
           cp index.html historique.html energie.html bilans.html lieux.html meteo.html chauffage.html photos.html verrou.js maj.js nav.js veille.js tele.js site/
-          cp -r app site/
+          cp -r app polices site/
           node outils/coffre.js chiffrer site/data.json site/solaire.json site/chauffage.json
           node outils/coffre.js controle site/controle.txt
           mkdir -p site/historique site/photos
