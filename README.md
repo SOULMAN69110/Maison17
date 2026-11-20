@@ -17,9 +17,11 @@ Mis en place le 3 novembre 2026.
 | Appli Météo (à installer sur le téléphone) | ouvrir le lien Météo seule (avec `?lieu=…`), puis iPhone : Safari → Partager → *Sur l'écran d'accueil* ; Android : Chrome → menu ⋮ → *Installer l'application* (ou *Ajouter à l'écran d'accueil*). L'icône ouvre la météo en plein écran, sur le lieu du lien. |
 | Mesures brutes (CSV) | branche `donnees` de ce dépôt, **chiffrées** (voir « Protection des données ») |
 
-**Affichage sur la télé** : ouvrir le tableau de bord dans Safari sur l'iPhone, tourner le téléphone à l'horizontale, puis centre de contrôle → Recopie de l'écran → Apple TV. La page s'ouvre aussi directement dans le navigateur de la télé Samsung.
+**Affichage sur la télé** : de préférence **directement dans le navigateur de la télé Samsung** (ci-dessous) : vrai plein écran 1920×1080, tout se pilote à la télécommande. La recopie de l'iPhone (Safari ou webapp à l'horizontale, centre de contrôle → Recopie de l'écran → Apple TV) marche aussi, mais laisse forcément une bande noire en haut et en bas : l'écran de l'iPhone (2,17:1) est plus allongé que la télé (16:9), l'image n'occupe qu'environ 82 % de la hauteur, quel que soit le réglage de la page (vérifié le 20/11/2026).
 
 **Directement sur la télé Samsung** (application Internet) : ouvrir `soulman69110.github.io/Maison17`, saisir la phrase d'accès, puis Paramètres (roue dentée) → *Définir comme page d'accueil* → *Page actuelle* : lancer Internet ouvre alors le tableau de bord. On peut aussi l'ajouter aux favoris (étoile). Pour un affichage permanent, vérifier l'arrêt automatique de la télé (Paramètres → Général → Solution Éco → Arrêt automatique). Les intitulés peuvent varier selon la version du logiciel de la télé.
+
+**Télécommande** (`tele.js`) : Rouge = Accueil, Vert = Énergie, Jaune = Photos, Bleu = Chauffage (Courbes sans jeton) ; chiffres 1 Accueil · 2 Courbes · 3 Énergie · 4 Bilans · 5 Photos · 6 Chauffage (sur la One Remote, touche « 123 ») ; Retour = accueil. Dans le diaporama : ◀ ▶, OK = pause, Info = lieu et date, ▦ = grille par semaine (CH +/− pour changer de semaine). Réglages propres à la télé, dans ⚙️ Réglages de Photos (« sur cet appareil ») : mode kiosque, mode nuit (23 h – 7 h par défaut sur la télé), cadrage, écran de veille.
 
 ## Capteurs Mobile Alerts
 
@@ -79,6 +81,12 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 | `outils/historiser.py` | ajoute les mesures aux CSV sans doublons |
 | `.github/workflows/pages.yml` | la tâche automatique (mesures, coffre, publication) |
 | `.github/workflows/horloge.yml` | relance la tâche automatique toutes les 10 min |
+| `photos.html`, `outils/photos.py`, `outils/photos_regler.py`, `.github/workflows/photos-regler.yml` | page Photos (albums partagés par lien, diaporama, grille par semaine, lieu 📍, musique Spotify, réglages) ; lecture des albums et des positions GPS par la tâche ; enregistrement des réglages communs |
+| `nav.js` | rangée de boutons vers les autres pages (Courbes, Énergie, Bilans, Photos, Chauffage) |
+| `veille.js` | écran de veille photos, mode nuit (heure qui se promène, température de la sonde) et mode kiosque |
+| `tele.js` | raccourcis de la télécommande, cadre jaune de sélection, retour sur le dernier bouton utilisé |
+| `maj.js` | rechargement des pages quand une nouvelle version est publiée (numéro de version inscrit par `pages.yml` dans chaque page et dans `version.txt`) |
+| `polices/` | polices du site (Bricolage Grotesque, IBM Plex Mono, licence SIL OFL) et `polices.css` |
 
 ### Format des CSV
 
@@ -90,7 +98,7 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
 - **Phrase d'accès** : voir « Protection des données ». Les chambres des enfants sont nommées par leur initiale (Chambre C., Chambre Y.).
 
 - **Si les chiffres se figent** : vérifier dans l'onglet Actions qu'une tâche `Horloge` est en cours ; sinon la lancer (*Run workflow*). GitHub met aussi en pause les tâches planifiées d'un dépôt public après 60 jours sans activité (l'historique n'est plus enregistré sur `main` mais sur la branche `donnees` ; la chaîne `Horloge` se relance elle-même) ; si besoin, relancer la tâche depuis l'onglet Actions (*Run workflow*).
-- **Ajouter une page** : la créer à la racine, l'ajouter à la commande `cp` de `pages.yml` et à la liste `RACCOURCIS` d'`index.html`.
+- **Ajouter une page** : la créer à la racine, l'ajouter à la commande `cp` de `pages.yml`, à `PAGES` de `nav.js` et à la liste `RACCOURCIS` d'`index.html` ; y mettre `verrou.js`, `maj.js`, `tele.js` (et `veille.js` pour l'écran de veille, le mode nuit et le kiosque), et `<link rel="stylesheet" href="polices/polices.css">`.
 - **Ajouter un capteur** : choisir un nom (ex. `cuisine`), l'ajouter au secret `MOBILE_ALERTS` (`cuisine=IDENTIFIANT`) et dans `CAPTEURS` dans `index.html` et `historique.html` (avec ce nom).
 - **Piles faibles** au 3 novembre 2026 : Chambre parents, Chambre Y., SdB parents.
 
@@ -143,5 +151,6 @@ Mobile Alerts refuse les appels directs depuis un navigateur : c'est pour ça qu
   - *Voyant « mesures figées »* sur le tableau de bord, sous la date : pastille orange « ⚠️ Mesures figées depuis 1 h 30 » quand la mesure Mobile Alerts la plus récente a plus de 30 min (`VOYANT_MIN` ; capteurs muets ou tâche de publication arrêtée), « ⚠️ Mesures indisponibles » si `data.json` ne se lit pas. Recalculé à chaque relecture et chaque minute ; pas sur la météo partagée.
   - *Mode kiosque* (`veille.js`, réglage par appareil dans ⚙️ Réglages de Photos, clé `maison17-kiosque` : cycle et temps par page de 30 s à 10 min) : sans action, les pages défilent toutes seules à la place de l'écran de veille — Accueil ↔ Énergie, Accueil → Énergie → Photos, ou Accueil → Énergie → Bilans → Photos ; l'étape Photos est le diaporama de veille (album de veille, ou tous les albums au hasard), 3 fois plus long, via `photos.html?veille=1&kiosque=<s>&retour=<page suivante>`. Démarre après le délai de l'écran de veille (3 min sans écran de veille) ; la moindre action l'arrête sur la page affichée (`maison17-kiosque-actif` dans `sessionStorage`) ; la nuit, l'écran de nuit passe avant. Désactivé par défaut partout.
 - **20 nov. 2026 (polices hébergées avec le site)** : plus de Google Fonts. Dossier `polices/` (copié par `pages.yml`) : `polices.css` et les fichiers woff2 de Bricolage Grotesque et IBM Plex Mono (licence SIL OFL, textes joints), sous-ensembles latin et latin étendu (261 ko en tout, chaque appareil ne charge que ce qu'il lui faut). Bricolage : fichier variable pour les navigateurs récents (`format("woff2-variations")`, rendu inchangé), fichiers fixes 400/600/700 pour la télé de 2018, qui ignore ce format et prend le suivant (Google lui envoyait de lourds TTF). Texte affiché plus vite au démarrage, sans dépendre d'un serveur extérieur. Fichiers tirés de Google Fonts le 20/11/2026.
+- **20 nov. 2026 (bilan de la session)** : page Photos complète et validée par Hervé (lieu, date, grille par semaine, musique, cadrage) ; affichage télé conseillé par le navigateur de la Samsung plutôt que la recopie de l'iPhone (bandes noires inévitables). Restent à confirmer sur la télé : touches de couleur, CH et Info, cadre jaune, écran de nuit avec la vraie sonde.
 - **À reprendre** : alertes automatiques (pile faible, box du chauffage hors ligne, capteur muet) envoyées par la tâche, par notification ntfy, e-mail, WhatsApp (CallMeBot) ou SMS (Free Mobile) ; pour les mesures figées, veilleur extérieur gratuit (healthchecks.io) prévenu à chaque passage.
 - Idées écartées pour l'instant : appli Apple TV native (nécessite un Mac), intégration de SmartThings.
