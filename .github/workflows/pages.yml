@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploiement.outputs.page_url }}
+      url: ${{ steps.deploiement.outputs.page_url || steps.deploiement2.outputs.page_url || steps.deploiement3.outputs.page_url }}
     env:
       MAISON17_PHRASE: ${{ secrets.MAISON17_PHRASE }}
     steps:
@@ -137,5 +137,21 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      # GitHub ne retrouve parfois pas tout de suite le paquet qui vient d'être déposé
+      # (« No artifacts named github-pages ») : on attend un peu et on retente, au lieu d'échouer.
       - id: deploiement
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Attendre avant de retenter la mise en ligne
+        if: steps.deploiement.outcome == 'failure'
+        run: sleep 20
+      - id: deploiement2
+        if: steps.deploiement.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Attendre avant le dernier essai
+        if: steps.deploiement.outcome == 'failure' && steps.deploiement2.outcome == 'failure'
+        run: sleep 45
+      - id: deploiement3
+        if: steps.deploiement.outcome == 'failure' && steps.deploiement2.outcome == 'failure'
         uses: actions/deploy-pages@v4
