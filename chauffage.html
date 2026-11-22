@@ -115,7 +115,7 @@ a{color:var(--givre)}
     <div class="reglage"><div class="nom">Consigne<span>mode Manuel · 13,5 à 30 °C</span></div><div class="pas" id="min-consigne"></div></div>
     <div class="reglage"><div class="nom">Extinction dans<span>15 min à 5 h 45</span></div><div class="pas" id="min-duree"></div></div>
     <button class="principal" id="min-lancer" type="button" style="margin-top:10px">Allumer en manuel</button>
-    <button type="button" id="min-annuler" style="width:100%;margin-top:8px" hidden>Annuler la minuterie (le radiateur reste en Manuel)</button>
+    <button type="button" id="min-annuler" style="width:100%;margin-top:8px" hidden>Annuler la minuterie (retour en mode Programme)</button>
     <div class="retour" id="min-retour"></div>
   </section>
 
@@ -392,14 +392,20 @@ el("min-lancer").addEventListener("click", function(){
 });
 el("min-annuler").addEventListener("click", function(){
   if (!minRun) return;
-  el("min-annuler").disabled = true;
+  var b = el("min-annuler"); b.disabled = true; retourMin("Annulation…", "");
+  /* 1. arrêter la tâche de la minuterie, 2. remettre le radiateur en mode Programme */
   fetch("https://api.github.com/repos/" + DEPOT + "/actions/runs/" + minRun.id + "/cancel", {
     method: "POST", headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json" }
   }).then(function(r){
-    el("min-annuler").disabled = false;
-    if (r.status === 202 || r.status === 409) { retourMin("Minuterie annulée : le radiateur reste dans son mode actuel.", "ok"); minRun = null; dessinerMinuterie(); setTimeout(lireMinuterie, 8000); }
-    else retourMin("Annulation refusée (" + r.status + "). Réessaie dans un instant.", "erreur");
-  }).catch(function(){ el("min-annuler").disabled = false; retourMin("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); });
+    if (r.status !== 202 && r.status !== 409) { b.disabled = false; retourMin("Annulation refusée (" + r.status + "). Réessaie dans un instant.", "erreur"); return; }
+    minRun = null; dessinerMinuterie();
+    envoyer({ piece: String(PIECE), mode: "Programme" }, function(ok, msg){
+      b.disabled = false;
+      retourMin(ok ? "Minuterie annulée : retour en mode Programme d'ici 1 à 2 min." : "Minuterie annulée, mais le retour en Programme a échoué : " + msg, ok ? "ok" : "erreur");
+      if (ok) { var n = 0, t = setInterval(function(){ lire(); if (++n >= 6) clearInterval(t); }, 30000); }
+      setTimeout(lireMinuterie, 8000);
+    });
+  }).catch(function(){ b.disabled = false; retourMin("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); });
 });
 
 /* ===== Jeton (sur cet appareil seulement) ===== */

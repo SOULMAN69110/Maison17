@@ -5,7 +5,7 @@ run-name: Minuterie ${{ inputs.minutes }} min
 # Passe le radiateur en mode Manuel (avec la consigne donnée), attend la durée choisie, puis le met
 # en Arrêt — seulement s'il est encore en Manuel (si on l'a réglé autrement entre-temps, on n'y touche pas).
 # Une nouvelle minuterie remplace la précédente ; « Annuler » sur la page arrête la tâche en cours
-# (le radiateur reste alors en Manuel). Durée maximale : 345 min (une tâche GitHub dure 6 h au plus).
+# puis remet le radiateur en mode Programme (par la tâche « Régler le chauffage »). Durée maximale : 345 min (une tâche GitHub dure 6 h au plus).
 
 on:
   workflow_dispatch:
