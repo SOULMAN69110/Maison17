@@ -1,0 +1,85 @@
+name: Minuterie du chauffage
+run-name: Minuterie ${{ inputs.minutes }} min
+
+# Lancée depuis la page chauffage.html (carte « Minuterie »), ou à la main (onglet Actions → Run workflow).
+# Passe le radiateur en mode Manuel (avec la consigne donnée), attend la durée choisie, puis le met
+# en Arrêt — seulement s'il est encore en Manuel (si on l'a réglé autrement entre-temps, on n'y touche pas).
+# Une nouvelle minuterie remplace la précédente ; « Annuler » sur la page arrête la tâche en cours
+# (le radiateur reste alors en Manuel). Durée maximale : 345 min (une tâche GitHub dure 6 h au plus).
+
+on:
+  workflow_dispatch:
+    inputs:
+      piece:
+        description: "Numéro de la pièce (7 = SdB filles)"
+        default: "7"
+      manuelle:
+        description: "Consigne manuelle (°C, 13,5 à 30, pas de 0,5 ; vide = inchangée)"
+        default: ""
+      minutes:
+        description: "Extinction au bout de … minutes (1 à 345)"
+        default: "60"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: chauffage-minuterie
+  cancel-in-progress: true
+
+jobs:
+  minuterie:
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    steps:
+      - name: Noter l'heure de départ et vérifier la durée
+        id: depart
+        env:
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          echo "debut=$(date +%s)" >> "$GITHUB_OUTPUT"
+          case "$MINUTES" in ''|*[!0-9]*) echo "Durée invalide : « $MINUTES »"; exit 1;; esac
+          if [ "$MINUTES" -lt 1 ] || [ "$MINUTES" -gt 345 ]; then echo "Durée hors limites (1 à 345 min) : $MINUTES"; exit 1; fi
+          echo "Extinction prévue vers $(TZ=Europe/Paris date -d "+$MINUTES min" '+%H:%M')"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Passer le radiateur en mode Manuel
+        env:
+          HSL_EMAIL: ${{ secrets.HSL_EMAIL }}
+          HSL_MOT_DE_PASSE: ${{ secrets.HSL_MOT_DE_PASSE }}
+          PIECE: ${{ inputs.piece }}
+          MODE: Manuel
+          MANUELLE: ${{ inputs.manuelle }}
+        run: |
+          pip install -q "homesmartlink==0.4.1"
+          python3 outils/chauffage_regler.py
+      - name: Relancer la publication pour afficher le nouvel état
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 45
+          gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main
+      - name: Attendre la fin de la minuterie
+        env:
+          DEBUT: ${{ steps.depart.outputs.debut }}
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          reste=$(( DEBUT + MINUTES * 60 - $(date +%s) ))
+          if [ "$reste" -gt 0 ]; then echo "Attente de $(( reste / 60 )) min $(( reste % 60 )) s"; sleep "$reste"; fi
+      - name: Éteindre le radiateur (s'il est toujours en Manuel)
+        env:
+          HSL_EMAIL: ${{ secrets.HSL_EMAIL }}
+          HSL_MOT_DE_PASSE: ${{ secrets.HSL_MOT_DE_PASSE }}
+          PIECE: ${{ inputs.piece }}
+          MODE: Arrêt
+          SEULEMENT_SI_MODE: Manuel
+        run: python3 outils/chauffage_regler.py
+      - name: Relancer la publication pour afficher l'arrêt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 45
+          gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main

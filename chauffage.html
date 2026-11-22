@@ -109,6 +109,16 @@ a{color:var(--givre)}
     <div class="etat" style="margin-top:12px">Le radiateur reçoit le réglage en 1 à 2 min ; cette page relit son état toute seule.</div>
   </section>
 
+  <section class="carte" id="minuterie" hidden>
+    <div class="etiquette">Minuterie · manuel puis arrêt</div>
+    <div class="etat" id="min-etat" style="margin:6px 0 4px">Lecture de la minuterie…</div>
+    <div class="reglage"><div class="nom">Consigne<span>mode Manuel · 13,5 à 30 °C</span></div><div class="pas" id="min-consigne"></div></div>
+    <div class="reglage"><div class="nom">Extinction dans<span>15 min à 5 h 45</span></div><div class="pas" id="min-duree"></div></div>
+    <button class="principal" id="min-lancer" type="button" style="margin-top:10px">Allumer en manuel</button>
+    <button type="button" id="min-annuler" style="width:100%;margin-top:8px" hidden>Annuler la minuterie (le radiateur reste en Manuel)</button>
+    <div class="retour" id="min-retour"></div>
+  </section>
+
   <section class="carte" id="programme" hidden>
     <div class="etiquette">Programmation de la semaine · <span id="prog-type"></span></div>
     <div class="semaine" id="semaine"></div>
@@ -178,6 +188,7 @@ function afficher(j){
   }).join("") || '<div class="carte etat">Aucun radiateur trouvé.</div>';
   var p = (j.pieces || []).filter(function(x){ return x.numero === PIECE; })[0];
   if (p && !choix.envoye) { actuel = { mode: p.mode, manuelle: p.consigne_manuelle, confort: p.consigne_confort, eco: p.consigne_eco }; reinitialiser(); }
+  if (p && jeton()) dessinerMinuterie();
   el("regl-nom").textContent = p ? (NOMS[p.numero] || p.nom) : "";
   if (p && p.plages) { semaine(p); if (!plagesEnvoyees) editeurPlages(p); }
 }
@@ -276,7 +287,7 @@ function dessiner(){
   el("modes").innerHTML = MODES.map(function(m){
     return '<button type="button" data-mode="' + m + '" class="' + (choix.mode === m ? "choisi" : "") + '">' + m + '</button>';
   }).join("");
-  Array.prototype.forEach.call(document.querySelectorAll(".pas"), function(z){
+  Array.prototype.forEach.call(document.querySelectorAll("#reglages .pas"), function(z){
     var c = z.getAttribute("data-cle");
     z.innerHTML = '<button type="button" data-pas="-0.5">−</button><output class="' + (actuel && choix[c] !== actuel[c] ? "change" : "") + '">' + deg(choix[c]) + '</output><button type="button" data-pas="0.5">+</button>';
   });
@@ -327,8 +338,72 @@ function envoyer(entrees, fini){
 }
 function retour(t, c){ var r = el("retour"); r.textContent = t; r.className = "retour " + c; }
 
+/* ===== Minuterie : tâche « Minuterie du chauffage » (Manuel, attente, puis Arrêt) =====
+   La minuterie en cours se lit dans les tâches GitHub : nom « Minuterie N min » + heure de départ. */
+var MIN_PAS = 15, MIN_MAX = 345;
+var minDuree = 60, minConsigne = null, minRun = null;
+function duree(m){ var h = Math.floor(m / 60), r = m % 60; return h ? h + " h" + (r ? " " + ("0" + r).slice(-2) : "") : r + " min"; }
+function hm(t){ return new Date(t).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }).replace(":", " h "); }
+function dessinerMinuterie(){
+  if (minConsigne === null && actuel && typeof actuel.manuelle === "number") minConsigne = actuel.manuelle;
+  el("min-consigne").innerHTML = '<button type="button" data-min-c="-0.5">−</button><output>' + deg(minConsigne) + '</output><button type="button" data-min-c="0.5">+</button>';
+  el("min-duree").innerHTML = '<button type="button" data-min-d="-1">−</button><output>' + duree(minDuree) + '</output><button type="button" data-min-d="1">+</button>';
+  el("min-lancer").textContent = "Allumer en manuel " + (typeof minConsigne === "number" ? "à " + deg(minConsigne) + " " : "") + "· arrêt vers " + hm(Date.now() + minDuree * 60000).replace(/ $/, "");
+  var fin = minRun && minRun.fin, reste = fin ? Math.max(0, Math.round((fin - Date.now()) / 60000)) : 0;
+  el("min-etat").innerHTML = fin ? 'Minuterie en cours : <b style="color:var(--soleil)">arrêt vers ' + hm(fin) + '</b> (dans ' + duree(reste) + '). En lancer une autre la remplace.'
+    : minRun ? "Minuterie en attente de démarrage chez GitHub…" : "Aucune minuterie en cours. Le radiateur passe en Manuel, puis en Arrêt à la fin du compte à rebours (sauf s'il a été réglé autrement entre-temps).";
+  el("min-annuler").hidden = !minRun;
+}
+function lireMinuterie(){
+  if (!jeton()) return;
+  fetch("https://api.github.com/repos/" + DEPOT + "/actions/workflows/chauffage-minuterie.yml/runs?per_page=5&t=" + Date.now(), {
+    headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json" }, cache: "no-store"
+  }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }).then(function(j){
+    var r = (j.workflow_runs || []).filter(function(x){ return x.status !== "completed"; })[0];
+    if (!r) minRun = null;
+    else {
+      var m = /Minuterie (\d+) min/.exec(r.display_title || r.name || ""), debut = r.status === "in_progress" ? Date.parse(r.run_started_at) : NaN;
+      minRun = { id: r.id, fin: m && debut ? debut + +m[1] * 60000 : null };
+    }
+    dessinerMinuterie();
+  }).catch(function(){ el("min-etat").textContent = "Minuterie illisible pour l'instant (jeton ou connexion)."; });
+}
+el("minuterie").addEventListener("click", function(e){
+  var c = parseFloat(e.target.getAttribute("data-min-c")), d = parseFloat(e.target.getAttribute("data-min-d"));
+  if (c) { minConsigne = Math.max(13.5, Math.min(30, Math.round(((minConsigne || 19) + c) * 2) / 2)); dessinerMinuterie(); }
+  if (d) { minDuree = Math.max(MIN_PAS, Math.min(MIN_MAX, minDuree + d * MIN_PAS)); dessinerMinuterie(); }
+});
+function retourMin(t, c){ var r = el("min-retour"); r.textContent = t; r.className = "retour " + c; }
+el("min-lancer").addEventListener("click", function(){
+  var b = el("min-lancer"); b.disabled = true; retourMin("Envoi…", "");
+  fetch("https://api.github.com/repos/" + DEPOT + "/actions/workflows/chauffage-minuterie.yml/dispatches", {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json", "Content-Type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: { piece: String(PIECE), manuelle: typeof minConsigne === "number" ? String(minConsigne) : "", minutes: String(minDuree) } })
+  }).then(function(r){
+    b.disabled = false;
+    if (r.status === 204) {
+      retourMin("Minuterie lancée : passage en Manuel d'ici 1 à 2 min, arrêt vers " + hm(Date.now() + minDuree * 60000) + ".", "ok");
+      setTimeout(lireMinuterie, 8000); setTimeout(lireMinuterie, 40000);
+      var n = 0, t = setInterval(function(){ lire(); if (++n >= 6) clearInterval(t); }, 30000);
+    } else if (r.status === 401 || r.status === 403 || r.status === 404) retourMin("Jeton refusé par GitHub (" + r.status + ") : vérifie qu'il a la permission Actions en écriture sur Maison17, ou recolle-le.", "erreur");
+    else retourMin("Échec de l'envoi (" + r.status + "). Réessaie dans un instant.", "erreur");
+  }).catch(function(){ b.disabled = false; retourMin("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); });
+});
+el("min-annuler").addEventListener("click", function(){
+  if (!minRun) return;
+  el("min-annuler").disabled = true;
+  fetch("https://api.github.com/repos/" + DEPOT + "/actions/runs/" + minRun.id + "/cancel", {
+    method: "POST", headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json" }
+  }).then(function(r){
+    el("min-annuler").disabled = false;
+    if (r.status === 202 || r.status === 409) { retourMin("Minuterie annulée : le radiateur reste dans son mode actuel.", "ok"); minRun = null; dessinerMinuterie(); setTimeout(lireMinuterie, 8000); }
+    else retourMin("Annulation refusée (" + r.status + "). Réessaie dans un instant.", "erreur");
+  }).catch(function(){ el("min-annuler").disabled = false; retourMin("Pas de connexion à GitHub. Réessaie dans un instant.", "erreur"); });
+});
+
 /* ===== Jeton (sur cet appareil seulement) ===== */
-function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; }
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("minuterie").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; if (a) { dessinerMinuterie(); lireMinuterie(); } }
 el("jeton-ok").addEventListener("click", function(){
   var v = el("jeton-saisie").value.trim(); if (!v) return;
   try { localStorage.setItem(CLE_JETON, v); } catch (e) {}
@@ -400,6 +475,8 @@ lire();
 courbe();
 setInterval(courbe, 10 * 60 * 1000);
 setInterval(lire, 5 * 60 * 1000);
+setInterval(function(){ if (jeton()) dessinerMinuterie(); }, 30 * 1000);   // compte à rebours et heure d'arrêt à jour
+setInterval(lireMinuterie, 2 * 60 * 1000);
 </script>
 </body>
 </html>

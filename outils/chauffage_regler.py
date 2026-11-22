@@ -7,7 +7,8 @@ HSL_MOT_DE_PASSE. Un champ vide veut dire « ne pas changer ».
 Variables : PIECE (numéro de la pièce, 7 = SdB filles), MODE (Arrêt, Hors-gel, Manuel, Programme
 ou vide), MANUELLE, CONFORT, ECO (en °C, pas de 0,5), PLAGES (JSON, programmation avancée :
 [{"plage": 1, "debut": "05:30", "fin": "08:00", "jours": [0, 1, 2, 3, 4]}, …], jours 0 = lundi ;
-heures par pas de 10 min ; aucun jour = plage inactive).
+heures par pas de 10 min ; aucun jour = plage inactive), SEULEMENT_SI_MODE (facultatif, utilisé par
+la minuterie : ne rien changer si le radiateur n'est plus dans ce mode).
 """
 
 import asyncio
@@ -56,6 +57,12 @@ async def regler(email, mdp, piece, mode, manuelle, confort, eco, plages):
         avant = (await client.get_home(home_id)).room(piece).heater_settings
         print("Avant : mode " + str(int(avant.current_mode)) + ", manuelle " + str(avant.manual_value)
               + ", confort " + str(avant.standard_value) + ", éco " + str(avant.economy_value))
+
+        # Minuterie : n'éteindre que si le radiateur est resté dans le mode attendu (sinon on l'a changé entre-temps)
+        si = MODES.get(os.environ.get("SEULEMENT_SI_MODE", "").strip())
+        if si is not None and int(avant.current_mode) != si:
+            print("Rien fait : le radiateur n'est plus dans le mode attendu (réglé autrement entre-temps).")
+            return
 
         if confort is not None or eco is not None:
             await client.update_room(
