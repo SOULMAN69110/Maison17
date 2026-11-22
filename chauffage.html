@@ -82,7 +82,7 @@ a{color:var(--givre)}
 .pied a:hover,.pied a:focus{opacity:1;text-decoration:underline}
 .retour{margin-top:12px;font-family:var(--mono);font-size:13px}
 .min-ligne:empty{display:none}
-.min-ligne{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--nuit);border:1px solid var(--soleil);font-size:18px}
+.min-ligne{margin:10px 0 4px;padding:10px 14px;border-radius:10px;background:var(--nuit);border:1px solid var(--soleil);font-size:18px}
 .min-ligne b{color:var(--soleil);font-variant-numeric:tabular-nums}
 .retour.ok{color:var(--ok)} .retour.erreur{color:var(--alerte)}
 </style>
@@ -114,12 +114,15 @@ a{color:var(--givre)}
 
   <section class="carte" id="minuterie" hidden>
     <div class="etiquette">Minuterie · manuel puis programme</div>
+    <div class="min-ligne" id="min-ligne"></div>
+    <div id="min-commandes">
     <div class="etat" id="min-etat" style="margin:6px 0 4px">Lecture de la minuterie…</div>
     <div class="reglage"><div class="nom">Consigne<span>mode Manuel · 13,5 à 30 °C</span></div><div class="pas" id="min-consigne"></div></div>
     <div class="reglage"><div class="nom">Retour au programme dans<span>15 min à 5 h 45</span></div><div class="pas" id="min-duree"></div></div>
     <button class="principal" id="min-lancer" type="button" style="margin-top:10px">Allumer en manuel</button>
     <button type="button" id="min-annuler" style="width:100%;margin-top:8px" hidden>Annuler la minuterie (retour en mode Programme)</button>
     <div class="retour" id="min-retour"></div>
+    </div>
   </section>
 
   <section class="carte" id="programme" hidden>
@@ -187,7 +190,7 @@ function afficher(j){
       '<div><span>Manuelle</span><b>' + deg(p.consigne_manuelle) + '</b></div>' +
       '<div><span>Fenêtre ouverte</span><b>' + (p.fenetre_ouverte_detection ? "détectée" : "non suivie") + '</b></div>' +
       (j.vacances_retour ? '<div><span>Vacances</span><b>retour ' + new Date(j.vacances_retour).toLocaleDateString("fr-FR") + '</b></div>' : '') +
-      '</div><div class="min-ligne" id="min-ligne-' + p.numero + '"></div></section>';
+      '</div></section>';
   }).join("") || '<div class="carte etat">Aucun radiateur trouvé.</div>';
   minPubliee = j.minuterie || null; ligneMinuterie();
   var p = (j.pieces || []).filter(function(x){ return x.numero === PIECE; })[0];
@@ -353,9 +356,7 @@ function dessinerMinuterie(){
   el("min-consigne").innerHTML = '<button type="button" data-min-c="-0.5">−</button><output>' + deg(minConsigne) + '</output><button type="button" data-min-c="0.5">+</button>';
   el("min-duree").innerHTML = '<button type="button" data-min-d="-1">−</button><output>' + duree(minDuree) + '</output><button type="button" data-min-d="1">+</button>';
   el("min-lancer").textContent = "Allumer en manuel " + (typeof minConsigne === "number" ? "à " + deg(minConsigne) + " " : "") + "· programme vers " + hm(Date.now() + minDuree * 60000);
-  var fin = minRun && minRun.fin, reste = fin ? Math.max(0, Math.round((fin - Date.now()) / 60000)) : 0;
-  el("min-etat").innerHTML = fin ? 'Minuterie en cours : <b style="color:var(--soleil)">retour au programme vers ' + hm(fin) + '</b> (dans ' + duree(reste) + '). En lancer une autre la remplace.'
-    : minRun ? "Minuterie en attente de démarrage chez GitHub…" : "Aucune minuterie en cours. Le radiateur passe en Manuel, puis revient en mode Programme à la fin du compte à rebours (sauf s'il a été réglé autrement entre-temps).";
+  el("min-etat").innerHTML = minRun ? "En lancer une autre remplace celle en cours." : "Aucune minuterie en cours. Le radiateur passe en Manuel, puis revient en mode Programme à la fin du compte à rebours (sauf s'il a été réglé autrement entre-temps).";
   el("min-annuler").hidden = !minRun;
 }
 /* Ligne « minuterie en cours » sur la carte du radiateur, pour tous les appareils (chauffage.json publié par la tâche) ;
@@ -366,8 +367,9 @@ function ligneMinuterie(){
   if (jeton() && minLue) { fin = minRun && minRun.fin; attente = !!minRun && !fin; }
   else if (minPubliee) { fin = minPubliee.fin ? Date.parse(minPubliee.fin) : null; attente = !fin; piece = minPubliee.piece || PIECE; }
   if (fin && fin <= Date.now()) fin = null;
-  Array.prototype.forEach.call(document.querySelectorAll(".min-ligne"), function(z){ z.innerHTML = ""; });
-  var z = el("min-ligne-" + piece); if (!z) return;
+  var z = el("min-ligne"); z.innerHTML = "";
+  if (!jeton()) el("minuterie").hidden = !(fin || attente);   // sans jeton : la carte n'apparaît que pour montrer la minuterie
+  if (piece !== PIECE) return;
   if (fin) z.innerHTML = '⏱ Minuterie : retour au programme vers <b>' + hm(fin) + '</b> · reste <b>' + duree(Math.max(1, Math.ceil((fin - Date.now()) / 60000))) + '</b>';
   else if (attente) z.innerHTML = '⏱ Minuterie en cours de démarrage…';
 }
@@ -426,7 +428,7 @@ el("min-annuler").addEventListener("click", function(){
 });
 
 /* ===== Jeton (sur cet appareil seulement) ===== */
-function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("minuterie").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; if (a) { dessinerMinuterie(); lireMinuterie(); } }
+function ecranJeton(){ var a = !!jeton(); el("reglages").hidden = !a; el("minuterie").hidden = !a; el("min-commandes").hidden = !a; el("plages-edit").hidden = !a; el("pied").hidden = !a; el("jeton").hidden = a; if (a) { dessinerMinuterie(); lireMinuterie(); } ligneMinuterie(); }
 el("jeton-ok").addEventListener("click", function(){
   var v = el("jeton-saisie").value.trim(); if (!v) return;
   try { localStorage.setItem(CLE_JETON, v); } catch (e) {}
