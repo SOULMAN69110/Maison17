@@ -3,7 +3,7 @@ run-name: Minuterie ${{ inputs.minutes }} min
 
 # Lancée depuis la page chauffage.html (carte « Minuterie »), ou à la main (onglet Actions → Run workflow).
 # Passe le radiateur en mode Manuel (avec la consigne donnée), attend la durée choisie, puis le met
-# en Arrêt — seulement s'il est encore en Manuel (si on l'a réglé autrement entre-temps, on n'y touche pas).
+# en mode Programme — seulement s'il est encore en Manuel (si on l'a réglé autrement entre-temps, on n'y touche pas).
 # Une nouvelle minuterie remplace la précédente ; « Annuler » sur la page arrête la tâche en cours
 # puis remet le radiateur en mode Programme (par la tâche « Régler le chauffage »). Durée maximale : 345 min (une tâche GitHub dure 6 h au plus).
 
@@ -17,7 +17,7 @@ on:
         description: "Consigne manuelle (°C, 13,5 à 30, pas de 0,5 ; vide = inchangée)"
         default: ""
       minutes:
-        description: "Extinction au bout de … minutes (1 à 345)"
+        description: "Retour au mode Programme au bout de … minutes (1 à 345)"
         default: "60"
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
           echo "debut=$(date +%s)" >> "$GITHUB_OUTPUT"
           case "$MINUTES" in ''|*[!0-9]*) echo "Durée invalide : « $MINUTES »"; exit 1;; esac
           if [ "$MINUTES" -lt 1 ] || [ "$MINUTES" -gt 345 ]; then echo "Durée hors limites (1 à 345 min) : $MINUTES"; exit 1; fi
-          echo "Extinction prévue vers $(TZ=Europe/Paris date -d "+$MINUTES min" '+%H:%M')"
+          echo "Retour au programme prévu vers $(TZ=Europe/Paris date -d "+$MINUTES min" '+%H:%M')"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -69,15 +69,15 @@ jobs:
         run: |
           reste=$(( DEBUT + MINUTES * 60 - $(date +%s) ))
           if [ "$reste" -gt 0 ]; then echo "Attente de $(( reste / 60 )) min $(( reste % 60 )) s"; sleep "$reste"; fi
-      - name: Éteindre le radiateur (s'il est toujours en Manuel)
+      - name: Remettre le radiateur en mode Programme (s'il est toujours en Manuel)
         env:
           HSL_EMAIL: ${{ secrets.HSL_EMAIL }}
           HSL_MOT_DE_PASSE: ${{ secrets.HSL_MOT_DE_PASSE }}
           PIECE: ${{ inputs.piece }}
-          MODE: Arrêt
+          MODE: Programme
           SEULEMENT_SI_MODE: Manuel
         run: python3 outils/chauffage_regler.py
-      - name: Relancer la publication pour afficher l'arrêt
+      - name: Relancer la publication pour afficher le retour au programme
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
