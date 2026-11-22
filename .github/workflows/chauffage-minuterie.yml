@@ -1,5 +1,5 @@
 name: Minuterie du chauffage
-run-name: Minuterie ${{ inputs.minutes }} min
+run-name: Minuterie ${{ inputs.minutes }} min · pièce ${{ inputs.piece }}
 
 # Lancée depuis la page chauffage.html (carte « Minuterie »), ou à la main (onglet Actions → Run workflow).
 # Passe le radiateur en mode Manuel (avec la consigne donnée), attend la durée choisie, puis le met

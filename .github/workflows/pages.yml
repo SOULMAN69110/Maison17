@@ -16,6 +16,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: read
 
 concurrency:
   group: pages
@@ -76,6 +77,14 @@ jobs:
         run: |
           pip install -q "homesmartlink==0.4.1" || true
           python3 outils/chauffage.py site/chauffage.json
+
+      - name: Ajouter la minuterie du chauffage en cours
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/chauffage-minuterie.yml/runs?per_page=5" > minuteries.json || echo '{}' > minuteries.json
+          python3 outils/minuterie.py site/chauffage.json minuteries.json
 
       - name: Récupérer la pression (Open-Meteo)
         run: |

@@ -81,6 +81,9 @@ a{color:var(--givre)}
 .pied a{color:var(--brume);opacity:.6;text-decoration:none}
 .pied a:hover,.pied a:focus{opacity:1;text-decoration:underline}
 .retour{margin-top:12px;font-family:var(--mono);font-size:13px}
+.min-ligne:empty{display:none}
+.min-ligne{margin-top:14px;padding:10px 14px;border-radius:10px;background:var(--nuit);border:1px solid var(--soleil);font-size:18px}
+.min-ligne b{color:var(--soleil);font-variant-numeric:tabular-nums}
 .retour.ok{color:var(--ok)} .retour.erreur{color:var(--alerte)}
 </style>
 <script src="verrou.js"></script>
@@ -184,8 +187,9 @@ function afficher(j){
       '<div><span>Manuelle</span><b>' + deg(p.consigne_manuelle) + '</b></div>' +
       '<div><span>Fenêtre ouverte</span><b>' + (p.fenetre_ouverte_detection ? "détectée" : "non suivie") + '</b></div>' +
       (j.vacances_retour ? '<div><span>Vacances</span><b>retour ' + new Date(j.vacances_retour).toLocaleDateString("fr-FR") + '</b></div>' : '') +
-      '</div></section>';
+      '</div><div class="min-ligne" id="min-ligne-' + p.numero + '"></div></section>';
   }).join("") || '<div class="carte etat">Aucun radiateur trouvé.</div>';
+  minPubliee = j.minuterie || null; ligneMinuterie();
   var p = (j.pieces || []).filter(function(x){ return x.numero === PIECE; })[0];
   if (p && !choix.envoye) { actuel = { mode: p.mode, manuelle: p.consigne_manuelle, confort: p.consigne_confort, eco: p.consigne_eco }; reinitialiser(); }
   if (p && jeton()) dessinerMinuterie();
@@ -354,6 +358,19 @@ function dessinerMinuterie(){
     : minRun ? "Minuterie en attente de démarrage chez GitHub…" : "Aucune minuterie en cours. Le radiateur passe en Manuel, puis revient en mode Programme à la fin du compte à rebours (sauf s'il a été réglé autrement entre-temps).";
   el("min-annuler").hidden = !minRun;
 }
+/* Ligne « minuterie en cours » sur la carte du radiateur, pour tous les appareils (chauffage.json publié par la tâche) ;
+   avec le jeton, l'état lu directement chez GitHub (plus frais) passe devant. */
+var minPubliee = null, minLue = false;
+function ligneMinuterie(){
+  var fin = null, piece = PIECE, attente = false;
+  if (jeton() && minLue) { fin = minRun && minRun.fin; attente = !!minRun && !fin; }
+  else if (minPubliee) { fin = minPubliee.fin ? Date.parse(minPubliee.fin) : null; attente = !fin; piece = minPubliee.piece || PIECE; }
+  if (fin && fin <= Date.now()) fin = null;
+  Array.prototype.forEach.call(document.querySelectorAll(".min-ligne"), function(z){ z.innerHTML = ""; });
+  var z = el("min-ligne-" + piece); if (!z) return;
+  if (fin) z.innerHTML = '⏱ Minuterie : retour au programme vers <b>' + hm(fin) + '</b> · reste <b>' + duree(Math.max(1, Math.ceil((fin - Date.now()) / 60000))) + '</b>';
+  else if (attente) z.innerHTML = '⏱ Minuterie en cours de démarrage…';
+}
 function lireMinuterie(){
   if (!jeton()) return;
   fetch("https://api.github.com/repos/" + DEPOT + "/actions/workflows/chauffage-minuterie.yml/runs?per_page=5&t=" + Date.now(), {
@@ -365,7 +382,7 @@ function lireMinuterie(){
       var m = /Minuterie (\d+) min/.exec(r.display_title || r.name || ""), debut = r.status === "in_progress" ? Date.parse(r.run_started_at) : NaN;
       minRun = { id: r.id, fin: m && debut ? debut + +m[1] * 60000 : null };
     }
-    dessinerMinuterie();
+    minLue = true; dessinerMinuterie(); ligneMinuterie();
   }).catch(function(){ el("min-etat").textContent = "Minuterie illisible pour l'instant (jeton ou connexion)."; });
 }
 el("minuterie").addEventListener("click", function(e){
@@ -398,7 +415,7 @@ el("min-annuler").addEventListener("click", function(){
     method: "POST", headers: { "Authorization": "Bearer " + jeton(), "Accept": "application/vnd.github+json" }
   }).then(function(r){
     if (r.status !== 202 && r.status !== 409) { b.disabled = false; retourMin("Annulation refusée (" + r.status + "). Réessaie dans un instant.", "erreur"); return; }
-    minRun = null; dessinerMinuterie();
+    minRun = null; dessinerMinuterie(); ligneMinuterie();
     envoyer({ piece: String(PIECE), mode: "Programme" }, function(ok, msg){
       b.disabled = false;
       retourMin(ok ? "Minuterie annulée : retour en mode Programme d'ici 1 à 2 min." : "Minuterie annulée, mais le retour en Programme a échoué : " + msg, ok ? "ok" : "erreur");
@@ -481,7 +498,7 @@ lire();
 courbe();
 setInterval(courbe, 10 * 60 * 1000);
 setInterval(lire, 5 * 60 * 1000);
-setInterval(function(){ if (jeton()) dessinerMinuterie(); }, 30 * 1000);   // compte à rebours et heure de fin à jour
+setInterval(function(){ if (jeton()) dessinerMinuterie(); ligneMinuterie(); }, 30 * 1000);   // compte à rebours et heure de fin à jour
 setInterval(lireMinuterie, 2 * 60 * 1000);
 </script>
 </body>
