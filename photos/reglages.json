@@ -1,9 +1,9 @@
 {
  "secondes": 5,
- "transition": "fondu",
+ "transition": "zoom",
  "ordre": "chrono",
  "legende": "non",
- "recents": 4,
+ "recents": 6,
  "veille": "tous",
- "veille_min": 5
+ "veille_min": 30
 }
